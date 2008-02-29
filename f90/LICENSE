@@ -1,0 +1,41 @@
+!---------------------------------------------------------------------------------!
+! EMTF File Conversion Utilities (FCU) is a set of routines written in Fortran 90 !
+! that is intended to allow conversion between the commonly used electromagnetic  !
+! transfer function file formats: Gary Egbert's Z-files, Society of Exploration   !
+! Geophysicists MT/EMAP Data Interchange Standard (EDI) and XML files, as defined !
+! by the latest version of the MT_TF.xsd XML schema.                              !
+!                                                                                 !
+! EMTF FCU are intended to complement Gary Egbert's EMTF electomagnetic data      !
+! processing and plotting software.                                               !
+!                                                                                 !
+! EMTF FCU is free software; you can redistribute it and/or modify it under the   !
+! terms of the GNU General Public License (GPL) version 3 or above, as published  !
+! by the Free Software Foundation.                                                !
+!                                                                                 !
+! This software is distributed in the hope that it will be useful, but WITHOUT    !
+! ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   ! 
+! FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.  !
+!                                                                                 !
+! Copyright (C) Anna Kelbert, 2007                                                !
+!               College of Oceanic and Atmospheric Sciences                       !
+!               Oregon State University                                           !
+!               104 COAS Administration Building                                  !
+!               Corvallis, OR 97331-5503                                          !
+!                                                                                 !
+! Please contact the author with questions, comments or corrections               !
+!                              at the e-mail address:  anya@coas.oregonstate.edu  !
+!                                        or by phone: +1-541-737-4113             !
+!                                                                                 !
+! EMTF FCU uses Fortran XML library (FoX),(C) 2005-2007 Toby White                !
+! This library is freely available under a 3-clause BSD license; which is         !
+! to say that it may be used freely by any and all users; redistributed in        !
+! source or binary form; provided that the copyright notices are maintained.      !
+! The FoX library is not included into this distribution of EMTF FCU.             !
+! It can be downloaded at http://uszla.me.uk/space/software/FoX/                  !
+!                                                                                 !
+! Subroutines in module utils.f90 are (C) 2007 Anna Kelbert (LGPL),               !
+! (C) 2002-2005 J. K. Dewhurst, S. Sharma and C. Ambrosch-Draxl (LGPL),           !
+! (C) 2003 Purple Sage Computing Solutions, Inc. (GPLv2 or above).                !
+! Module write_edi.f90 is an adaptation of a modified version of wrt_edi.f,       !
+! originally written by Randie Mackie.                                            !
+!---------------------------------------------------------------------------------!

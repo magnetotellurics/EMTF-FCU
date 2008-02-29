@@ -1,0 +1,42 @@
+1. Install a g95 or similar Fortran 95 compiler
+
+2. Download the newest version of FoX library,
+   http://uszla.me.uk/space/software/FoX/
+   and unpack it to a directory $FOX_DIR
+
+3. Compile FoX package
+
+   cd $FOX_DIR
+   ./configure
+   make
+
+NB: if you move FoX in the file system, reconfigure 
+
+4. Go back to the EMTF FCU directory. Change the
+   $FOX_DIR variable in the Makefile to your FoX path.
+   Compile EMTF FCU by typing 'make'.
+   
+5. This comment only applies if you would like to 
+   use the software to create XML files for archiving.
+   In this case, you need to create an XML configuration
+   file which looks like
+   
+ <Configuration>
+ <Source>USArray_MT</Source>
+ <Year>2006</Year>
+ <ID>EMTF.Egbert</ID>
+ <ProcessedBy>Gary Egbert (COAS/OSU)</ProcessedBy>
+ <RunList>USArray_2006_Runs.xml</RunList>
+ <SiteList>USArray_2006_Sites.xml</SiteList>
+ </Configuration>
+   
+   This is where any user-defined information about
+   the experiment is stored. The lists, if specified,
+   should contain information about runs and the sites
+   in the experiment, as described in module read_lists.f90
+   
+ Enjoy!
+ 
+ Anna Kelbert
+ 11 Nov 2007  
+ 
