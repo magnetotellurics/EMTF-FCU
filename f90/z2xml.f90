@@ -7,8 +7,10 @@ program z2xml
   use xml_write
   implicit none
 
+  character(len=80) :: input_dir='./'
   character(len=80) :: z_file=''
-  character(len=80) :: xml_file=''  
+  character(len=80) :: xml_file='' 
+  character(len=80) :: config_file = 'config.xml'
   character(len=80) :: zsitename, basename, verbose=''
   type(RemoteRef_t) :: Info
   type(UserInfo_t)  :: UserInfo
@@ -54,10 +56,17 @@ program z2xml
  	xml_file = trim(xml_file)//'.xml'
   end if
   
+  ! Look for configuration file in the input directory
+  i = index(z_file,'/',.true.)
+  if (i>0) then
+    input_dir = z_file(1:i)
+  end if
+  config_file = trim(input_dir)//'/'//trim(config_file)
+  
   ! Read the configuration file, if it exists
-  inquire (file='config.xml',exist=config_exists)
+  inquire (file=config_file,exist=config_exists)
   if (config_exists) then
-  	call read_xml_config('config.xml',UserInfo)
+  	call read_xml_config(config_file,UserInfo,input_dir)
   else
   	write(0,*) 'Please provide an XML configuration file (config.xml).'
   	write(0,*) 'This file should describe the experiment in the format:'

@@ -78,7 +78,7 @@ program z2edi
   edi_date = date(5:6)//'/'//date(7:8)//'/'//date(3:4)
 
   call write_edi_file(edi_file,edi_date,zsitename,zLocalSite, &
-										InputChannel,OutputChannel,F,TF,TFVar,Info,UserInfo)
+										InputChannel,OutputChannel,F,TF,TFVar,Info)
 
   ! Exit nicely
   deallocate(InputChannel, OutputChannel)

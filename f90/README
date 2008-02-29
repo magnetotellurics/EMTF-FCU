@@ -35,6 +35,14 @@ NB: if you move FoX in the file system, reconfigure
    should contain information about runs and the sites
    in the experiment, as described in module read_lists.f90
    
+   The program looks for the configuration file in the
+   same directory where the input file is located.
+   
+NB: If you have the lists, use them by first running
+    z2xml, then xml2edi. Note that the program z2edi
+    does not require FoX library to be installed, and
+    it does not use the additional XML information.
+   
  Enjoy!
  
  Anna Kelbert
