@@ -48,16 +48,21 @@ contains
     type(UserInfo_t), intent(out)   :: UserInfo
     type(RemoteRef_t), intent(out)  :: Info
 	type(Node), pointer             :: infoNode
-	character(len=80)               :: source
+	character(len=80)               :: project
 
 	! Initialize site information
 	call init_site_info(Site)
 	call init_user_info(UserInfo)
 	call init_remote_ref(Info)
+
+	UserInfo%Source = getString(doc,"Source")
+	UserInfo%Project = getString(doc,"Project")
+	UserInfo%Experiment = getString(doc,"Experiment")
+	UserInfo%YearCollected = getInteger(doc,"YearCollected")
+	UserInfo%ProcessedBy = getString(doc,"ProcessedBy")
+	UserInfo%ProcessingSoftware = getString(doc,"ProcessingSoftware")
 	
-	id = getString(doc,"SiteID","network","EMTF")
-	source = getString(doc,"Source")
-	Site%ID = getString(doc,"SiteID","network",source)
+	Site%ID = getString(doc,"SiteID","project",UserInfo%Project)
 	Site%Description = getString(doc,"SiteName")
 	Site%Location%lat = getReal(doc,"Latitude")
 	Site%Location%lon = getReal(doc,"Longitude")
@@ -65,9 +70,7 @@ contains
 	Site%Declination = getReal(doc,"Declination")
 	Site%RunList = getString(doc,"RunList")
 
-	UserInfo%Source = source
-	UserInfo%Year = getInteger(doc,"YearCollected")
-	UserInfo%ProcessedBy = getString(doc,"ProcessedBy")
+	id = getString(doc,"ProcessingID")
 
 	! Need to create this node since tags like SiteID and Location
 	! are encountered several times throughout the document
@@ -78,7 +81,9 @@ contains
   	if (index(Info%remote_ref_type,'Remote Reference')>0) then
 		Info%remote_ref = .true.
 	end if
-	Info%remote_site_id = getString(infoNode,"SiteID","network",source)
+	Info%sign_convention = getString(infoNode,"SignConvention")
+	Info%remote_site_id = getString(infoNode,"SiteID","project",UserInfo%Project)
+	Info%processing_id = id
 
   end subroutine read_xml_header
   
@@ -93,6 +98,7 @@ contains
        Input(i)%ID = getAttribute(this,"name")
        Input(i)%orientation = getRealAttr(this,"Channel","orientation")
        Input(i)%tilt = 0.0
+       !Input(i)%units = getAttribute(this,"units")
     end do
 
     do i=1,nch-2
@@ -100,6 +106,7 @@ contains
        Output(i)%ID = getAttribute(this,"name")
        Output(i)%orientation = getRealAttr(this,"Channel","orientation")
        Output(i)%tilt = 0.0
+       !Output(i)%units = getAttribute(this,"units")
     end do
 
   end subroutine read_xml_channels

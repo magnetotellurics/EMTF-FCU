@@ -47,7 +47,7 @@ contains
   	real                                           :: azimuth
 	real(8)                                        :: lat, long, elev
 	character(len=80)                              :: dataid, source
-	character(len=80), dimension(7)                :: info_block
+	character(len=80), dimension(11)               :: info_block
 	real(8), dimension(:), allocatable             :: freq
 	complex(8), dimension(:,:), allocatable        :: t
 	complex(8), dimension(:,:), allocatable        :: z
@@ -107,18 +107,24 @@ contains
 	
 	! create a block of additional information
 	if (present(UserInfo)) then
-		write(info_block(1),*) 'EXPERIMENT=',trim(UserInfo%Source)
-		write(info_block(2),*) 'YEAR=',UserInfo%Year	
-		write(info_block(3),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
+	    write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
+		write(info_block(2),*) 'EXPERIMENT=',trim(UserInfo%Experiment)
+		write(info_block(3),*) 'YEAR=',UserInfo%YearCollected	
+		write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%Source)
+		write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
 	else
-		write(info_block(1),*) 'EXPERIMENT=UNKNOWN'
-		write(info_block(2),*) 'YEAR=UNKNOWN'
-		write(info_block(3),*) 'PROCESSEDBY=UNKNOWN'
+	    write(info_block(1),*) 'PROJECT=UNKNOWN'
+		write(info_block(2),*) 'EXPERIMENT=UNKNOWN'
+		write(info_block(3),*) 'YEAR=UNKNOWN'
+		write(info_block(4),*) 'PROCESSEDBY=UNKNOWN'
+		write(info_block(5),*) 'PROCESSINGSOFTWARE=UNKNOWN'
 	end if	
-	write(info_block(4),*) 'SITENAME=',trim(Site%Description)
-	write(info_block(5),*) 'RUNLIST=',trim(Site%RunList)
-	write(info_block(6),*) 'REMOTEREF=',trim(Info%remote_ref_type)
-	write(info_block(7),*) 'REMOTESITE=',trim(Info%remote_site_id)
+	write(info_block(6),*) 'PROCESSINGID=',trim(Info%processing_id)
+	write(info_block(7),*) 'SITENAME=',trim(Site%Description)
+	write(info_block(8),*) 'RUNLIST=',trim(Site%RunList)
+	write(info_block(9),*) 'REMOTEREF=',trim(Info%remote_ref_type)
+	write(info_block(10),*) 'REMOTESITE=',trim(Info%remote_site_id)
+	write(info_block(11),*) 'SIGNCONVENTION=',trim(Info%sign_convention)
 	
 	call wrt_edi(fname,dataid,sectid,source,info_block, &
 			freq,zvar,tvar,z,t,lat,long,elev, &

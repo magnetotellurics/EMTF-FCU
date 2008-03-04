@@ -59,26 +59,37 @@ program z2xml
   ! Look for configuration file in the input directory
   i = index(z_file,'/',.true.)
   if (i>0) then
-    input_dir = z_file(1:i)
+    input_dir = z_file(1:i-1)
   end if
   config_file = trim(input_dir)//'/'//trim(config_file)
+  if (.not. silent) then
+    write(*,*) 'Reading configuration file ',config_file
+  end if
   
   ! Read the configuration file, if it exists
   inquire (file=config_file,exist=config_exists)
   if (config_exists) then
   	call read_xml_config(config_file,UserInfo,input_dir)
   else
-  	write(0,*) 'Please provide an XML configuration file (config.xml).'
-  	write(0,*) 'This file should describe the experiment in the format:'
+  	write(0,*) 'Please provide an XML configuration file [config.xml].'
+  	write(0,*) 'This file should reside together with the input data.'
+  	write(0,*) 'An example configuration is provided below:'
+  	write(0,*)
   	write(0,*) '<Configuration>'
-  	write(0,*) '<Source>USArray_MT</Source>'
-  	write(0,*) '<Year>2007</Year>'
-  	write(0,*) '<ID>Egbert</ID>'
-  	write(0,*) '<ProcessedBy>Gary Egbert (COAS/OSU)</ProcessedBy>'
+  	write(0,*) '<Source>OSU</Source>'
+  	write(0,*) '<Project>USArray</Project>'
+  	write(0,*) '<Experiment>USArray Cascadia</Experiment>'
+  	write(0,*) '<YearCollected>2007</YearCollected>'    
+  	write(0,*) '<ProcessedBy>Gary Egbert</ProcessedBy>'
+  	write(0,*) '<ProcessingSoftware>EMTF</ProcessingSoftware>'
+  	write(0,*) '<ProcessingTag></ProcessingTag>'
   	write(0,*) '<RunList>USArray_2007_Runs.xml</RunList>'
   	write(0,*) '<SiteList>USArray_2007_Sites.xml</SiteList>'
   	write(0,*) '</Configuration>'
-  	write(0,*) 'ID, if specified, helps identify a product in SPADE.'
+  	write(0,*)
+  	write(0,*) 'Source, Project and ProcessingSoftware help identify'
+    write(0,*) 'a product in SPADE. They should not contain spaces.'
+    write(0,*) 'Same is true about the optional ProcessingTag.'
   	write(0,*) 'Leave the RunList and SiteList elements out or empty'
   	write(0,*) 'if you do not have XML lists for this experiment.'
   	return
@@ -115,9 +126,9 @@ program z2xml
   call read_site_list(UserInfo%SiteList, zLocalSite%ID, xmlLocalSite, site_list_exists)
 
   if (len_trim(xmlLocalSite%ID)>0) then
-  	call add_USArray_MT_header(zsitename, xmlLocalSite, UserInfo, Info, Notes)
+  	call add_USArray_MT_header(xmlLocalSite, UserInfo, Info, Notes)
   else
-  	call add_USArray_MT_header(zsitename, zLocalSite, UserInfo, Info, Notes)  
+  	call add_USArray_MT_header(zLocalSite, UserInfo, Info, Notes)  
   end if
 
   if (Info%remote_ref) then

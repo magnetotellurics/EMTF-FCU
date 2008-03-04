@@ -72,34 +72,42 @@ contains
 
 
 
-  subroutine add_USArray_MT_header(zsitename, Site, UserInfo, Info, Notes)
-    character(len=*), intent(in) :: zsitename
+  subroutine add_USArray_MT_header(Site, UserInfo, Info, Notes)
     type(Site_t), intent(in)     :: Site
     type(UserInfo_t), intent(in) :: UserInfo
     type(RemoteRef_t), intent(in):: Info
     character(len=*), dimension(:), pointer, optional :: Notes
 
+    call xml_NewElement(xmlfile, 'Network')
+    call xml_AddCharacters(xmlfile, trim(network))
+    call xml_EndElement(xmlfile, 'Network')
+    
     call xml_NewElement(xmlfile, 'ProductID')
-    call xml_AddCharacters(xmlfile, trim(UserInfo%Source)//'.'//Site%ID)
-    if (len_trim(UserInfo%ID)>0) call xml_AddCharacters(xmlfile, '.'//trim(UserInfo%ID))
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Project)//'.'//Site%ID)
+    if (len_trim(UserInfo%ProcessingTag)>0) call xml_AddCharacters(xmlfile, '.'//trim(UserInfo%ProcessingTag))
     call xml_EndElement(xmlfile, 'ProductID')
+
+    call xml_NewElement(xmlfile, 'SourceID')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Source)//'.'//trim(UserInfo%ProcessingSoftware))
+    call xml_EndElement(xmlfile, 'SourceID')
     
     call xml_NewElement(xmlfile, 'Source')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Source))
     call xml_EndElement(xmlfile, 'Source')
 
+    call xml_NewElement(xmlfile, 'Project')
+    if (trim(UserInfo%Source) .eq. 'USArray') call xml_AddAttribute(xmlfile, 'component', '_US_MT')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Project))
+    call xml_EndElement(xmlfile, 'Project')
+    
+    call xml_NewElement(xmlfile, 'Experiment')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Experiment))
+    call xml_EndElement(xmlfile, 'Experiment')
+    
     call xml_NewElement(xmlfile, 'YearCollected')
-    call xml_AddCharacters(xmlfile, UserInfo%Year)
+    call xml_AddCharacters(xmlfile, UserInfo%YearCollected)
     call xml_EndElement(xmlfile, 'YearCollected')
 
-    call xml_NewElement(xmlfile, 'USArrayNet')
-    call xml_AddCharacters(xmlfile, '_US-MT')
-    call xml_EndElement(xmlfile, 'USArrayNet')
-
-    call xml_NewElement(xmlfile, 'Network')
-    call xml_AddCharacters(xmlfile, trim(network))
-    call xml_EndElement(xmlfile, 'Network')
-    
     call xml_NewElement(xmlfile, 'SiteName')
     call xml_AddCharacters(xmlfile, trim(Site%Description))
     call xml_EndElement(xmlfile, 'SiteName')
@@ -116,13 +124,8 @@ contains
 	call add_Location(Site%Location,Site%Declination)
  
     call xml_NewElement(xmlfile, 'SiteID')
-    call xml_AddAttribute(xmlfile, 'network', trim(UserInfo%Source))
+    call xml_AddAttribute(xmlfile, 'project', trim(UserInfo%Project))
     call xml_AddCharacters(xmlfile, trim(Site%ID))
-    call xml_EndElement(xmlfile, 'SiteID')
- 
-    call xml_NewElement(xmlfile, 'SiteID')
-    call xml_AddAttribute(xmlfile, 'network', 'EMTF')
-    call xml_AddCharacters(xmlfile, trim(zsitename))
     call xml_EndElement(xmlfile, 'SiteID')
     
     call xml_NewElement(xmlfile, 'RunList')
@@ -151,6 +154,10 @@ contains
     	type(Run_t), optional, dimension(:), intent(in) :: RemoteRun 
 
 		call xml_NewElement(xmlfile, 'ProcessingInfo')
+		call xml_NewElement(xmlfile, 'SignConvention')
+		call xml_AddCharacters(xmlfile, trim(Info%sign_convention))
+		call xml_EndElement(xmlfile, 'SignConvention')
+		
 		call xml_NewElement(xmlfile, 'RemoteRef')
 		call xml_AddAttribute(xmlfile, 'type', trim(Info%remote_ref_type))
 		call xml_EndElement(xmlfile, 'RemoteRef')
@@ -159,15 +166,15 @@ contains
 			if (len_trim(RemoteSite%ID)>0) then
 				call xml_NewElement(xmlfile, 'RemoteSite')
 			
+				call xml_NewElement(xmlfile, 'SiteID')
+				call xml_AddAttribute(xmlfile, 'project', trim(UserInfo%Project))
+ 				call xml_AddCharacters(xmlfile, trim(RemoteSite%ID))
+				call xml_EndElement(xmlfile, 'SiteID')
+			
 				call xml_NewElement(xmlfile, 'SiteName')
 				call xml_AddCharacters(xmlfile, trim(RemoteSite%Description))
 				call xml_EndElement(xmlfile, 'SiteName')
 
-				call xml_NewElement(xmlfile, 'SiteID')
-				call xml_AddAttribute(xmlfile, 'network', trim(UserInfo%Source))
- 				call xml_AddCharacters(xmlfile, trim(RemoteSite%ID))
-				call xml_EndElement(xmlfile, 'SiteID')
-			
 				call add_Location(RemoteSite%Location)
 				
 				if (present(RemoteRun)) then
@@ -188,8 +195,12 @@ contains
 		if (len_trim(Info%software_version)>0) then
 			call xml_AddAttribute(xmlfile, 'version', trim(Info%software_version))
 		end if
-		call xml_AddCharacters(xmlfile, trim(Info%software))
+		call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessingSoftware))
 		call xml_EndElement(xmlfile, 'ProcessingSoftware')
+		
+		call xml_NewElement(xmlfile, 'ProcessingID')
+        call xml_AddCharacters(xmlfile, trim(Info%processing_id))
+        call xml_EndElement(xmlfile, 'ProcessingID')
 		call xml_EndElement(xmlfile, 'ProcessingInfo')
     	
 	end subroutine add_ProcessingInfo
@@ -356,6 +367,9 @@ contains
           call xml_NewElement(xmlfile, 'component')
           call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
           call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
+          if (Input(j)%Units .ne. Output(i)%Units) then
+             call xml_AddAttribute(xmlfile, 'units', trim(Output(i)%Units)//'/'//trim(Input(j)%Units))
+          end if
           call xml_NewElement(xmlfile, 'real')
           call xml_AddCharacters(xmlfile, dreal(TF(i,j)), fmt="s5")
           call xml_EndElement(xmlfile, 'real')

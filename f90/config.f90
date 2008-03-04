@@ -23,9 +23,12 @@ contains
   	doc => parseFile(xmlFile)
 
 	Info%Source = getString(doc,"Source")
+	Info%Project = getString(doc,"Project")
+	Info%Experiment = getString(doc,"Experiment")
+	Info%YearCollected = getInteger(doc,"YearCollected")
 	Info%ProcessedBy = getString(doc,"ProcessedBy")
-	Info%Year = getInteger(doc,"Year")
-	Info%ID = getString(doc,"ID")
+	Info%ProcessingSoftware = getString(doc,"ProcessingSoftware")
+	Info%ProcessingTag = getString(doc,"ProcessingTag")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")
 
@@ -37,9 +40,30 @@ contains
   	  Info%SiteList = trim(listDir)//'/'//trim(Info%SiteList)
     end if
 
-	if (.not.silent) then
-		write(*,*) 'Processing experiment ',trim(Info%Source),' (',Info%Year,')'
-	end if
+    ! Source, Project and ProcessingSoftware are used to create the ID tags
+    if (index(trim(Info%Source),' ')>0) then
+        write(5,*) 'Source field in ',trim(xmlFile),' should not contain spaces'
+        stop
+    end if
+    if (index(trim(Info%Project),' ')>0) then
+        write(5,*) 'Project field in ',trim(xmlFile),' should not contain spaces'
+        stop
+    end if
+    if (index(trim(Info%ProcessingSoftware),' ')>0) then
+        write(5,*) 'ProcessingSoftware field in ',trim(xmlFile),' should not contain spaces'
+        stop
+    end if
+    
+    ! ProcessingTag is added to the end of ProductID. Optional.
+    if ((len_trim(Info%ProcessingTag)>0) .and. (index(trim(Info%ProcessingTag),' ')>0)) then
+        write(5,*) 'ProcessingTag field in ',trim(xmlFile),', if present, should not contain spaces'
+        stop
+    end if
+    
+    ! Otherwise, exit successfully
+    if (.not.silent) then
+		write(*,*) 'Processing experiment ',trim(Info%Experiment),' (',Info%YearCollected,')'
+	end if     
 	
   end subroutine read_xml_config
 

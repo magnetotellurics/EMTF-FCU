@@ -9,21 +9,32 @@ module global
   integer, external     :: iargc
   !*********************************************************
   ! The version only changes if the XML schema changes
-  character(len=3)      :: version='0.3'
+  character(len=3)      :: version='0.4'
   !*********************************************************
   ! The network is always 'EM' !!!
   character(len=2)      :: network='EM'
   !*********************************************************
+  ! The sign convention is always going to be +1
+  character(len=16)     :: sign_convention='exp(+ i\omega t)'
+  !*********************************************************
+  ! The units are always going to be non-SI
+  ! character(len=12)     :: units='[mV/km]/[nT]'
+  character(len=12)     :: magnetic_field_units='[nT]'
+  character(len=12)     :: electric_field_units='[mV/km]'
+  !*********************************************************
 
   type :: UserInfo_t
     character(len=80) :: Source
-!    character(len=4)  :: Year
-    integer           :: Year
-    character(len=80) :: ID
+    character(len=80) :: Project
+    character(len=80) :: Experiment
+!    character(len=4)  :: YearCollected
+    integer           :: YearCollected
     character(len=80) :: ProcessedBy
+    character(len=80) :: ProcessingSoftware
+    character(len=80) :: ProcessingTag
     character(len=80) :: RunList
     character(len=80) :: SiteList
-  end type UserInfo_t   
+  end type UserInfo_t
 
 
   type :: Location_t
@@ -69,6 +80,7 @@ module global
 	real              :: Orientation
 	real              :: Tilt
 	type(Location_t)  :: Location
+	character(len=12) :: Units
   end type Channel_t
 
 
@@ -83,6 +95,8 @@ module global
 
   type :: RemoteRef_t
   	!character(len=80) :: processed_by
+  	character(len=80) :: processing_id
+  	character(len=80) :: sign_convention
   	character(len=80) :: software
   	character(len=80) :: software_version
 	character(len=80) :: remote_ref_type
@@ -98,10 +112,13 @@ contains
 	subroutine init_user_info(Info)
 		type(UserInfo_t), intent(out)  :: Info
 		
-		Info%Source = 'USArray_MT'
-		Info%Year = 2007
-		Info%ID = ''
-		Info%ProcessedBy = 'Gary Egbert (OSU)'
+		Info%Source = 'OSU'
+		Info%Project = 'USArray'
+		Info%Experiment = 'UNKNOWN'
+		Info%YearCollected = 2007
+		Info%ProcessedBy = 'UNKNOWN'
+		Info%ProcessingSoftware = 'EMTF'
+		Info%ProcessingTag = ''
 		Info%RunList = 'USArray_2007_Runs.xml'
 		Info%SiteList = 'USArray_2007_Sites.xml'
 
@@ -148,6 +165,8 @@ contains
 		type(RemoteRef_t), intent(out)  :: Info
 		
 		!Info%processed_by = ' '
+		Info%processing_id = ' '
+		Info%sign_convention = sign_convention
 		Info%software = ' '
 		Info%software_version = ' '
   		Info%remote_ref_type = ' '
@@ -169,5 +188,21 @@ contains
 		Freq%dec_level = 0
 	
 	end subroutine init_freq_info
+
+
+    subroutine init_channel_units(Channel)
+         type(Channel_t), intent(inout) :: Channel
+         
+         if (index(Channel%ID,'H')==1) then
+            Channel%Units = magnetic_field_units
+         else if (index(Channel%ID,'E')==1) then
+            Channel%Units = electric_field_units
+         end if
+         
+         if (.not. silent) then
+             write(*,*) trim(Channel%ID)//' '//trim(Channel%Units)
+         end if
+         
+    end subroutine init_channel_units
 
 end module global

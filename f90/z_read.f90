@@ -117,7 +117,7 @@ contains
     if (.not.silent) then
        write(*,*) trim(sitename),': local ',Site%ID,' remote ',Info%remote_site_id
     end if
-
+    
 	if (index(Info%remote_ref_type,'Remote Reference')>0) then
 		if (len_trim(Info%remote_site_id)>0) then
 			Info%remote_ref = .TRUE.
@@ -125,6 +125,7 @@ contains
 	end if
 
 	!Info%processed_by = processed_by
+	Info%processing_id = sitename
 	Info%software = 'EMTF'
 
     read (zfile,'(a120)',iostat=ios) temp
@@ -165,6 +166,7 @@ contains
        Input(i)%ID = chname
        Input(i)%orientation = orientation
        Input(i)%tilt = tilt
+       call init_channel_units(Input(i))
     end do
 
     do i=1,nch-2
@@ -172,6 +174,7 @@ contains
        Output(i)%ID = chname
        Output(i)%orientation = orientation
        Output(i)%tilt = tilt
+       call init_channel_units(Output(i))
     end do
 
     read (zfile, *) ! read empty line at the end
