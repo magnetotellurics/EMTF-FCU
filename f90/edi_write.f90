@@ -338,8 +338,8 @@ contains
         write (edifile,'(A8)') '>=MTSECT'
 
 !-SECTID
-        lsectid=16
-        call trmstr(sectid,lsectid,empty)
+        lsectid = index(trim(sectid),' ')-1
+        if (lsectid <= 0) lsectid = len_trim(sectid)
         lsectid = min( lsectid, 16)
         write(edifile,*) 'SECTID="', sectid(1:lsectid), '"'
 
