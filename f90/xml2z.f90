@@ -53,8 +53,8 @@ program xml2z
 
   call read_xml_header(zsitename, xmlLocalSite, UserInfo, Info)
   
-  ! Update output file name and initialize output
-  if (index(z_file,'.')==0) then
+  ! Update output file name (../ or ./ allowed) and initialize output
+  if (index(z_file,'.')<=2) then
   	if (Info%remote_ref) then
  		z_file = trim(z_file)//'.zrr'
   	else
