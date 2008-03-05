@@ -60,8 +60,8 @@ contains
   		thisSite => item(sites, i)
   		IDstring = getString(thisSite,"ID")
    		! if this is the correct ID, then pull out all the information from the site tag.
-  		if (trim(IDstring)==id) then
-  			Site%ID = id
+  		if (IDstring(3:5)==id(3:5)) then
+  			Site%ID = IDstring
   			Site%Description = getString(thisSite,"Description")
     		Site%Location%lat = getReal(thisSite,"Latitude")
     		Site%Location%lon = getReal(thisSite,"Longitude")
