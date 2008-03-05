@@ -75,15 +75,14 @@ contains
 	! Clear up all allocated memory
   	call destroy(doc)
 	
-    if (.not.silent) then
-    	if (len_trim(Site%Description)==0) then
-			write(0,*) 'Site description has not been obtained from file ',trim(xmlFile)
-		else
-    		write(*,*) 'Site ',Site%ID,' description is ',Site%Description
-    		write(*,*) 'Location is ', &
-    			Site%Location%lon, Site%Location%lat, Site%Location%elev, Site%Declination
-			write(*,*) 'Run list is ', Site%RunList
- 		end if			
+    if (len_trim(Site%Description)==0) then
+	    write(0,*) 'Site description has not been obtained from file ',trim(xmlFile)
+		exists = .false.
+	else if (.not.silent) then
+    	write(*,*) 'Site ',Site%ID,' description is ',Site%Description
+    	write(*,*) 'Location is ', &
+    		Site%Location%lon, Site%Location%lat, Site%Location%elev, Site%Declination
+		write(*,*) 'Run list is ', Site%RunList		
     end if
     
   end subroutine read_site_list

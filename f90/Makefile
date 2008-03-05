@@ -15,7 +15,7 @@ CONFIG=$(FOX_LIB)/FoX-config
 INCFLAGS=$$($(CONFIG) --fcflags --wxml)
 LIBS=$(FOX_LIB)/objs/lib/libFoX_dom.a $(FOX_LIB)/objs/lib/libFoX_wxml.a $(FOX_LIB)/objs/lib/libFoX_common.a
 
-all: $(PROGS)
+all: $(PROGS) install
 
 z2xml: z2xml.o $(LIBS)
 	$(FC) $(FFLAGS) $(LDFLAGS) -o $@ $< $(OBJS_Z2XML) $$($(CONFIG) --libs --dom)

@@ -58,13 +58,20 @@ contains
   	character(len=5), intent(out)    :: SiteID
   	character(len=5), intent(out)    :: RemoteSiteID
   	character(len=80), intent(out)   :: RunList
+  	character(len=80)                :: info
 	character(len=20)                :: list, abbrev
-  	integer                          :: l, k
+  	integer                          :: l, k, i
   	
   	SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//toupper(sitename(3:3))//sitename(4:5)
 	RunList = ' '
  
-  	l = len_trim(sitename)
+    ! Find spaces in the sitename
+    i = index(trim(sitename),' ')
+    if (i > 0) then
+        l = i-1
+    else
+  	    l = len_trim(sitename)
+  	end if
   	
   	if (l>5) then
   		i = index(sitename,'_')
@@ -95,6 +102,13 @@ contains
 		write(0,*) 'Unable to extract remote reference site from the string ',trim(sitename)
 		RemoteSiteID = ' '
 	end if  	 
+  
+    i = index(sitename,'remote')
+    l = len_trim(sitename)
+    if (i > 0) then
+        write(*,*) 'Using remote site ID from the Z-file header...'
+        RemoteSiteID = sitename(i+7:l)
+    end if
   
   end subroutine parse_z_site_name 
 
