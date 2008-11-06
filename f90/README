@@ -21,14 +21,17 @@ NB: if you move FoX in the file system, reconfigure
    In this case, you need to create an XML configuration
    file which looks like
    
- <Configuration>
- <Source>USArray_MT</Source>
- <Year>2006</Year>
- <ID>EMTF.Egbert</ID>
- <ProcessedBy>Gary Egbert (COAS/OSU)</ProcessedBy>
- <RunList>USArray_2006_Runs.xml</RunList>
- <SiteList>USArray_2006_Sites.xml</SiteList>
- </Configuration>
+<Configuration>
+<Source>OSU</Source>
+<Project>USArray</Project>
+<Experiment>USArray Cascadia</Experiment>
+<YearCollected>2007</YearCollected>    
+<ProcessedBy>Gary Egbert and Prasanta Patro</ProcessedBy>
+<ProcessingSoftware>EMTF</ProcessingSoftware>
+<ProcessingTag></ProcessingTag>
+<RunList>USArray_2007_Runs.xml</RunList>
+<SiteList>USArray_2007_Sites.xml</SiteList>
+</Configuration>
    
    This is where any user-defined information about
    the experiment is stored. The lists, if specified,
