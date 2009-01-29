@@ -9,7 +9,7 @@ program z2xml
 
   character(len=80) :: input_dir='./'
   character(len=80) :: z_file=''
-  character(len=80) :: xml_file='' 
+  character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: zsitename, basename, verbose=''
   type(RemoteRef_t) :: Info
@@ -50,12 +50,12 @@ program z2xml
         silent = .true.
      end if
   end if
-  
+
   ! Update output file name
   if (index(xml_file,'.')==0) then
  	xml_file = trim(xml_file)//'.xml'
   end if
-  
+
   ! Look for configuration file in the input directory
   i = index(z_file,'/',.true.)
   if (i>0) then
@@ -65,7 +65,7 @@ program z2xml
   if (.not. silent) then
     write(*,*) 'Reading configuration file ',config_file
   end if
-  
+
   ! Read the configuration file, if it exists
   inquire (file=config_file,exist=config_exists)
   if (config_exists) then
@@ -79,7 +79,7 @@ program z2xml
   	write(0,*) '<Source>OSU</Source>'
   	write(0,*) '<Project>USArray</Project>'
   	write(0,*) '<Experiment>USArray Cascadia</Experiment>'
-  	write(0,*) '<YearCollected>2007</YearCollected>'    
+  	write(0,*) '<YearCollected>2007</YearCollected>'
   	write(0,*) '<ProcessedBy>Gary Egbert</ProcessedBy>'
   	write(0,*) '<ProcessingSoftware>EMTF</ProcessingSoftware>'
   	write(0,*) '<ProcessingTag></ProcessingTag>'
@@ -92,14 +92,14 @@ program z2xml
     write(0,*) 'Same is true about the optional ProcessingTag.'
   	write(0,*) 'Leave the RunList and SiteList elements out or empty'
   	write(0,*) 'if you do not have XML lists for this experiment.'
-  	return
+  	stop
   end if
-    
+
   ! Initialize input and output
   call initialize_xml_output(xml_file,'MT_TF')
 
   ! Read the Z-file in full
-  
+
   call initialize_z_input(z_file)
 
   call read_z_header(zsitename, zLocalSite, Info)
@@ -107,28 +107,28 @@ program z2xml
   ! Allocate space for channels and transfer functions
   allocate(InputChannel(2), OutputChannel(nch-2))
   allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2))
- 
+
   call read_z_channels(InputChannel, OutputChannel)
- 
+
    do k=1,nf
-     
+
      !write (*,*) 'Reading period number ', k
      call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
   end do
 
   call read_z_notes(Notes)
-  
+
   ! Finished reading Z-file
- 
+
   ! Read information for this site from a list. If successfully read,
-  ! trust this information rather than that from the Z-file 
+  ! trust this information rather than that from the Z-file
   call read_site_list(UserInfo%SiteList, zLocalSite%ID, xmlLocalSite, site_list_exists)
 
   if (len_trim(xmlLocalSite%ID)>0) then
   	call add_USArray_MT_header(xmlLocalSite, UserInfo, Info, Notes)
   else
-  	call add_USArray_MT_header(zLocalSite, UserInfo, Info, Notes)  
+  	call add_USArray_MT_header(zLocalSite, UserInfo, Info, Notes)
   end if
 
   if (Info%remote_ref) then
@@ -137,7 +137,7 @@ program z2xml
   	if (run_list_exists) then
 		call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite, RemoteRun)
 	else
-		call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite)	
+		call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite)
 	end if
   else
   	call add_ProcessingInfo(UserInfo, Info)
@@ -146,19 +146,19 @@ program z2xml
   ! Read runs (e.g. start and end times) information for each of the runs
   ! which were used in processing the data found in the Z-file
   call read_run_list(UserInfo%RunList, zLocalSite%RunList, Run, run_list_exists)
-  
+
   if (run_list_exists) then
   	do i=1,size(Run)
 		call add_Info(Run(i))
-  	end do  
-  
+  	end do
+
   	call new_element('TimeDataCollected')
   	do i=1,size(Run)
 		call add_TimePeriod(Run(i))
   	end do
   	call end_element('TimeDataCollected')
   end if
-  
+
   call new_element('InputChannels')
   do i=1,2
      call add_Channel(InputChannel(i), location=.false.)
@@ -173,18 +173,18 @@ program z2xml
 
   ! Read and write frequency blocks: transfer functions, variance, covariance
   call initialize_xml_freq_block_output(nf)
-  
+
   do k=1,nf
-          
+
      call new_Frequency(F(k))
-     
+
      call add_TF(TF(k,:,:), InputChannel, OutputChannel)
      call add_TFVar(TFVar(k,:,:), InputChannel, OutputChannel)
      call add_InvSigCov(InvSigCov(k,:,:), InputChannel)
      call add_ResidCov(ResidCov(k,:,:), OutputChannel)
 
      call end_element('Frequency')
-     
+
   end do
 
   call end_xml_freq_block_output

@@ -32,9 +32,9 @@ contains
         open (unit=zfile,iostat=ios)
      else
         zfile=55
-        open (unit=zfile,file=fname,status='old',iostat=ios)   
+        open (unit=zfile,file=fname,status='old',iostat=ios)
      end if
-     
+
      if(ios/=0) then
         write(0,*) 'Error opening file:', fname
      endif
@@ -61,10 +61,10 @@ contains
   	character(len=80)                :: info
 	character(len=20)                :: list, abbrev
   	integer                          :: l, k, i
-  	
+
   	SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//toupper(sitename(3:3))//sitename(4:5)
 	RunList = ' '
- 
+
     ! Find spaces in the sitename
     i = index(trim(sitename),' ')
     if (i > 0) then
@@ -72,7 +72,7 @@ contains
     else
   	    l = len_trim(sitename)
   	end if
-  	
+
   	if (l>5) then
   		i = index(sitename,'_')
 		if (i==0) then ! Single Station - create the run list and exit
@@ -80,14 +80,14 @@ contains
 			abbrev = ' '
 		else ! Remote Reference - parse the name of the remote site
 			list = sitename(6:i-1)
-			abbrev = sitename(i+1:l)		
+			abbrev = sitename(i+1:l)
 		end if
 		! In either case, make a list of run names, store them in a string
 		do k=1,len_trim(list)
 			RunList = trim(RunList)//' '//trim(SiteID)//list(k:k)
 		end do
-	end if	
-  
+	end if
+
   	if (len_trim(abbrev)==0) then
   		RemoteSiteID = ' '
   	else if (len_trim(abbrev)==2) then
@@ -96,21 +96,21 @@ contains
   		if (isdigit(abbrev(3:3))) then
   			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
   		else ! Account for additional characters at the end e.g. ORG05bc_H6x
-   			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2) 		
+   			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
   		end if
 	else
 		write(0,*) 'Unable to extract remote reference site from the string ',trim(sitename)
 		RemoteSiteID = ' '
-	end if  	 
-  
+	end if
+
     i = index(sitename,'remote')
     l = len_trim(sitename)
     if (i > 0) then
         write(*,*) 'Using remote site ID from the Z-file header...'
         RemoteSiteID = sitename(i+7:l)
     end if
-  
-  end subroutine parse_z_site_name 
+
+  end subroutine parse_z_site_name
 
 
   subroutine read_z_header(sitename, Site, Info)
@@ -131,7 +131,7 @@ contains
     if (.not.silent) then
        write(*,*) trim(sitename),': local ',Site%ID,' remote ',Info%remote_site_id
     end if
-    
+
 	if (index(Info%remote_ref_type,'Remote Reference')>0) then
 		if (len_trim(Info%remote_site_id)>0) then
 			Info%remote_ref = .TRUE.
@@ -146,13 +146,13 @@ contains
     i = index(temp,'coordinate')
     j = index(temp,'declination')
 
-    read (temp(i+12:j-1),*) Site%Location%lat, Site%Location%lon 
+    read (temp(i+12:j-1),*) Site%Location%lat, Site%Location%lon
     read (temp(j+12:120),*) Site%Declination
 
     read (zfile,'(a120)',iostat=ios) temp
     i = index(temp,'channels')
     j = index(temp,'frequencies')
-    
+
     read (temp(i+9:j-1),*) nch
     read (temp(j+12:120),*) nf
 
@@ -195,7 +195,7 @@ contains
 
   end subroutine read_z_channels
 
-  
+
   subroutine read_z_period(F, TF, TFVar, InvSigCov, ResidCov)
     type(FreqInfo_t),           intent(out)   :: F
     complex(8), dimension(:,:), intent(inout) :: TF
@@ -207,11 +207,11 @@ contains
     integer           :: num_points
     real              :: sampling_freq
     character(len=10) :: units
-    
+
     read (zfile,'(a100)',iostat=ios) temp
     i = index(temp,'period')
     !j = index(temp,'decimation level')
-    
+
     read (temp(i+8:i+24),*) period
     !read (temp(i+8:j-1),*) period
     !read (temp(j+16:100),'(i3)') dec_level
@@ -222,7 +222,7 @@ contains
     read (zfile,'(a100)',iostat=ios) temp
     i = index(temp,'data point')
     !j = index(temp,'sampling freq')
-    
+
     read (temp(i+10:i+18),*) num_points
     !read (temp(i+10:j-1),'(i8)') num_points
     !read (temp(j+14:100),*) sampling_freq, units
@@ -248,7 +248,7 @@ contains
        end do
        read (zfile,*)
     end do
-    
+
     ResidCov=0.0d0
     read (zfile,*) temp !Residual Covariance
     do i=1,nch-2
@@ -271,6 +271,18 @@ contains
   end subroutine read_z_period
 
 
+  subroutine rotate_z_period(Input, Output, TF, TFVar, InvSigCov, ResidCov)
+    type(Channel_t), dimension(:), intent(inout)   :: Input
+    type(Channel_t), dimension(:), intent(inout)   :: Output
+    complex(8),      dimension(:,:), intent(inout) :: TF
+    real(8),         dimension(:,:), intent(inout) :: TFVar
+    complex(8),      dimension(:,:), intent(inout) :: InvSigCov
+    complex(8),      dimension(:,:), intent(inout) :: ResidCov
+
+
+  end subroutine rotate_z_period
+
+
   subroutine read_z_notes(Notes)
   	character(100), dimension(:), pointer :: Notes
 	integer                               :: n
@@ -288,7 +300,7 @@ contains
 	do i=1,n
 		read (zfile,'(a100)',iostat=ios) Notes(i)
 	end do
-    
+
   end subroutine read_z_notes
 
 
