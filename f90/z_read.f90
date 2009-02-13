@@ -16,6 +16,8 @@ module z_read
   public :: read_z_header
   public :: read_z_channels
   public :: read_z_period
+  public :: rotate_z_channels
+  public :: rotate_z_period
   public :: read_z_notes
   public :: end_z_input
 
@@ -164,21 +166,29 @@ contains
   end subroutine read_z_header
 
 
-  subroutine read_z_channels(Input, Output)
+  subroutine read_z_channels(Input, Output, decl)
     type(Channel_t), dimension(:), intent(inout) :: Input
     type(Channel_t), dimension(:), intent(inout) :: Output
-    character(len=3)               :: temp
-    integer                        :: num
-    character(len=80)              :: chname
-    real                           :: orientation
-    real                           :: tilt
+    real(8), intent(inout), optional             :: decl
+    real(8)                          :: declination
+    character(len=3)                 :: temp
+    integer                          :: num
+    character(len=80)                :: chname
+    real                             :: orientation
+    real                             :: tilt
 
     read (zfile,*) temp !read the first comment
+
+    if (.not. present(decl)) then
+    	declination = 0.0
+    else
+    	declination = decl
+    end if
 
     do i=1,2
        read (zfile,*) num, orientation, tilt, temp, chname
        Input(i)%ID = chname
-       Input(i)%orientation = orientation
+       Input(i)%orientation = orientation + declination
        Input(i)%tilt = tilt
        call init_channel_units(Input(i))
     end do
@@ -186,7 +196,7 @@ contains
     do i=1,nch-2
        read (zfile,*) num, orientation, tilt, temp, chname
        Output(i)%ID = chname
-       Output(i)%orientation = orientation
+       Output(i)%orientation = orientation + declination
        Output(i)%tilt = tilt
        call init_channel_units(Output(i))
     end do
@@ -271,14 +281,105 @@ contains
   end subroutine read_z_period
 
 
-  subroutine rotate_z_period(Input, Output, TF, TFVar, InvSigCov, ResidCov)
+  subroutine rotate_z_channels(Input, Output, U, V, azimuth)
     type(Channel_t), dimension(:), intent(inout)   :: Input
     type(Channel_t), dimension(:), intent(inout)   :: Output
+   	real(8),         dimension(:,:), intent(out)   :: U, V ! rotation matrices
+   	real(8),         optional, intent(inout)       :: azimuth ! new azimuth
+    ! local variables
+    real(8)                                        :: theta0
+    real(8),         dimension(:), allocatable     :: theta, thetanew
+    integer                                        :: nch, i, j, istat
+
+    nch = size(Input) + size(Output)
+
+	! note: U and V must be allocated before calling this subroutine
+    allocate(theta(nch), thetanew(nch), stat = istat)
+
+	if (.not. present(azimuth)) then
+    	theta0 = 0.0
+    else
+    	theta0 = azimuth
+	end if
+
+    ! assuming Hx and Hy are the input channels, - pretty much always the case
+    theta(1) = Input(1)%orientation; thetanew(1) = theta0
+    theta(2) = Input(2)%orientation; thetanew(2) = theta0 + 90.0
+
+    U(1,1) = cos(D2R*(theta(1) - theta0))
+    U(1,2) = sin(D2R*(theta(1) - theta0))
+    U(2,1) = cos(D2R*(theta(2) - theta0))
+    U(2,2) = sin(D2R*(theta(2) - theta0))
+
+	call inverse22(U,U);
+
+	! if there are 3 output channels, assume the first is Hz; otherwise no Hz
+	if (size(Output) == 3) then
+
+		theta(3) = Output(1)%orientation; thetanew(3) = 0.0
+		theta(4) = Output(2)%orientation; thetanew(4) = theta0
+		theta(5) = Output(3)%orientation; thetanew(5) = theta0 + 90.0
+
+		V(:,:) = 0.0
+		V(1,1) = 1.0
+		V(2,2) = cos(D2R*(theta(4) - theta0))
+		V(2,3) = cos(D2R*(theta(5) - theta0))
+		V(3,2) = sin(D2R*(theta(4) - theta0))
+		V(3,3) = sin(D2R*(theta(5) - theta0))
+
+	else if (size(Output) == 2) then
+
+		theta(3) = Output(1)%orientation; thetanew(3) = theta0
+		theta(4) = Output(2)%orientation; thetanew(4) = theta0 + 90.0
+
+    	V(1,1) = cos(D2R*(theta(3) - theta0))
+    	V(1,2) = cos(D2R*(theta(4) - theta0))
+    	V(2,1) = sin(D2R*(theta(3) - theta0))
+    	V(2,2) = sin(D2R*(theta(4) - theta0))
+
+	else
+		write(*,*) 'Unable to create rotation matrices: too many channels...'
+		deallocate(theta, thetanew)
+		call identity(U)
+		call identity(V)
+		return
+	end if
+
+	! define the new channel orientations
+    do i=1,2
+		Input(i)%orientation = thetanew(i)
+    end do
+
+    do i=1,nch-2
+		Output(i)%orientation = thetanew(i+2)
+    end do
+
+	deallocate(theta, thetanew)
+
+  end subroutine rotate_z_channels
+
+
+  subroutine rotate_z_period(U, V, TF, TFVar, InvSigCov, ResidCov)
+   	real(8),         dimension(:,:), intent(in)    :: U ! rotation matrix size 2x2 for input channels
+   	real(8),         dimension(:,:), intent(in)    :: V ! rotation matrix size (nch-2)x(nch-2) for output channels
     complex(8),      dimension(:,:), intent(inout) :: TF
     real(8),         dimension(:,:), intent(inout) :: TFVar
     complex(8),      dimension(:,:), intent(inout) :: InvSigCov
     complex(8),      dimension(:,:), intent(inout) :: ResidCov
+    ! local variables
+    integer                                        :: i, j
 
+	! rotate the transfer functions and covariance matrices (using * gives strange results!)
+	TF = matmul(V, matmul(TF,transpose(U)))
+	InvSigCov = matmul(U, matmul(InvSigCov,transpose(U)))
+	ResidCov = matmul(V, matmul(ResidCov,transpose(V)))
+
+	! finally, update the variances
+    do i=1,size(V,1)
+       do j=1,2
+          TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))/2
+       end do
+    end do
 
   end subroutine rotate_z_period
 

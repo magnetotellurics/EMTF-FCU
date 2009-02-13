@@ -8,6 +8,11 @@ module utils
 implicit none
 
 ! **********************************************************************
+!  subroutines to compute 2x2 and 3x3 matrix inverses
+
+public                     ::  inverse22, inverse33
+
+! **********************************************************************
 !  ascii character functions
 
 public                     ::  toupper, isdigit
@@ -163,6 +168,103 @@ integer, public, parameter :: ascii_del = 127                        ! delete
 contains
 
 ! **********************************************************************
+! identity(): outputs an identity matrix of the same size as the input
+! (C) Anna Kelbert, 2009
+
+subroutine identity(a)
+
+  real(8), intent(inout), dimension(:,:) :: a
+  integer :: i, n
+
+  if (size(a,1) /= size(a,2)) then
+  	write(*,*) 'Error in identity: not a square matrix'
+  	return
+  end if
+
+  n = size(a,1)
+
+  a = 0.0d0
+
+  do i=1,n
+  	a(i,i) = 1.0d0
+  end do
+
+end subroutine identity
+
+! **********************************************************************
+! inverse22(): computes the inverse of a 2x2 real double precision matrix
+! (C) Anna Kelbert, 2009
+
+subroutine inverse22(a,b)
+
+  real(8), intent(in),  dimension(:,:) :: a
+  real(8), intent(out), dimension(:,:) :: b
+  real(8)						       :: det
+
+  if ((size(a,1) /= 2) .or. (size(a,2) /= 2)) then
+  	write(*,*) 'Error in inverse22: input matrix is not 2x2'
+  	return
+  else if ((size(b,1) /= 2) .or. (size(b,2) /= 2)) then
+  	write(*,*) 'Error in inverse22: output matrix is not 2x2'
+  	return
+  end if
+
+  det = a(1,1) * a(2,2) - a(1,2) * a(2,1)
+
+  if (abs(det) < 1.0e-8) then
+     write(*,*) 'Error in inverse22: zero determinant'
+     return
+  end if
+
+  b(1,1) =  a(2,2)/det
+  b(2,2) =  a(1,1)/det
+  b(1,2) = -a(1,2)/det
+  b(2,1) = -a(2,1)/det
+
+end subroutine inverse22
+
+
+! **********************************************************************
+! inverse33(): computes the inverse of a 3x3 real double precision matrix
+! (C) Anna Kelbert, 2009
+
+subroutine inverse33(a,b)
+
+  real(8), intent(in),  dimension(:,:) :: a
+  real(8), intent(out), dimension(:,:) :: b
+  real(8)						       :: det
+
+  if ((size(a,1) /= 3) .or. (size(a,2) /= 3)) then
+  	write(*,*) 'Error in inverse33: input matrix is not 3x3'
+  	return
+  else if ((size(b,1) /= 3) .or. (size(b,2) /= 3)) then
+  	write(*,*) 'Error in inverse33: output matrix is not 3x3'
+  	return
+  end if
+
+  det = a(1,1) * (a(2,2) * a(3,3) - a(2,3) * a(3,2)) &
+       & + a(1,2) * (a(2,3) * a(3,1) - a(2,1) * a(3,3)) &
+       & + a(1,3) * (a(2,1) * a(3,2) - a(2,2) * a(3,1))
+
+  if (abs(det) < 1.0e-8) then
+     write(*,*) 'Error in inverse33: zero determinant'
+     return
+  end if
+
+  b(1,1) = (a(2,2) * a(3,3) - a(2,3) * a(3,2)) / det
+  b(2,1) = (a(2,3) * a(3,1) - a(2,1) * a(3,3)) / det
+  b(3,1) = (a(2,1) * a(3,2) - a(2,2) * a(3,1)) / det
+  b(1,2) = (a(3,2) * a(1,3) - a(3,3) * a(1,2)) / det
+  b(2,2) = (a(3,3) * a(1,1) - a(3,1) * a(1,3)) / det
+  b(3,2) = (a(3,1) * a(1,2) - a(3,2) * a(1,1)) / det
+  b(1,3) = (a(1,2) * a(2,3) - a(1,3) * a(2,2)) / det
+  b(2,3) = (a(1,3) * a(2,1) - a(1,1) * a(2,3)) / det
+  b(3,3) = (a(1,1) * a(2,2) - a(1,2) * a(2,1)) / det
+
+end subroutine inverse33
+
+
+! **********************************************************************
 !  toupper(): if lowercase, change to uppercase
 ! Extracted from Fortran 95 module character_functions
 ! (C) 2003 Purple Sage Computing Solutions, Inc.
@@ -229,11 +331,11 @@ end function isdigit
 
 
 ! **********************************************************************
-! Convert latitude or longitude from a decimal to the 
+! Convert latitude or longitude from a decimal to the
 ! sexagesimal system (degrees, minutes & seconds);
 ! the result is a character string length 16.
 ! Written by: Anna Kelbert, 3 Nov 2007
-! This subroutine is distributed under the terms of 
+! This subroutine is distributed under the terms of
 ! the GNU Lesser General Public License.
 
   function deg2char(loc) result (cloc)
@@ -250,9 +352,9 @@ end function isdigit
 	logical                 :: negative
 
 ! ----------------------------------------------------------------------
-  
+
   	negative = .false.
-    if (loc < 0) negative = .true. 
+    if (loc < 0) negative = .true.
 	aloc = abs(loc)
 
 	d = floor(aloc)
@@ -260,18 +362,18 @@ end function isdigit
 		write(cdeg,'(i4)') -d
 	else
 		write(cdeg,'(i4)') d
-	end if	
-  	
+	end if
+
 	m = floor((aloc-d)*60)
 	write(cmin,'(i2)') m
 
 	s = ((aloc-d)*60-m)*60
 	write(csec,'(f5.2)') s
 
-	cloc = cdeg//':'//cmin//':'//csec	
+	cloc = cdeg//':'//cmin//':'//csec
 
 ! ----------------------------------------------------------------------
-  
+
   end function deg2char
 
 ! **********************************************************************

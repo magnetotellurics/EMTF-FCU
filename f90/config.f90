@@ -9,16 +9,16 @@ module config
 	type(Node), pointer  :: doc
 
 	public  :: read_xml_config
-	
+
 contains
-  
+
   subroutine read_xml_config(xmlFile, Info, listDir)
     character(len=*), intent(in)    :: xmlFile
 	type(UserInfo_t), intent(out)   :: Info
 	character(len=*), intent(in), optional :: listDir
-  	  	
+
   	call init_user_info(Info)
-  	  	
+
   	! Load in the document
   	doc => parseFile(xmlFile)
 
@@ -26,6 +26,7 @@ contains
 	Info%Project = getString(doc,"Project")
 	Info%Experiment = getString(doc,"Experiment")
 	Info%YearCollected = getInteger(doc,"YearCollected")
+	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")
 	Info%ProcessedBy = getString(doc,"ProcessedBy")
 	Info%ProcessingSoftware = getString(doc,"ProcessingSoftware")
 	Info%ProcessingTag = getString(doc,"ProcessingTag")
@@ -34,7 +35,7 @@ contains
 
 	! Clear up all allocated memory
   	call destroy(doc)
-  	
+
   	if (present(listDir)) then
   	  Info%RunList = trim(listDir)//'/'//trim(Info%RunList)
   	  Info%SiteList = trim(listDir)//'/'//trim(Info%SiteList)
@@ -53,18 +54,18 @@ contains
         write(5,*) 'ProcessingSoftware field in ',trim(xmlFile),' should not contain spaces'
         stop
     end if
-    
+
     ! ProcessingTag is added to the end of ProductID. Optional.
     if ((len_trim(Info%ProcessingTag)>0) .and. (index(trim(Info%ProcessingTag),' ')>0)) then
         write(5,*) 'ProcessingTag field in ',trim(xmlFile),', if present, should not contain spaces'
         stop
     end if
-    
+
     ! Otherwise, exit successfully
     if (.not.silent) then
 		write(*,*) 'Processing experiment ',trim(Info%Experiment),' (',Info%YearCollected,')'
-	end if     
-	
+	end if
+
   end subroutine read_xml_config
 
 end module config

@@ -24,8 +24,9 @@ program z2xml
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
+  real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
   logical           :: config_exists, run_list_exists, site_list_exists
-  integer           :: i, j, k, n, l
+  integer           :: i, j, k, n, l, istat
 
   n = iargc()
 
@@ -80,16 +81,20 @@ program z2xml
   	write(0,*) '<Project>USArray</Project>'
   	write(0,*) '<Experiment>USArray Cascadia</Experiment>'
   	write(0,*) '<YearCollected>2007</YearCollected>'
+  	write(0,*) '<OrthogonalGeographic>0</OrthogonalGeographic>'
   	write(0,*) '<ProcessedBy>Gary Egbert</ProcessedBy>'
   	write(0,*) '<ProcessingSoftware>EMTF</ProcessingSoftware>'
   	write(0,*) '<ProcessingTag></ProcessingTag>'
-  	write(0,*) '<RunList>USArray_2007_Runs.xml</RunList>'
-  	write(0,*) '<SiteList>USArray_2007_Sites.xml</SiteList>'
+  	write(0,*) '<RunList>Runs.xml</RunList>'
+  	write(0,*) '<SiteList>Sites.xml</SiteList>'
   	write(0,*) '</Configuration>'
   	write(0,*)
   	write(0,*) 'Source, Project and ProcessingSoftware help identify'
     write(0,*) 'a product in SPADE. They should not contain spaces.'
     write(0,*) 'Same is true about the optional ProcessingTag.'
+    write(0,*) 'OrthogonalGeographic > 0 requests a conversion of all'
+    write(0,*) 'data to orthogonal geographic coordinates; only works'
+    write(0,*) 'if there are four or five channels.'
   	write(0,*) 'Leave the RunList and SiteList elements out or empty'
   	write(0,*) 'if you do not have XML lists for this experiment.'
   	stop
@@ -105,15 +110,26 @@ program z2xml
   call read_z_header(zsitename, zLocalSite, Info)
 
   ! Allocate space for channels and transfer functions
-  allocate(InputChannel(2), OutputChannel(nch-2))
-  allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2))
+  allocate(InputChannel(2), OutputChannel(nch-2), stat=istat)
+  allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2), stat=istat)
+  allocate(U(2,2), V(nch-2,nch-2), stat=istat)
 
-  call read_z_channels(InputChannel, OutputChannel)
+  call read_z_channels(InputChannel, OutputChannel, zLocalSite%Declination)
 
-   do k=1,nf
+  ! Initialize conversion to orthogonal geographic coords
+  if (UserInfo%OrthogonalGeographic > 0) then
+     call rotate_z_channels(InputChannel, OutputChannel, U, V)
+  end if
+
+  do k=1,nf
 
      !write (*,*) 'Reading period number ', k
      call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+
+     ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
+     if (UserInfo%OrthogonalGeographic > 0) then
+     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     end if
 
   end do
 

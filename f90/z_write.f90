@@ -25,8 +25,8 @@ contains
      character(20)		  :: str
 
      zfile=55
-     open (unit=zfile,file=fname,status='unknown',iostat=ios)   
-     
+     open (unit=zfile,file=fname,status='unknown',iostat=ios)
+
      if(ios/=0) then
         write(0,*) 'Error opening file:', fname
      endif
@@ -40,12 +40,14 @@ contains
 	type(RemoteRef_t), intent(in)    :: Info
 
 !...  write header information
+!...  declination does not mean what you think it does:
+!...  it is set to zero if channel orientations are correct.
 
     write (zfile,*) 'TRANSFER FUNCTIONS IN MEASUREMENT COORDINATES'
     write (zfile,*) '********* WITH FULL ERROR COVARIANCE ********'
     write (zfile,'(a80)') Info%remote_ref_type
     write (zfile,'(a12,a80)') 'station    :', sitename
-    write(zfile,105) Site%Location%lat, Site%Location%lon, Site%Declination
+    write(zfile,105) Site%Location%lat, Site%Location%lon, 0.0d0
     write(zfile,110) nch,nf
 
 100   format('station    : ',a20)
@@ -53,7 +55,7 @@ contains
 110   format('number of channels ',i3,2x,' number of frequencies',i4)
 
   end subroutine write_z_header
-  
+
 
   subroutine write_z_channels(sitename, Input, Output)
   	character(len=*), intent(in)   :: sitename
@@ -82,7 +84,7 @@ contains
 
   end subroutine write_z_channels
 
-  
+
   subroutine write_z_period(F, TF, TFVar, InvSigCov, ResidCov)
     type(FreqInfo_t),           intent(in)   :: F
     complex(8), dimension(:,:), intent(in)   :: TF
@@ -91,15 +93,15 @@ contains
     complex(8), dimension(:,:), intent(in)   :: ResidCov
     real(8)           :: period
     !real              :: sampling_freq
-    
+
     !sampling_freq = 0.0
-    
+
     if (trim(F%info_type)=='period') then
     	period = F%value
     else
     	period = 1.0d0/F%value
-    end if    
-    
+    end if
+
     write (zfile,121) period
     !write (zfile,125) F%num_points, sampling_freq
     write (zfile,126) F%num_points
@@ -121,7 +123,7 @@ contains
        end do
        write (zfile,*)
     end do
-    
+
 !...        RESIDUAL COVARIANCE
     write(zfile,*) 'Residual Covariance'
     do i=1,nch-2
