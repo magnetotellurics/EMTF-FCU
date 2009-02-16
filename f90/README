@@ -25,12 +25,13 @@ NB: if you move FoX in the file system, reconfigure
 <Source>OSU</Source>
 <Project>USArray</Project>
 <Experiment>USArray Cascadia</Experiment>
-<YearCollected>2007</YearCollected>    
+<YearCollected>2007</YearCollected>
+<OrthogonalGeographic>1</OrthogonalGeographic>    
 <ProcessedBy>Gary Egbert and Prasanta Patro</ProcessedBy>
 <ProcessingSoftware>EMTF</ProcessingSoftware>
 <ProcessingTag></ProcessingTag>
-<RunList>USArray_2007_Runs.xml</RunList>
-<SiteList>USArray_2007_Sites.xml</SiteList>
+<RunList>Runs.xml</RunList>
+<SiteList>Sites.xml</SiteList>
 </Configuration>
    
    This is where any user-defined information about
@@ -51,3 +52,22 @@ NB: If you have the lists, use them by first running
  Anna Kelbert
  11 Nov 2007  
  
+
+PS FoX example:
+
+
+doc => parseFile("input.xml")
+
+nlist => getElementsByTagname(doc, "interestingElement")
+
+do i = 0, getLength(nlist)-1
+  np => item(nlist, i)
+
+  call extractDataAttribute(np, "att", value)
+
+  if (value==somethingInteresting) then
+    call extractDataContent(np, data)
+  endif
+enddo
+
+call destroy(doc)
