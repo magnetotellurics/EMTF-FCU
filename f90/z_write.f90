@@ -24,7 +24,7 @@ contains
      integer			  :: ios
      character(20)		  :: str
 
-     zfile=55
+     zfile=56
      open (unit=zfile,file=fname,status='unknown',iostat=ios)
 
      if(ios/=0) then
@@ -34,17 +34,28 @@ contains
   end subroutine initialize_z_output
 
 
-  subroutine write_z_header(sitename, Site, Info)
+  subroutine write_z_header(sitename, Site, Info, header1, header2)
     character(len=80), intent(in)    :: sitename
     type(Site_t),  intent(in)        :: Site
 	type(RemoteRef_t), intent(in)    :: Info
+	character(len=80), optional, intent(in)  :: header1, header2
+
+	if (.not. present(header1)) then
+    	write (zfile,*) 'TRANSFER FUNCTIONS IN MEASUREMENT COORDINATES'
+    else
+    	write (zfile,*) trim(header1)
+	end if
+
+	if (.not. present(header2)) then
+    	write (zfile,*) '********* WITH FULL ERROR COVARIANCE ********'
+    else
+    	write (zfile,*) trim(header2)
+	end if
 
 !...  write header information
 !...  declination does not mean what you think it does:
 !...  it is set to zero if channel orientations are correct.
 
-    write (zfile,*) 'TRANSFER FUNCTIONS IN MEASUREMENT COORDINATES'
-    write (zfile,*) '********* WITH FULL ERROR COVARIANCE ********'
     write (zfile,'(a80)') Info%remote_ref_type
     write (zfile,'(a12,a80)') 'station    :', sitename
     write(zfile,105) Site%Location%lat, Site%Location%lon, 0.0d0

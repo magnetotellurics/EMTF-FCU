@@ -5,6 +5,7 @@ module global
 
   integer, save         :: nch, nf
   logical, save         :: silent=.false.
+  logical, save         :: rotate=.false.
   character(len=10)     :: date, time, zone
   integer, external     :: iargc
   !*********************************************************

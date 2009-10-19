@@ -6,9 +6,9 @@ program z2edi
   implicit none
 
   character(len=80) :: z_file=''
-  character(len=80) :: edi_file=''  
-  character(len=80) :: site_info_list='USArray_2006_Sites.xml'
-  character(len=80) :: run_info_list='USArray_2006_Runs.xml'
+  character(len=80) :: edi_file=''
+  character(len=80) :: site_info_list='Sites.xml'
+  character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favourite station'
   character(len=80) :: zsitename, basename, verbose=''
   type(UserInfo_t)  :: UserInfo
@@ -54,23 +54,23 @@ program z2edi
   if (index(edi_file,'.')==0) then
  	edi_file = trim(edi_file)//'.edi'
   end if
-  
+
   ! Initialize input
   call initialize_z_input(z_file)
 
   call read_z_header(zsitename, zLocalSite, Info)
- 
+
   ! Read and write channels
   allocate(InputChannel(2), OutputChannel(nch-2))
   allocate(F(nf),TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2))
 
   call read_z_channels(InputChannel, OutputChannel)
-  
+
   do k=1,nf
-     
+
      !write (*,*) 'Reading period number ', k
      call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
-     
+
   end do
 
   call date_and_time(date)

@@ -5,12 +5,13 @@ FOX_LIB = ../FoX
 
 include $(FOX_LIB)/arch.make
 
-PROGS = z2edi xml2z z2xml xml2edi
+PROGS = z2edi xml2z z2xml xml2edi z2z
 BIN_DIR = ~/data/bin
 OBJS_Z2XML   = global.o parse_dom.o z_read.o xml_write.o read_lists.o utils.o config.o
 OBJS_XML2Z   = global.o parse_dom.o xml_read.o z_write.o
 OBJS_XML2EDI = global.o parse_dom.o xml_read.o edi_write.o utils.o
 OBJS_Z2EDI   = global.o z_read.o edi_write.o utils.o
+OBJS_Z2Z     = global.o z_read.o z_write.o utils.o
 CONFIG=$(FOX_LIB)/FoX-config
 INCFLAGS=$$($(CONFIG) --fcflags --wxml)
 LIBS=$(FOX_LIB)/objs/lib/libFoX_dom.a $(FOX_LIB)/objs/lib/libFoX_wxml.a $(FOX_LIB)/objs/lib/libFoX_common.a
@@ -29,6 +30,9 @@ xml2edi: xml2edi.o $(LIBS)
 z2edi: z2edi.o
 	$(FC) $(FFLAGS) $(LDFLAGS) -o $@ $< $(OBJS_Z2EDI) $$($(CONFIG) --libs --dom)
 
+z2z: z2z.o
+	$(FC) $(FFLAGS) $(LDFLAGS) -o $@ $< $(OBJS_Z2Z) $$($(CONFIG) --libs --dom)
+
 z2xml.o: z_read.o xml_write.o read_lists.o config.o
 
 xml2z.o: xml_read.o z_write.o
@@ -36,6 +40,8 @@ xml2z.o: xml_read.o z_write.o
 xml2edi.o: xml_read.o edi_write.o
 
 z2edi.o: z_read.o edi_write.o
+
+z2z.o: z_read.o z_write.o
 
 z_read.o: global.o utils.o
 
