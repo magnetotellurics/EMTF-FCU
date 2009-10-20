@@ -11,7 +11,7 @@
 ! by the Free Software Foundation.                                                !
 !                                                                                 !
 ! This software is distributed in the hope that it will be useful, but WITHOUT    !
-! ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   ! 
+! ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   !
 ! FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.  !
 !                                                                                 !
 ! Copyright (C) Anna Kelbert, 2007                                                !
@@ -46,11 +46,11 @@ module parse_dom
 	public :: getIntegerAttr, getInteger
 
 contains
-  
+
 ! *****************************************************************
-! Get the attribute with tag attrName from the first child element 
+! Get the attribute with tag attrName from the first child element
 ! of domNode with tag xmlName. Store the result in a string.
-  
+
     function getStringAttr(domNode, xmlName, attrName) result (str)
 	type(Node), pointer             :: domNode
 	type(NodeList), pointer         :: nodes
@@ -83,7 +83,7 @@ contains
 		write(0,*) 'XML Error: no tag ',trim(xmlName)
 		return
 	end if
-	
+
 	hasAttr = .false.
 	! Find the first child of this node with the tag and attribute of interest
 	do i=0,getLength(list)-1
@@ -94,25 +94,25 @@ contains
 			exit
       	end if
     end do
-    
+
     if (.not.hasAttr) then
       	write(0,*) 'XML Error: no child ',trim(xmlName),' with attribute ',trim(attrName)
       	return
-    end if 
+    end if
 
   end function getStringAttr
-  
+
 ! *****************************************************************
-! Get the attribute with tag attrName from the first child element 
+! Get the attribute with tag attrName from the first child element
 ! of domNode with tag xmlName. Store the result as a real value.
-  
+
   function getRealAttr(domNode, xmlName, attrName) result (value)
 	type(Node), pointer             :: domNode
     character(len=*), intent(in)    :: xmlName
     character(len=*), intent(in)    :: attrName
 	character(len=80)               :: str
  	real(8)                         :: value
-  	
+
 	! Initialize output
 	value = 0.0d0
 
@@ -121,7 +121,7 @@ contains
 		write(0,*) 'Error: pointer not associated in getStringAttr'
 		return
 	end if
-	
+
 	str = getStringAttr(domNode, xmlName, attrName)
 
 	if (len_trim(str)>0) then
@@ -134,22 +134,22 @@ contains
 			read(str, '(f9.6)') value
 		end if
 	else
-		write(0,*) 'XML Error: unable to convert the attribute ',trim(attrName),' to a real value'	
-	end if		
+		write(0,*) 'XML Error: unable to convert the attribute ',trim(attrName),' to a real value'
+	end if
 
   end function getRealAttr
-   
+
 ! *****************************************************************
-! Get the attribute with tag attrName from the first child element 
+! Get the attribute with tag attrName from the first child element
 ! of domNode with tag xmlName. Store the result as an integer.
-  
+
   function getIntegerAttr(domNode, xmlName, attrName) result (value)
 	type(Node), pointer             :: domNode
     character(len=*), intent(in)    :: xmlName
     character(len=*), intent(in)    :: attrName
 	character(len=80)               :: str
  	integer                         :: value
-  	
+
 	! Initialize output
 	value = 0
 
@@ -158,21 +158,21 @@ contains
 		write(0,*) 'Error: pointer not associated in getStringAttr'
 		return
 	end if
-	
+
 	str = getStringAttr(domNode, xmlName, attrName)
 
 	if (len_trim(str)>0) then
 		read(str, '(i8)') value
 	else
-		write(0,*) 'XML Error: unable to convert the attribute ',trim(attrName),' to an integer'	
-	end if		
+		write(0,*) 'XML Error: unable to convert the attribute ',trim(attrName),' to an integer'
+	end if
 
   end function getIntegerAttr
-    
+
 ! *****************************************************************
-! Get the text node from the first child element 
+! Get the text node from the first child element
 ! of domNode with tag xmlName. Store the result in a string.
-  
+
   function getString(domNode, xmlName, attrName, attrValue) result (str)
 	type(Node), pointer             :: domNode
     character(len=*), intent(in)    :: xmlName
@@ -189,10 +189,10 @@ contains
 		write(0,*) 'Error: pointer not associated in getStringAttr'
 		return
 	end if
-	
+
 	if (getLocalName(domNode)==trim(xmlName)) then
 
-		! First try the text node of the input node	
+		! First try the text node of the input node
 		if (present(attrName)) then
 			if (hasAttribute(domNode, attrName)) then
 				if (present(attrValue)) then
@@ -208,22 +208,22 @@ contains
 		end if
 		! c) the tag name is correct and the attribute requirement is not specified
 		textNode => domNode
-	else		
-	
+	else
+
 		! If that doesn't work, try all child elements
 		list => getElementsByTagName(domNode, trim(xmlName))
 		if (getLength(list)<1) then
 			write(0,*) 'XML Error: no tag ',trim(xmlName)
 			return
 		end if
-		
+
 		if (present(attrName)) then
 			hasAttr = .false.
 			! Find the first child of this node with the tag and attribute of interest
 			do i=0,getLength(list)-1
 				textNode => item(list, i)
 	    		if (hasAttribute(textNode, attrName)) then
-	    			if (present(attrValue)) then    			
+	    			if (present(attrValue)) then
 	      				if (getAttribute(textNode, attrName)==trim(attrValue)) then
 	      					hasAttr = .true.
 	      					exit
@@ -237,14 +237,14 @@ contains
 	      	if (.not.hasAttr) then
 	      		write(0,*) 'XML Error: no child ',trim(xmlName),' with this value of attribute ',trim(attrName)
 	      		return
-	      	end if 
+	      	end if
 		else
 	  		! Take the first child of this node that has the tag of interest
 			textNode => item(list, 0)
 		end if
-	
+
 	end if
-	
+
   	! and we know that the data we are interested in is in the text node which is the first child of that node.
   	if (hasChildNodes(textNode)) then
 		str = getData(getFirstChild(textNode))
@@ -254,11 +254,11 @@ contains
 	end if
 
   end function getString
-  
+
 ! *****************************************************************
-! Get the text node from the first child element 
+! Get the text node from the first child element
 ! of domNode with tag xmlName. Store the result as a real value.
-  
+
   function getReal(domNode, xmlName, attrName, attrValue) result (value)
 	type(Node), pointer             :: domNode
     character(len=*), intent(in)    :: xmlName
@@ -266,7 +266,7 @@ contains
     character(len=*), intent(in), optional  :: attrValue
 	character(len=80)               :: str
  	real(8)                         :: value
-  	
+
 	! Initialize output
 	value = 0.0d0
 
@@ -275,14 +275,14 @@ contains
 		write(0,*) 'Error: pointer not associated in getStringAttr'
 		return
 	end if
-	
+
 	if (present(attrValue)) then
 		str = getString(domNode, xmlName, attrName, attrValue)
 	else if (present(attrName)) then
 		str = getString(domNode, xmlName, attrName)
 	else
 		str = getString(domNode, xmlName)
-	end if	
+	end if
 
 	if (len_trim(str)>0) then
 		if ((index(str,'e')>0).or.(index(str,'E')>0)) then
@@ -294,16 +294,16 @@ contains
 			read(str, '(f9.6)') value
 		end if
 	else
-		write(0,*) 'XML Error: unable to convert the text node from the element ',trim(xmlName),' to a real value'	
-	end if		
+		write(0,*) 'XML Error: unable to convert the text node from the element ',trim(xmlName),' to a real value'
+	end if
 
   end function getReal
-  
-  
+
+
 ! *****************************************************************
-! Get the text node from the first child element 
+! Get the text node from the first child element
 ! of domNode with tag xmlName. Store the result as an integer.
-  
+
   function getInteger(domNode, xmlName, attrName, attrValue) result (value)
 	type(Node), pointer             :: domNode
     character(len=*), intent(in)    :: xmlName
@@ -311,7 +311,7 @@ contains
     character(len=*), intent(in), optional  :: attrValue
  	character(len=80)               :: str
  	integer                         :: value
-  	
+
 	! Initialize output
 	value = 0
 
@@ -320,21 +320,21 @@ contains
 		write(0,*) 'Error: pointer not associated in getStringAttr'
 		return
 	end if
-	
+
 	if (present(attrValue)) then
 		str = getString(domNode, xmlName, attrName, attrValue)
 	else if (present(attrName)) then
 		str = getString(domNode, xmlName, attrName)
 	else
 		str = getString(domNode, xmlName)
-	end if	
+	end if
 
 	if (len_trim(str)>0) then
 		read(str, '(i8)') value
 	else
-		write(5,*) 'XML Error: unable to convert the text node from the element ',trim(xmlName),' to an integer'	
-	end if		
+		write(0,*) 'XML Error: unable to convert the text node from the element ',trim(xmlName),' to an integer'
+	end if
 
   end function getInteger
-  
+
 end module parse_dom
