@@ -24,6 +24,7 @@ program z2z
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
   real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
+  real(8)           :: azimuth
   logical           :: config_exists, run_list_exists, site_list_exists
   integer           :: i, j, k, n, l, istat
 
@@ -55,11 +56,14 @@ program z2z
   end if
 
   if (n>3) then
+     rotate = .true.
      call getarg(4,coords)
-     if (index(coords,'rotate')>0) then
-        rotate = .true.
-        if (.not.silent) then
+     read(coords, '(f9.6)') azimuth
+     if (.not.silent) then
+        if ((azimuth)<0.01) then
            write(*,*) 'Rotate to orthogonal geographic coords. '
+        else
+           write(*,*) 'Rotate to the new azimuth ',azimuth
         end if
      end if
   end if
@@ -79,7 +83,7 @@ program z2z
 
   call read_z_header(zsitename, zLocalSite, Info)
 
-  if (rotate) then
+  if (rotate .and. ((azimuth)<0.01)) then
      header1 = 'TRANSFER FUNCTIONS IN GEOGRAPHIC COORDINATES'
      header2 = '******** WITH FULL ERROR COVARIANCE ********'
   else
@@ -98,7 +102,7 @@ program z2z
 
   ! Initialize conversion to orthogonal geographic coords
   if (rotate) then
-     call rotate_z_channels(InputChannel, OutputChannel, U, V)
+     call rotate_z_channels(InputChannel, OutputChannel, U, V, azimuth)
   end if
 
   call write_z_channels(zsitename, InputChannel, OutputChannel)
