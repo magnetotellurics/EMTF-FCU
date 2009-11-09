@@ -6,7 +6,7 @@ FOX_LIB = ../FoX
 include $(FOX_LIB)/arch.make
 
 PROGS = z2edi xml2z z2xml xml2edi z2z
-BIN_DIR = ~/data/bin
+BIN_DIR = /home/mt/earthscope/bin.x* #~/data/bin
 OBJS_Z2XML   = global.o parse_dom.o z_read.o xml_write.o read_lists.o utils.o config.o
 OBJS_XML2Z   = global.o parse_dom.o xml_read.o z_write.o
 OBJS_XML2EDI = global.o parse_dom.o xml_read.o edi_write.o utils.o
