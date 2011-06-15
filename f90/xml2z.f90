@@ -24,17 +24,17 @@ program xml2z
   complex(8), dimension(:,:), allocatable    :: ResidCov
   integer           :: i, j, k, n, l
 
-  n = iargc()
+  n = command_argument_count()
 
   if (n<1) then
      write(0,*) 'Please specify the name of the input XML-file'
      stop
   else if (n>=1) then
-     call getarg(1,xml_file)
+     call get_command_argument(1,xml_file)
   end if
 
   if (n>1) then
-     call getarg(2,z_file)
+     call get_command_argument(2,z_file)
   else
      l = len_trim(xml_file)
      basename = xml_file(1:l-4)
@@ -42,7 +42,7 @@ program xml2z
   end if
 
   if (n>2) then
-     call getarg(3,verbose)
+     call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
      end if

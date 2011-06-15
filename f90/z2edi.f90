@@ -26,17 +26,17 @@ program z2edi
   real              :: Ex_len, Ey_len
   integer           :: i, j, k, n, len
 
-  n = iargc()
+  n = command_argument_count()
 
   if (n<1) then
      write(0,*) 'Please specify the name of the input Z-file'
      stop
   else if (n>=1) then
-     call getarg(1,z_file)
+     call get_command_argument(1,z_file)
   end if
 
   if (n>1) then
-     call getarg(2,edi_file)
+     call get_command_argument(2,edi_file)
   else
      len = len_trim(z_file)
      basename = z_file(1:len-4)
@@ -44,7 +44,7 @@ program z2edi
   end if
 
   if (n>2) then
-     call getarg(3,verbose)
+     call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
      end if

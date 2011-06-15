@@ -28,17 +28,17 @@ program z2xml
   logical           :: config_exists, run_list_exists, site_list_exists
   integer           :: i, j, k, n, l, istat
 
-  n = iargc()
+  n = command_argument_count()
 
   if (n<1) then
      write(0,*) 'Please specify the name of the input Z-file'
      stop
   else if (n>=1) then
-     call getarg(1,z_file)
+     call get_command_argument(1,z_file)
   end if
 
   if (n>1) then
-     call getarg(2,xml_file)
+     call get_command_argument(2,xml_file)
   else
      l = len_trim(z_file)
      basename = z_file(1:l-4)
@@ -46,7 +46,7 @@ program z2xml
   end if
 
   if (n>2) then
-     call getarg(3,verbose)
+     call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
      end if

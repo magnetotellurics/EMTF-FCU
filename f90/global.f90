@@ -7,7 +7,6 @@ module global
   logical, save         :: silent=.false.
   logical, save         :: rotate=.false.
   character(len=10)     :: date, time, zone
-  integer, external     :: iargc
   !*********************************************************
   ! The version only changes if the XML schema changes
   character(len=3)      :: version='0.5'

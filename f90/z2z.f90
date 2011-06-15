@@ -28,13 +28,13 @@ program z2z
   logical           :: config_exists, run_list_exists, site_list_exists
   integer           :: i, j, k, n, l, istat
 
-  n = iargc()
+  n = command_argument_count()
 
   if (n<1) then
      write(0,*) 'Please specify the name of the input Z-file'
      stop
   else if (n>=1) then
-     call getarg(1,z_file)
+     call get_command_argument(1,z_file)
   end if
 
   l = len_trim(z_file)
@@ -42,14 +42,14 @@ program z2z
   ext = z_file(l-3:l)
 
   if (n>1) then
-     call getarg(2,z_file_out)
+     call get_command_argument(2,z_file_out)
   else
 
      z_file_out = trim(basename)//'_z2z'//trim(ext)
   end if
 
   if (n>2) then
-     call getarg(3,verbose)
+     call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
      end if
@@ -57,7 +57,7 @@ program z2z
 
   if (n>3) then
      rotate = .true.
-     call getarg(4,coords)
+     call get_command_argument(4,coords)
      read(coords, '(f9.6)') azimuth
      if (.not.silent) then
         if ((azimuth)<0.01) then
