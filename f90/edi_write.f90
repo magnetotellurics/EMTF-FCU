@@ -100,7 +100,7 @@ contains
 	tipper_present = .true. ! assume tipper is always present
 	azimuth = InputChannel(1)%orientation ! orientation of Hx
 	if (present(UserInfo)) then
-		source = UserInfo%Source
+		source = UserInfo%Creator%Name
 	else
 		source = 'UNKNOWN'
 	end if
@@ -108,18 +108,18 @@ contains
 	! create a block of additional information
 	if (present(UserInfo)) then
 	    write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
-		write(info_block(2),*) 'EXPERIMENT=',trim(UserInfo%Experiment)
+		write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
 		write(info_block(3),*) 'YEAR=',UserInfo%YearCollected	
-		write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%Source)
+		write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
 		write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
 	else
 	    write(info_block(1),*) 'PROJECT=UNKNOWN'
-		write(info_block(2),*) 'EXPERIMENT=UNKNOWN'
+		write(info_block(2),*) 'SURVEY=UNKNOWN'
 		write(info_block(3),*) 'YEAR=UNKNOWN'
 		write(info_block(4),*) 'PROCESSEDBY=UNKNOWN'
 		write(info_block(5),*) 'PROCESSINGSOFTWARE=UNKNOWN'
 	end if	
-	write(info_block(6),*) 'PROCESSINGID=',trim(Info%processing_id)
+	write(info_block(6),*) 'PROCESSINGTAG=',trim(Info%processing_tag)
 	write(info_block(7),*) 'SITENAME=',trim(Site%Description)
 	write(info_block(8),*) 'RUNLIST=',trim(Site%RunList)
 	write(info_block(9),*) 'REMOTEREF=',trim(Info%remote_ref_type)

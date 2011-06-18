@@ -141,8 +141,8 @@ contains
 	end if
 
 	!Info%processed_by = processed_by
-	Info%processing_id = sitename
-	Info%software = 'EMTF'
+	Info%processing_tag = sitename
+	!Info%software = 'EMTF'
 
     read (zfile,'(a120)',iostat=ios) temp
     i = index(temp,'coordinate')
@@ -187,6 +187,7 @@ contains
 
     do i=1,2
        read (zfile,*) num, orientation, tilt, temp, chname
+       call init_channel_info(Input(i))
        Input(i)%ID = chname
        Input(i)%orientation = orientation + declination
        Input(i)%tilt = tilt
@@ -195,6 +196,7 @@ contains
 
     do i=1,nch-2
        read (zfile,*) num, orientation, tilt, temp, chname
+       call init_channel_info(Output(i))
        Output(i)%ID = chname
        Output(i)%orientation = orientation + declination
        Output(i)%tilt = tilt
@@ -222,10 +224,13 @@ contains
     i = index(temp,'period')
     !j = index(temp,'decimation level')
 
+	call init_freq_info(F)
+
     read (temp(i+8:i+24),*) period
     !read (temp(i+8:j-1),*) period
     !read (temp(j+16:100),'(i3)') dec_level
     F%value = period   !1.0d0/period
+    F%units = 'secs'   ! Hz
     F%info_type  = 'period' !'frequency'
     !F%dec_level = dec_level
 

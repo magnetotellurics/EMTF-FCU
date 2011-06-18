@@ -55,10 +55,9 @@ contains
 	call init_user_info(UserInfo)
 	call init_remote_ref(Info)
 
-	UserInfo%Source = getString(doc,"Source")
 	UserInfo%Project = getString(doc,"Project")
-	UserInfo%Experiment = getString(doc,"Experiment")
-	UserInfo%YearCollected = getInteger(doc,"YearCollected")
+	UserInfo%Survey = getString(doc,"Survey")
+	UserInfo%YearCollected = getString(doc,"YearCollected")
 	UserInfo%ProcessedBy = getString(doc,"ProcessedBy")
 	UserInfo%ProcessingSoftware = getString(doc,"ProcessingSoftware")
 	
@@ -83,7 +82,7 @@ contains
 	end if
 	Info%sign_convention = getString(infoNode,"SignConvention")
 	Info%remote_site_id = getString(infoNode,"SiteID","project",UserInfo%Project)
-	Info%processing_id = id
+	Info%processing_tag = id
 
   end subroutine read_xml_header
   

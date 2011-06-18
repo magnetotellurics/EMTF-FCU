@@ -9,7 +9,7 @@ module global
   character(len=10)     :: date, time, zone
   !*********************************************************
   ! The version only changes if the XML schema changes
-  character(len=3)      :: version='0.5'
+  character(len=3)      :: version='2.0'
   !*********************************************************
   ! The network is always 'EM' !!!
   character(len=2)      :: network='EM'
@@ -30,19 +30,32 @@ module global
   !*********************************************************
 
 
+  type :: Person_t
+    character(len=80) :: Name
+    character(len=80) :: Email
+    character(len=80) :: Org
+    character(len=80) :: OrgUrl
+    character(len=80) :: OrgLogoUrl
+  end type Person_t
+
   type :: UserInfo_t
-    character(len=80) :: Source
     character(len=80) :: Project
-    character(len=80) :: Experiment
-    integer           :: YearCollected
-    integer           :: OrthogonalGeographic
+    character(len=80) :: Survey
+    character(len=80) :: YearCollected    
+    character(len=80) :: Tags
+    character(len=80) :: ReleaseStatus
+    character(len=80) :: AcquiredBy
+    type(Person_t)	  :: Creator
+    type(Person_t)	  :: Submitter
     character(len=80) :: ProcessedBy
     character(len=80) :: ProcessingSoftware
-    character(len=80) :: ProcessingTag
+    character(len=80) :: ProcessingSoftwareLastMod
+    character(len=80) :: ProcessingSoftwareAuthor
+    integer           :: OrthogonalGeographic
     character(len=80) :: RunList
     character(len=80) :: SiteList
+    character(len=80) :: ChannelList
   end type UserInfo_t
-
 
   type :: Location_t
 	real(8)           :: lat
@@ -63,6 +76,12 @@ module global
 	character(len=80)  :: Description
   	type(Location_t)   :: Location
 	real(8)            :: Declination
+	integer			   :: QualityRating ! 1-5
+	real(8)			   :: GoodFromPeriod
+	real(8)			   :: GoodToPeriod
+	character(len=80)  :: QualityComments
+ 	character(len=19)  :: Start
+	character(len=19)  :: End
 	character(len=80)  :: RunList
   end type Site_t
 
@@ -70,24 +89,40 @@ module global
   type :: Run_t
   	character(len=6)   :: ID
   	character(len=5)   :: SiteID
-  	character(len=80)  :: Instrument
+   	character(len=80)  :: Instrument
+	character(len=80)  :: InstrumentName
+ 	character(len=80)  :: InstrumentID
+	character(len=200) :: Manufacturer
   	type(Location_t)   :: Location
 	real(8)            :: Declination
 	type(TimePeriod_t) :: TimePeriod
 	real(8)            :: Ex_wire_length
 	real(8)            :: Ey_wire_length
-	real(8)            :: SamplingFreq
+	real(8)            :: SamplingRate
 	real(8)            :: SamplingInterval
-	character(len=80)  :: Comments
+	character(len=80)  :: SiteInstalledBy
+	character(len=80)  :: MetaDataCheckedBy
+	character(len=400) :: FieldComments
+	character(len=400) :: Comments
+	character(len=400) :: Errors
   end type Run_t
 
 
   type :: Channel_t
-	character(len=80) :: ID
-	real              :: Orientation
-	real              :: Tilt
-	type(Location_t)  :: Location
-	character(len=12) :: Units
+	character(len=10)  :: ID
+	real               :: DipoleLength
+	real               :: DipoleAzimuth ! instrument orientation
+	real               :: Orientation   ! orientation in final TF
+	real               :: Tilt
+	real               :: X,Y,Z,X2,Y2,Z2  ! location relative to site
+	type(Location_t)   :: Location
+	character(len=12)  :: Units
+	character(len=80)  :: Instrument
+	character(len=200) :: InstrumentType
+	character(len=200) :: Manufacturer
+	character(len=80)  :: InstrumentName
+	character(len=80)  :: InstrumentID
+	character(len=80)  :: InstrumentConfig
   end type Channel_t
 
 
@@ -102,10 +137,11 @@ module global
 
   type :: RemoteRef_t
   	!character(len=80) :: processed_by
-  	character(len=80) :: processing_id
+  	character(len=80) :: processing_tag
   	character(len=80) :: sign_convention
-  	character(len=80) :: software
-  	character(len=80) :: software_version
+  	!character(len=80) :: software
+  	!character(len=80) :: software_lastmod
+  	!character(len=80) :: software_author
 	character(len=80) :: remote_ref_type
 	logical           :: remote_ref
 	character(len=5)  :: remote_site_id
@@ -113,25 +149,40 @@ module global
 	!character(len=2) :: remote_ref_abbrev
   end type RemoteRef_t
 
-
 contains
 
 	subroutine init_user_info(Info)
 		type(UserInfo_t), intent(out)  :: Info
 
-		Info%Source = 'OSU'
 		Info%Project = 'USArray'
-		Info%Experiment = 'UNKNOWN'
-		Info%YearCollected = 2007
-		Info%OrthogonalGeographic = 0;
+		Info%Survey = 'TA'
+		Info%YearCollected = ''
+		Info%Tags = 'impedance,tipper'
+		Info%ReleaseStatus = 'Unrestricted Release'
+		Info%AcquiredBy = 'UNKNOWN'
+		call init_person(Info%Creator)
+		call init_person(Info%Submitter)
 		Info%ProcessedBy = 'UNKNOWN'
-		Info%ProcessingSoftware = 'EMTF'
-		Info%ProcessingTag = ''
-		Info%RunList = 'USArray_2007_Runs.xml'
-		Info%SiteList = 'USArray_2007_Sites.xml'
-
+		Info%ProcessingSoftware = 'UNKNOWN'
+		Info%ProcessingSoftwareLastMod = 'UNKNOWN'
+		Info%ProcessingSoftwareAuthor = 'UNKNOWN'
+		Info%OrthogonalGeographic = 0
+		Info%RunList = 'Runs.xml'
+		Info%SiteList = 'Sites.xml'
+		Info%ChannelList = 'Channels.xml'
+		
 	end subroutine init_user_info
 
+	subroutine init_person(Person)
+		type(Person_t), intent(out)  :: Person
+
+		Person%Name = 'UNKNOWN'
+		Person%Email = 'UNKNOWN'
+		Person%Org = 'UNKNOWN'
+		Person%OrgUrl = 'UNKNOWN'
+		Person%OrgLogoUrl = 'UNKNOWN'
+
+	end subroutine init_person
 
 	subroutine init_site_info(Site)
 		type(Site_t), intent(out)  :: Site
@@ -142,6 +193,11 @@ contains
 		Site%Location%lat = 0.0d0
 		Site%Location%elev = 0.0d0
 		Site%Declination = 0.0d0
+		Site%QualityRating = 0
+		Site%GoodFromPeriod = 0.0d0
+		Site%GoodToPeriod = 0.0d0
+		Site%Start = ' '
+		Site%End = ' '
 		Site%RunList = ' '
 
 	end subroutine init_site_info
@@ -153,6 +209,9 @@ contains
 		Run%ID = ' '
 		Run%SiteID = ' '
 		Run%Instrument = ' '
+		Run%InstrumentName = ' '
+		Run%InstrumentID = ' '
+		Run%Manufacturer = ' '
 		Run%Location%lon = 0.0d0
 		Run%Location%lat = 0.0d0
 		Run%Location%elev = 0.0d0
@@ -162,9 +221,13 @@ contains
 		Run%TimePeriod%EndTime = ' '
 		Run%Ex_wire_length = 0.0d0
 		Run%Ey_wire_length = 0.0d0
-		Run%SamplingFreq = 0.0d0
+		Run%SamplingRate = 0.0d0
 		Run%SamplingInterval = 0.0d0
+		Run%SiteInstalledBy = ' '
+		Run%MetaDataCheckedBy = ' '
+		Run%FieldComments = ' '
 		Run%Comments = ' '
+		Run%Errors = ' '
 
 	end subroutine init_run_info
 
@@ -173,10 +236,11 @@ contains
 		type(RemoteRef_t), intent(out)  :: Info
 
 		!Info%processed_by = ' '
-		Info%processing_id = ' '
+		Info%processing_tag = ' '
 		Info%sign_convention = sign_convention
-		Info%software = ' '
-		Info%software_version = ' '
+		!Info%software = ' '
+		!Info%software_lastmod = ' '
+		!Info%software_author = ' '
   		Info%remote_ref_type = ' '
 		Info%remote_ref = .FALSE.
 		Info%remote_site_id = ' '
@@ -187,16 +251,39 @@ contains
 
 
 	subroutine init_freq_info(Freq)
-		type(FreqInfo_t), intent(out)   :: Freq
+		type(FreqInfo_t), intent(inout) :: Freq
 
-		Freq%info_type = 'frequency'
+		Freq%info_type = 'period'
 		Freq%value = 0.0d0
 		Freq%num_points = 0
-		Freq%units = 'Hz'
+		Freq%units = 'secs'
 		Freq%dec_level = 0
 
 	end subroutine init_freq_info
 
+    subroutine init_channel_info(Channel)
+         type(Channel_t), intent(inout) :: Channel
+
+		Channel%ID = ' '
+		Channel%DipoleLength = 0
+		Channel%DipoleAzimuth = 0
+		Channel%Orientation = 0
+		Channel%Tilt = 0
+		Channel%X = 0
+		Channel%Y = 0
+		Channel%Z = 0
+		Channel%X2 = 0
+		Channel%Y2 = 0
+		Channel%Z2 = 0
+		Channel%Units = ' '
+		Channel%Instrument = ' '
+		Channel%InstrumentType = ' '
+		Channel%Manufacturer = ' '
+		Channel%InstrumentName = ' '
+		Channel%InstrumentID = ' '
+		Channel%InstrumentConfig = ' '
+
+    end subroutine init_channel_info
 
     subroutine init_channel_units(Channel)
          type(Channel_t), intent(inout) :: Channel
@@ -212,5 +299,20 @@ contains
          end if
 
     end subroutine init_channel_units
+    
+    
+    function TF_name(InputChannel,OutputChannel) result (tfname)
+		  type(Channel_t), intent(in)    :: InputChannel, OutputChannel
+		  character(10)					 :: tfname
+		  
+		  if (index(OutputChannel%ID,'H')==1) then
+		     tfname = 'T'//trim(InputChannel%ID(2:10))
+		  else if (index(OutputChannel%ID,'E')==1) then
+		     tfname = 'Z'//trim(InputChannel%ID(2:10))//trim(OutputChannel%ID(2:10))
+		  else
+		     tfname = 'UNKNOWN'
+		  end if
+		  
+	end function TF_name
 
 end module global

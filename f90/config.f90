@@ -16,22 +16,43 @@ contains
     character(len=*), intent(in)    :: xmlFile
 	type(UserInfo_t), intent(out)   :: Info
 	character(len=*), intent(in), optional :: listDir
+	type(Node), pointer             :: creator,submitter,software
 
   	call init_user_info(Info)
 
   	! Load in the document
   	doc => parseFile(xmlFile)
 
-	Info%Source = getString(doc,"Source")
 	Info%Project = getString(doc,"Project")
-	Info%Experiment = getString(doc,"Experiment")
-	Info%YearCollected = getInteger(doc,"YearCollected")
-	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")
+	Info%Survey = getString(doc,"Survey")
+	Info%YearCollected = getString(doc,"YearCollected")
+	Info%Tags = getString(doc,"Tags")
+	Info%ReleaseStatus = getString(doc,"ReleaseStatus")
+	Info%AcquiredBy = getString(doc,"AcquiredBy")
+	
+	creator => item(getElementsByTagName(doc, "Creator"),0)
+	Info%Creator%Name = getString(creator,"Name")
+	Info%Creator%Email = getString(creator,"Email")
+	Info%Creator%Org = getString(creator,"Org")
+	Info%Creator%OrgUrl = getString(creator,"OrgUrl")
+
+	submitter => item(getElementsByTagName(doc, "Submitter"),0)
+	Info%Submitter%Name = getString(submitter,"Name")
+	Info%Submitter%Email = getString(submitter,"Email")
+	Info%Submitter%Org = getString(submitter,"Org")
+	Info%Submitter%OrgUrl = getString(submitter,"OrgUrl")
+
 	Info%ProcessedBy = getString(doc,"ProcessedBy")
-	Info%ProcessingSoftware = getString(doc,"ProcessingSoftware")
-	Info%ProcessingTag = getString(doc,"ProcessingTag")
+	
+	software => item(getElementsByTagName(doc, "ProcessingSoftware"),0)
+	Info%ProcessingSoftware = getString(software,"Name")
+	Info%ProcessingSoftwareLastMod = getString(software,"LastMod")
+	Info%ProcessingSoftwareAuthor = getString(software,"Author")
+
+	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")
+	Info%ChannelList = getString(doc,"ChannelList")
 
 	! Clear up all allocated memory
   	call destroy(doc)
@@ -39,31 +60,18 @@ contains
   	if (present(listDir)) then
   	  Info%RunList = trim(listDir)//'/'//trim(Info%RunList)
   	  Info%SiteList = trim(listDir)//'/'//trim(Info%SiteList)
+  	  Info%ChannelList = trim(listDir)//'/'//trim(Info%ChannelList)
     end if
 
-    ! Source, Project and ProcessingSoftware are used to create the ID tags
-    if (index(trim(Info%Source),' ')>0) then
-        write(0,*) 'Source field in ',trim(xmlFile),' should not contain spaces'
-        stop
-    end if
-    if (index(trim(Info%Project),' ')>0) then
+    ! Project name is used to create the ID tags
+   if (index(trim(Info%Project),' ')>0) then
         write(0,*) 'Project field in ',trim(xmlFile),' should not contain spaces'
-        stop
-    end if
-    if (index(trim(Info%ProcessingSoftware),' ')>0) then
-        write(0,*) 'ProcessingSoftware field in ',trim(xmlFile),' should not contain spaces'
-        stop
-    end if
-
-    ! ProcessingTag is added to the end of ProductID. Optional.
-    if ((len_trim(Info%ProcessingTag)>0) .and. (index(trim(Info%ProcessingTag),' ')>0)) then
-        write(0,*) 'ProcessingTag field in ',trim(xmlFile),', if present, should not contain spaces'
         stop
     end if
 
     ! Otherwise, exit successfully
     if (.not.silent) then
-		write(*,*) 'Processing experiment ',trim(Info%Experiment),' (',Info%YearCollected,')'
+		write(*,*) 'Processing survey ',trim(Info%Project),' ',trim(Info%Survey),' (',trim(Info%YearCollected),')'
 	end if
 
   end subroutine read_xml_config

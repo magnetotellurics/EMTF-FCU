@@ -3,7 +3,7 @@
 ! that is intended to allow conversion between the commonly used electromagnetic  !
 ! transfer function file formats: Gary Egbert's Z-files, Society of Exploration   !
 ! Geophysicists MT/EMAP Data Interchange Standard (EDI) and XML files, as defined !
-! by the latest version of the MT_TF.xsd XML schema.                              !
+! by the latest version of the EM_TF.xsd XML schema.                              !
 !                                                                                 !
 ! EMTF FCU are intended to complement Gary Egbert's EMTF electomagnetic data      !
 ! processing and plotting software.                                               !
@@ -16,7 +16,7 @@
 ! ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   ! 
 ! FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.  !
 !                                                                                 !
-! Copyright (C) Anna Kelbert, 2007                                                !
+! Copyright (C) Anna Kelbert, 2007-2011                                           !
 !               College of Oceanic and Atmospheric Sciences                       !
 !               Oregon State University                                           !
 !               104 COAS Administration Building                                  !
