@@ -150,6 +150,10 @@ contains
 
     read (temp(i+12:j-1),*) Site%Location%lat, Site%Location%lon
     read (temp(j+12:120),*) Site%Declination
+    
+    if(Site%Location%lon > 180.0d0) then
+		Site%Location%lon = Site%Location%lon - 360.0d0
+	end if
 
     read (zfile,'(a120)',iostat=ios) temp
     i = index(temp,'channels')

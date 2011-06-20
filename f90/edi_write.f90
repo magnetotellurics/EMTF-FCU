@@ -46,7 +46,7 @@ contains
   	logical                                        :: tipper_present
   	real                                           :: azimuth
 	real(8)                                        :: lat, long, elev
-	character(len=80)                              :: dataid, source
+	character(len=80)                              :: dataid, acqby
 	character(len=80), dimension(11)               :: info_block
 	real(8), dimension(:), allocatable             :: freq
 	complex(8), dimension(:,:), allocatable        :: t
@@ -100,16 +100,16 @@ contains
 	tipper_present = .true. ! assume tipper is always present
 	azimuth = InputChannel(1)%orientation ! orientation of Hx
 	if (present(UserInfo)) then
-		source = UserInfo%Creator%Name
+		acqby = UserInfo%AcquiredBy
 	else
-		source = 'UNKNOWN'
+		acqby = 'UNKNOWN'
 	end if
 	
 	! create a block of additional information
 	if (present(UserInfo)) then
 	    write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
 		write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
-		write(info_block(3),*) 'YEAR=',UserInfo%YearCollected	
+		write(info_block(3),*) 'YEAR=',trim(UserInfo%YearCollected)	
 		write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
 		write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
 	else
@@ -126,7 +126,7 @@ contains
 	write(info_block(10),*) 'REMOTESITE=',trim(Info%remote_site_id)
 	write(info_block(11),*) 'SIGNCONVENTION=',trim(Info%sign_convention)
 	
-	call wrt_edi(fname,dataid,sectid,source,info_block, &
+	call wrt_edi(fname,dataid,sectid,acqby,info_block, &
 			freq,zvar,tvar,z,t,lat,long,elev, &
 			edi_date,tipper_present,azimuth)
 			
@@ -140,11 +140,11 @@ contains
 ! global.f90, that is used by this code.                                   !
 ! Date: 1 Nov 2007                                                         !
 !--------------------------------------------------------------------------!
-  subroutine wrt_edi(fname,dataid,sectid,source,info, &
+  subroutine wrt_edi(fname,dataid,sectid,acqby,info, &
   						 f,v,vt,z,t,lat,long,elev, &
                          cdate,ltip,azm)
 
-	  character(80), intent(in)                      :: fname, dataid, sectid, source
+	  character(80), intent(in)                      :: fname, dataid, sectid, acqby
 	  character(80), dimension(:), intent(in)        :: info !goes into the info block
       real(8), dimension(nf), intent(in)             :: f !list of frequencies
       real(8), dimension(nf,4), intent(in)           :: v !variances for impedances
@@ -163,7 +163,7 @@ contains
       integer idx(nf)
       logical empty
       real sid(10)
-      character*16 acqby, yname
+      character*16 yname
       character*16 clat,clong,celev
       integer ex_x1,ex_x2,ex_y1,ex_y2,ey_x1,ey_x2,ey_y1,ey_y2
       real site_x, site_y, site_z
@@ -206,19 +206,18 @@ contains
       ldataid = min( ldataid, 16)
       write(edifile,*) 'DATAID="', dataid(1:ldataid), '"'
 !-ACQBY
-      acqby=source
       lacqby=16
       call trmstr(acqby,lacqby,empty)
       lacqby = min( lacqby, 16)
       write(edifile,*) 'ACQBY="', acqby(1:lacqby), '"'
 !-FILEBY
-      yname='z2edi'
+      yname='EMTF FCU'
       lyname=16
       call trmstr(yname,lyname,empty)
       lyname = min( lyname, 16)
       write(edifile,*) 'FILEBY="', yname(1:lyname), '"'
 !-FILEDATE
-      lcdate=16
+      lcdate=9
       call trmstr(cdate,lcdate,empty)
       lcdate = min( lcdate, 16)
       write(edifile,*) 'FILEDATE=', cdate(1:lcdate)
@@ -242,9 +241,9 @@ contains
 !-STDVERS
       write(edifile,*) 'STDVERS=SEG 1.0'
 !-PROGVERS
-      write(edifile,*) 'PROGVERS="EMTF File Conversion Utilities 1.0"'
+      write(edifile,*) 'PROGVERS="',version,'"'
 !-PROGDATE
-      write(edifile,*) 'PROGDATE=11/02/07'
+      write(edifile,*) 'PROGDATE=06/20/11'
 !-MAXSECT
       write(edifile,*) 'MAXSECT=999'
 !-EMPTY

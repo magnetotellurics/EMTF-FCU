@@ -24,7 +24,7 @@ contains
   	doc => parseFile(xmlFile)
 
 	! Get all frequencies / periods and count them
-	periods => getElementsByTagName(doc, "Frequency")
+	periods => getElementsByTagName(doc, "Period")
 	nf = getLength(periods)
 
 	! Get all channels and count them
@@ -58,21 +58,27 @@ contains
 	UserInfo%Project = getString(doc,"Project")
 	UserInfo%Survey = getString(doc,"Survey")
 	UserInfo%YearCollected = getString(doc,"YearCollected")
+	UserInfo%YearCollected = getString(doc,"YearCollected")
+	UserInfo%AcquiredBy = getString(doc,"AcquiredBy")
 	UserInfo%ProcessedBy = getString(doc,"ProcessedBy")
-	UserInfo%ProcessingSoftware = getString(doc,"ProcessingSoftware")
-	
-	Site%ID = getString(doc,"SiteID","project",UserInfo%Project)
-	Site%Description = getString(doc,"SiteName")
-	Site%Location%lat = getReal(doc,"Latitude")
-	Site%Location%lon = getReal(doc,"Longitude")
-	Site%Location%elev = getReal(doc,"Elevation")
-	Site%Declination = getReal(doc,"Declination")
-	Site%RunList = getString(doc,"RunList")
 
-	id = getString(doc,"ProcessingID")
+	infoNode => item(getElementsByTagName(doc, "ProcessingSoftware"),0)
+	UserInfo%ProcessingSoftware = getString(infoNode,"Name")
 
-	! Need to create this node since tags like SiteID and Location
+	! Need to create this node since tags like ID and Location
 	! are encountered several times throughout the document
+	infoNode => item(getElementsByTagName(doc, "Site"),0)
+	
+	Site%ID = getString(infoNode,"ID")
+	Site%Description = getString(infoNode,"Name")
+	Site%Location%lat = getReal(infoNode,"Latitude")
+	Site%Location%lon = getReal(infoNode,"Longitude")
+	Site%Location%elev = getReal(infoNode,"Elevation")
+	Site%Declination = getReal(infoNode,"Declination")
+	Site%RunList = getString(infoNode,"RunList")
+
+	id = getString(doc,"ProcessingTag")
+
 	infoNode => item(getElementsByTagName(doc, "ProcessingInfo"),0)
 
 	call init_remote_ref(Info)
@@ -81,7 +87,7 @@ contains
 		Info%remote_ref = .true.
 	end if
 	Info%sign_convention = getString(infoNode,"SignConvention")
-	Info%remote_site_id = getString(infoNode,"SiteID","project",UserInfo%Project)
+	Info%remote_site_id = getString(infoNode,"ID")
 	Info%processing_tag = id
 
   end subroutine read_xml_header
@@ -124,8 +130,11 @@ contains
 	type(Node), pointer                       :: comp
 	character(4)                              :: input, output
 	character(12)                             :: tag
+	character(800)							  :: str
 	real(8)                                   :: vreal, vimag
-
+	real(8), dimension(:), allocatable        :: v
+	integer									  :: i,j,ind,istat
+	
 	call init_freq_info(F)
 	TF = dcmplx(0.0d0,0.0d0)
 	TFVar = 0.0d0
@@ -134,15 +143,16 @@ contains
 
 	thisFreq => item(periods, k-1)
 	
-	F%value = getRealAttr(thisFreq,"Frequency","value")
-   	F%info_type = "frequency"
-	if (hasAttribute(thisFreq, "type")) then
-      if (getAttribute(thisFreq, "type")=="period") then
-      	F%info_type = "period"
+	F%value = getRealAttr(thisFreq,"Period","value")
+	F%units = 'secs'
+   	F%info_type = 'period'
+	if (hasAttribute(thisFreq, "units")) then
+      if (getAttribute(thisFreq, "units")=='Hz') then
+      	F%info_type = 'frequency'
       end if
     end if
     
-	F%num_points = getInteger(thisFreq,"NumData")
+	F%num_points = 0
 	F%dec_level = 0
 	
 	if (.not.silent) then
@@ -150,11 +160,11 @@ contains
 	end if
 	
 	thisNode => item(getElementsByTagName(thisFreq, "TF"),0)
-	list => getElementsByTagName(thisNode,"component")
+	list => getElementsByTagName(thisNode,"value")
 	do i=0,getLength(list)-1
 		comp => item(list,i)
-		vreal = getReal(comp,"real")
-		vimag = getReal(comp,"imag")
+		str = getString(comp,"value")
+		read(str,*) vreal,vimag
 		input = getAttribute(comp,"input")
 		output = getAttribute(comp,"output")
 		tag = trim(input)//' -> '//trim(output)
@@ -176,7 +186,7 @@ contains
 		end select		
 	end do
 	
-	thisNode => item(getElementsByTagName(thisFreq, "TFVar"),0)
+	thisNode => item(getElementsByTagName(thisFreq, "TFVAR"),0)
 	list => getElementsByTagName(thisNode,"value")
 	do i=0,getLength(list)-1
 		comp => item(list,i)
@@ -204,59 +214,39 @@ contains
 
 	if (.not.(present(InvSigCov))) return
 
-	thisNode => item(getElementsByTagName(thisFreq, "InvSigCov"),0)
-	list => getElementsByTagName(thisNode,"value")
-	do i=0,getLength(list)-1
-		comp => item(list,i)
-		vreal = getReal(comp,"real")
-		vimag = getReal(comp,"imag")
-		input = getAttribute(comp,"row")
-		output = getAttribute(comp,"col")
-		tag = trim(input)//' -> '//trim(output)
-		select case ( tag )
-		case ('Hx -> Hx')
-			InvSigCov(1,1) = dcmplx(vreal,vimag)
-		case ('Hy -> Hx')
-			InvSigCov(2,1) = dcmplx(vreal,vimag)
-			InvSigCov(1,2) = dcmplx(vreal,-vimag)
-		case ('Hy -> Hy')
-			InvSigCov(2,2) = dcmplx(vreal,vimag)
-		case default
-			write(*,*) 'Unknown input/output pair ',trim(tag),': InvSigCov value not stored!'
-		end select		
+	allocate(v(2*(2*2)), stat=istat)
+	thisNode => item(getElementsByTagName(thisFreq, "INVSIGCOV"),0)
+	str = getString(thisNode,"value")
+	if (.not.silent) then
+		write(*,*) 'InvSigCov: ', trim(str)
+	end if
+	read(str,*) v
+	ind = 1
+	do i=1,2
+		do j=1,2
+			InvSigCov(i,j) = dcmplx(v(ind),v(ind+1))
+			ind = ind+2
+		end do
 	end do
-
+	deallocate(v, stat=istat)
+			
 	if (.not.(present(ResidCov))) return
 	
-	thisNode => item(getElementsByTagName(thisFreq, "ResidCov"),0)
-	list => getElementsByTagName(thisNode,"value")
-	do i=0,getLength(list)-1
-		comp => item(list,i)
-		vreal = getReal(comp,"real")
-		vimag = getReal(comp,"imag")
-		input = getAttribute(comp,"row")
-		output = getAttribute(comp,"col")
-		tag = trim(input)//' -> '//trim(output)
-		select case ( tag )
-		case ('Hz -> Hz')
-			ResidCov(1,1) = dcmplx(vreal,vimag)
-		case ('Ex -> Hz')
-			ResidCov(2,1) = dcmplx(vreal,vimag)
-			ResidCov(1,2) = dcmplx(vreal,-vimag)
-		case ('Ex -> Ex')
-			ResidCov(2,2) = dcmplx(vreal,vimag)
-		case ('Ey -> Hz')
-			ResidCov(3,1) = dcmplx(vreal,vimag)
-			ResidCov(1,3) = dcmplx(vreal,-vimag)
-		case ('Ey -> Ex')
-			ResidCov(3,2) = dcmplx(vreal,vimag)
-			ResidCov(2,3) = dcmplx(vreal,-vimag)
-		case ('Ey -> Ey')
-			ResidCov(3,3) = dcmplx(vreal,vimag)
-		case default
-			write(*,*) 'Unknown input/output pair ',trim(tag),': ResidCov value not stored!'
-		end select		
+	allocate(v(2*(nch-2)*(nch-2)), stat=istat)
+	thisNode => item(getElementsByTagName(thisFreq, "RESIDCOV"),0)
+	str = getString(thisNode,"value")
+	if (.not.silent) then
+		write(*,*) 'ResidCov: ', trim(str)
+	end if
+	read(str,*) v
+	ind = 1
+	do i=1,nch-2
+		do j=1,nch-2
+			ResidCov(i,j) = dcmplx(v(ind),v(ind+1))
+			ind = ind+2
+		end do
 	end do
+	deallocate(v, stat=istat)
 
   end subroutine read_xml_period
   

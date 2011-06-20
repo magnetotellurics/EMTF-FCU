@@ -39,6 +39,7 @@ contains
     type(Site_t),  intent(in)        :: Site
 	type(RemoteRef_t), intent(in)    :: Info
 	character(len=80), optional, intent(in)  :: header1, header2
+	real(8)							 :: lon, lat
 
 	if (.not. present(header1)) then
     	write (zfile,*) 'TRANSFER FUNCTIONS IN MEASUREMENT COORDINATES'
@@ -58,7 +59,14 @@ contains
 
     write (zfile,'(a80)') Info%remote_ref_type
     write (zfile,'(a12,a80)') 'station    :', sitename
-    write(zfile,105) Site%Location%lat, Site%Location%lon, 0.0d0
+
+	lon = Site%Location%lon
+	lat = Site%Location%lat
+    if(lon < 0.0d0) then
+		lon = lon + 360.0d0
+	end if
+
+    write(zfile,105) lat, lon, 0.0d0
     write(zfile,110) nch,nf
 
 100   format('station    : ',a20)

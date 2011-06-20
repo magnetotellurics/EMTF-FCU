@@ -612,7 +612,7 @@ contains
     real(8), dimension(:,:), intent(in)       :: TFVar
     type(Channel_t), dimension(:), intent(in) :: Input, Output
     ! local
-    character(100)	:: comment
+    character(400)	:: comment
 
     call xml_NewElement(xmlfile, 'TFVAR')
     call xml_NewElement(xmlfile, 'name')
@@ -645,13 +645,17 @@ contains
     complex(8), dimension(:,:), intent(in)    :: InvSigCov
     type(Channel_t), dimension(:), intent(in) :: Input
     ! local
-    character(100)	:: comment
+    character(400)	:: comment
 
     call xml_NewElement(xmlfile, 'INVSIGCOV')
     call xml_NewElement(xmlfile, 'name')
     call xml_AddCharacters(xmlfile, 'Inverse Coherent Signal Power Matrix (S)')
     call xml_EndElement(xmlfile, 'name')    
-    comment = 'Generalized inverse of the 2x2 H cross power matrix.'
+    comment = 'Eisel, M. and Egbert, G. D. (2001), &
+    On the stability of magnetotelluric transfer function estimates &
+    and the reliability of their variances. &
+    Geophysical Journal International, 144: 65-82. &
+    doi: 10.1046/j.1365-246x.2001.00292.x'
     call xml_NewElement(xmlfile, 'comment')
     call xml_AddCharacters(xmlfile, trim(comment), ws_significant=.true.)
     call xml_EndElement(xmlfile, 'comment')

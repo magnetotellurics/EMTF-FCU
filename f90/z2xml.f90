@@ -164,8 +164,10 @@ program z2xml
   call read_site_list(UserInfo%SiteList, zLocalSite%ID, xmlLocalSite, site_list_exists)
 
   if (len_trim(xmlLocalSite%ID)>0) then
+
   	call add_USArray_MT_header(xmlLocalSite, UserInfo, Info, Notes)
   else
+
   	call add_USArray_MT_header(zLocalSite, UserInfo, Info, Notes)
   end if
 

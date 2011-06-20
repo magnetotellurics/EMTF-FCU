@@ -196,6 +196,7 @@ contains
 		Site%QualityRating = 0
 		Site%GoodFromPeriod = 0.0d0
 		Site%GoodToPeriod = 0.0d0
+		Site%QualityComments = ' '
 		Site%Start = ' '
 		Site%End = ' '
 		Site%RunList = ' '

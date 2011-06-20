@@ -179,7 +179,7 @@ contains
     character(len=*), intent(in), optional  :: attrName
     character(len=*), intent(in), optional  :: attrValue
     logical                         :: hasAttr
-	character(len=400)              :: str
+	character(len=800)              :: str
 
 	! Initialize output
 	str = " "
