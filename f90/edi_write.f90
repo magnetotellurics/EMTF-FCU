@@ -206,10 +206,7 @@ contains
       ldataid = min( ldataid, 16)
       write(edifile,*) 'DATAID="', dataid(1:ldataid), '"'
 !-ACQBY
-      lacqby=16
-      call trmstr(acqby,lacqby,empty)
-      lacqby = min( lacqby, 16)
-      write(edifile,*) 'ACQBY="', acqby(1:lacqby), '"'
+      write(edifile,*) 'ACQBY="', trim(acqby), '"'
 !-FILEBY
       yname='EMTF FCU'
       lyname=16

@@ -335,6 +335,7 @@ end function isdigit
 ! sexagesimal system (degrees, minutes & seconds);
 ! the result is a character string length 16.
 ! Written by: Anna Kelbert, 3 Nov 2007
+! Last Mod. : 30 Jun 2011 to add leading zeros to mins
 ! This subroutine is distributed under the terms of
 ! the GNU Lesser General Public License.
 
@@ -365,10 +366,10 @@ end function isdigit
 	end if
 
 	m = floor((aloc-d)*60)
-	write(cmin,'(i2)') m
+	write(cmin,'(i2.2)') m
 
 	s = ((aloc-d)*60-m)*60
-	write(csec,'(f5.2)') s
+	write(csec,'(i2.2,f3.2)') floor(s),s-floor(s)
 
 	cloc = cdeg//':'//cmin//':'//csec
 

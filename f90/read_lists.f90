@@ -172,6 +172,7 @@ contains
 	do i = 0, getLength(runs)-1
   		thisRun => item(runs, i)
   		IDstring = getString(thisRun,"ID")
+  		! write(*,*) 'Reading run: ',trim(IDstring)
    		! if this is one of the runs in the list, pull out all the information.
   		if (index(runlist,trim(IDstring))>0) then
  			Run(k)%ID = IDstring
