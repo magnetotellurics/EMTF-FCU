@@ -112,10 +112,10 @@ contains
     call xml_AddCharacters(xmlfile, 'Magnetotelluric Transfer Functions')
     call xml_EndElement(xmlfile, 'Description')
     
-    call xml_NewElement(xmlfile, 'ProductID')
+    call xml_NewElement(xmlfile, 'ProductId')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Project)//'.'//Site%ID)
     if (len_trim(UserInfo%YearCollected)>0) call xml_AddCharacters(xmlfile, '.'//trim(UserInfo%YearCollected))
-    call xml_EndElement(xmlfile, 'ProductID')
+    call xml_EndElement(xmlfile, 'ProductId')
 
     call xml_NewElement(xmlfile, 'SubType')
     call xml_AddCharacters(xmlfile, 'MT_TF')
@@ -198,6 +198,14 @@ contains
     call xml_AddCharacters(xmlfile, trim(UserInfo%AcquiredBy))
     call xml_EndElement(xmlfile, 'AcquiredBy')
 
+    call xml_NewElement(xmlfile, 'Start')
+    call xml_AddCharacters(xmlfile, trim(Site%Start))
+    call xml_EndElement(xmlfile, 'Start')
+
+    call xml_NewElement(xmlfile, 'End')
+    call xml_AddCharacters(xmlfile, trim(Site%End))
+    call xml_EndElement(xmlfile, 'End')
+
     call xml_NewElement(xmlfile, 'RunList')
     call xml_AddCharacters(xmlfile, trim(Site%RunList))
     call xml_EndElement(xmlfile, 'RunList')
@@ -252,9 +260,9 @@ contains
 		call xml_AddCharacters(xmlfile, trim(UserInfo%YearCollected))
 		call xml_EndElement(xmlfile, 'YearCollected')
 		
-		call xml_NewElement(xmlfile, 'ID')
+		call xml_NewElement(xmlfile, 'Id')
 		call xml_AddCharacters(xmlfile, trim(Site%ID))
-		call xml_EndElement(xmlfile, 'ID')
+		call xml_EndElement(xmlfile, 'Id')
 		
 		call xml_NewElement(xmlfile, 'Name')
 		call xml_AddCharacters(xmlfile, trim(Site%Description))
@@ -340,9 +348,9 @@ contains
 		call xml_NewElement(xmlfile, 'Name')
 		call xml_AddCharacters(xmlfile, trim(Run%InstrumentName))
 		call xml_EndElement(xmlfile, 'Name')
-		call xml_NewElement(xmlfile, 'ID')
+		call xml_NewElement(xmlfile, 'Id')
 		call xml_AddCharacters(xmlfile, trim(Run%InstrumentID))
-		call xml_EndElement(xmlfile, 'ID')
+		call xml_EndElement(xmlfile, 'Id')
 		call xml_NewElement(xmlfile, 'Settings')
 		call xml_EndElement(xmlfile, 'Settings')
 		call xml_EndElement(xmlfile, 'Instrument')
@@ -359,9 +367,9 @@ contains
 			call xml_NewElement(xmlfile, 'Name')
 			call xml_AddCharacters(xmlfile, trim(InputChannel(1)%InstrumentName))
 			call xml_EndElement(xmlfile, 'Name')
-			call xml_NewElement(xmlfile, 'ID')
+			call xml_NewElement(xmlfile, 'Id')
 			call xml_AddCharacters(xmlfile, trim(InputChannel(1)%InstrumentID))
-			call xml_EndElement(xmlfile, 'ID')
+			call xml_EndElement(xmlfile, 'Id')
 			call xml_NewElement(xmlfile, 'Settings')
 			call xml_EndElement(xmlfile, 'Settings')
 			call xml_EndElement(xmlfile, 'Magnetometer')

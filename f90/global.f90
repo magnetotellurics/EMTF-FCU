@@ -79,10 +79,10 @@ module global
 	integer			   :: QualityRating ! 1-5
 	real(8)			   :: GoodFromPeriod
 	real(8)			   :: GoodToPeriod
-	character(len=80)  :: QualityComments
+	character(len=200) :: QualityComments
  	character(len=19)  :: Start
 	character(len=19)  :: End
-	character(len=80)  :: RunList
+	character(len=200) :: RunList
   end type Site_t
 
 

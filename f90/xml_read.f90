@@ -69,7 +69,7 @@ contains
 	! are encountered several times throughout the document
 	infoNode => item(getElementsByTagName(doc, "Site"),0)
 	
-	Site%ID = getString(infoNode,"ID")
+	Site%ID = getString(infoNode,"Id")
 	Site%Description = getString(infoNode,"Name")
 	Site%Location%lat = getReal(infoNode,"Latitude")
 	Site%Location%lon = getReal(infoNode,"Longitude")
@@ -87,7 +87,7 @@ contains
 		Info%remote_ref = .true.
 	end if
 	Info%sign_convention = getString(infoNode,"SignConvention")
-	Info%remote_site_id = getString(infoNode,"ID")
+	Info%remote_site_id = getString(infoNode,"Id")
 	Info%processing_tag = id
 
   end subroutine read_xml_header

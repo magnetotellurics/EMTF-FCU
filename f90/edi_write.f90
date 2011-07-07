@@ -47,6 +47,7 @@ contains
   	real                                           :: azimuth
 	real(8)                                        :: lat, long, elev
 	character(len=80)                              :: dataid, acqby
+	character(len=80)                              :: runlist
 	character(len=80), dimension(11)               :: info_block
 	real(8), dimension(:), allocatable             :: freq
 	complex(8), dimension(:,:), allocatable        :: t
@@ -104,6 +105,11 @@ contains
 	else
 		acqby = 'UNKNOWN'
 	end if
+	if (len_trim(Site%RunList) > 70) then
+		runlist = 'UNKNOWN'
+	else
+		runlist = Site%RunList
+	end if
 	
 	! create a block of additional information
 	if (present(UserInfo)) then
@@ -121,7 +127,7 @@ contains
 	end if	
 	write(info_block(6),*) 'PROCESSINGTAG=',trim(Info%processing_tag)
 	write(info_block(7),*) 'SITENAME=',trim(Site%Description)
-	write(info_block(8),*) 'RUNLIST=',trim(Site%RunList)
+	write(info_block(8),*) 'RUNLIST=',trim(runlist)
 	write(info_block(9),*) 'REMOTEREF=',trim(Info%remote_ref_type)
 	write(info_block(10),*) 'REMOTESITE=',trim(Info%remote_site_id)
 	write(info_block(11),*) 'SIGNCONVENTION=',trim(Info%sign_convention)
