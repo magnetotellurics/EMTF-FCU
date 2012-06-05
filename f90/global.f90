@@ -309,7 +309,7 @@ contains
 		  if (index(OutputChannel%ID,'H')==1) then
 		     tfname = 'T'//trim(InputChannel%ID(2:10))
 		  else if (index(OutputChannel%ID,'E')==1) then
-		     tfname = 'Z'//trim(InputChannel%ID(2:10))//trim(OutputChannel%ID(2:10))
+		     tfname = 'Z'//trim(OutputChannel%ID(2:10))//trim(InputChannel%ID(2:10))
 		  else
 		     tfname = 'UNKNOWN'
 		  end if
