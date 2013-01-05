@@ -27,7 +27,7 @@ contains
 	Info%Survey = getString(doc,"Survey")
 	Info%YearCollected = getString(doc,"YearCollected")
 	Info%Tags = getString(doc,"Tags")
-	Info%ReleaseStatus = getString(doc,"ReleaseStatus")
+	Info%Copyright%ReleaseStatus = getString(doc,"ReleaseStatus")
 	Info%AcquiredBy = getString(doc,"AcquiredBy")
 	
 	creator => item(getElementsByTagName(doc, "Creator"),0)

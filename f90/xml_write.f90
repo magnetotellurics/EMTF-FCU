@@ -14,7 +14,7 @@ module xml_write
   save   :: xmlfile
 
   public :: initialize_xml_output
-  public :: add_USArray_MT_header
+  public :: add_xml_header
   public :: add_ProcessingInfo
   public :: end_xml_output
   public :: new_element, end_element
@@ -102,14 +102,14 @@ contains
 
 
 
-  subroutine add_USArray_MT_header(Site, UserInfo, Info, Notes)
+  subroutine add_xml_header(Site, UserInfo, Info, Notes)
     type(Site_t), intent(in)     :: Site
     type(UserInfo_t), intent(in) :: UserInfo
     type(RemoteRef_t), intent(in):: Info
     character(len=*), dimension(:), pointer, optional :: Notes
 
     call xml_NewElement(xmlfile, 'Description')
-    call xml_AddCharacters(xmlfile, 'Magnetotelluric Transfer Functions')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Description))
     call xml_EndElement(xmlfile, 'Description')
     
     call xml_NewElement(xmlfile, 'ProductId')
@@ -118,7 +118,7 @@ contains
     call xml_EndElement(xmlfile, 'ProductId')
 
     call xml_NewElement(xmlfile, 'SubType')
-    call xml_AddCharacters(xmlfile, 'MT_TF')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%SubType))
     call xml_EndElement(xmlfile, 'SubType')
 
     call xml_NewElement(xmlfile, 'Notes')
@@ -134,7 +134,7 @@ contains
     call xml_AddCharacters(xmlfile, 'IRIS DMC MetaData')
     call xml_EndElement(xmlfile, 'Description')
     call xml_NewElement(xmlfile, 'Url')
-    call xml_AddCharacters(xmlfile, 'http://www.iris.edu/mda/EM/'//Site%ID)
+    call xml_AddCharacters(xmlfile, 'http://www.iris.edu/mda/'//UserInfo%Network//'/'//Site%ID)
     call xml_EndElement(xmlfile, 'Url')
     call xml_EndElement(xmlfile, 'ExternalUrl')
 
@@ -184,16 +184,20 @@ contains
 
     call xml_EndElement(xmlfile, 'Provenance')
     
+    call xml_NewElement(xmlfile, 'Copyright')
+
+    call xml_NewElement(xmlfile, 'ReleaseStatus')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ReleaseStatus))
+    call xml_EndElement(xmlfile, 'ReleaseStatus')
+
+    call xml_EndElement(xmlfile, 'Copyright')
+
     call xml_NewElement(xmlfile, 'Site')
 
 	call add_Site_header(UserInfo, Site)
  
 	call add_Location(Site%Location,Site%Declination)
  
-    call xml_NewElement(xmlfile, 'ReleaseStatus')
-    call xml_AddCharacters(xmlfile, trim(UserInfo%ReleaseStatus))
-    call xml_EndElement(xmlfile, 'ReleaseStatus')
-
     call xml_NewElement(xmlfile, 'AcquiredBy')
     call xml_AddCharacters(xmlfile, trim(UserInfo%AcquiredBy))
     call xml_EndElement(xmlfile, 'AcquiredBy')
@@ -226,6 +230,18 @@ contains
     call xml_EndElement(xmlfile, 'Comments')
     call xml_EndElement(xmlfile, 'DataQualityNotes')
 
+    if (Site%WarningFlag >= 0) then
+    call xml_NewElement(xmlfile, 'DataQualityWarnings')
+    call xml_NewElement(xmlfile, 'Flag')
+    call xml_AddCharacters(xmlfile, Site%WarningFlag)
+    call xml_EndElement(xmlfile, 'Flag')
+    call xml_NewElement(xmlfile, 'Comments')
+    call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%Creator%Name))
+    call xml_AddCharacters(xmlfile, trim(Site%WarningComments))
+    call xml_EndElement(xmlfile, 'Comments')
+    call xml_EndElement(xmlfile, 'DataQualityWarnings')
+    end if
+
     if (present(Notes)) then
     	if (associated(Notes)) then
     		    call xml_NewElement(xmlfile, 'Comments')
@@ -241,7 +257,7 @@ contains
     
     call xml_EndElement(xmlfile, 'Site')
     
-  end subroutine add_USArray_MT_header
+  end subroutine add_xml_header
 
   
 	subroutine add_Site_header(UserInfo, Site)
@@ -476,6 +492,7 @@ contains
 	real(8), optional, intent(in)   :: decl
 
     call xml_NewElement(xmlfile, 'Location')
+    call xml_AddAttribute(xmlfile, 'datum', trim(L%datum))
     
     call xml_NewElement(xmlfile, 'Latitude')
     call xml_AddCharacters(xmlfile, L%lat, fmt="r6")

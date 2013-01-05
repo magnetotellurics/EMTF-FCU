@@ -8,9 +8,9 @@ program xml2edi
   character(len=80) :: edi_file=''
   character(len=80) :: xml_file=''
   character(len=19) :: xml_time, edi_date 
-  character(len=80) :: site_info_list='USArray_2006_Sites.xml'
-  character(len=80) :: run_info_list='USArray_2006_Runs.xml'
-  character(len=80) :: description='My favourite station'
+  character(len=80) :: site_info_list='Sites.xml'
+  character(len=80) :: run_info_list='Runs.xml'
+  character(len=80) :: description='My favorite station'
   character(len=80) :: zsitename, basename, verbose=''
   type(UserInfo_t)  :: UserInfo
   type(RemoteRef_t) :: Info

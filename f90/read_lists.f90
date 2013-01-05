@@ -82,6 +82,8 @@ contains
     		Site%GoodFromPeriod = getReal(thisSite,"GoodFromPeriod")
     		Site%GoodToPeriod = getReal(thisSite,"GoodToPeriod")
     		Site%QualityComments = getString(thisSite,"QualityComments")
+            Site%WarningFlag = getInteger(thisSite,"WarningFlag")
+            Site%WarningComments = getString(thisSite,"WarningComments")
     		Site%Start = getString(thisSite,"Start")
     		Site%End = getString(thisSite,"End")
     		Site%RunList = getString(thisSite,"RunList")

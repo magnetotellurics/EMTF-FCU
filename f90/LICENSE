@@ -5,7 +5,7 @@
 ! Geophysicists MT/EMAP Data Interchange Standard (EDI) and XML files, as defined !
 ! by the latest version of the EM_TF.xsd XML schema.                              !
 !                                                                                 !
-! EMTF FCU are intended to complement Gary Egbert's EMTF electomagnetic data      !
+! EMTF FCU are intended to complement Gary Egbert's EMTF electromagnetic data      !
 ! processing and plotting software.                                               !
 !                                                                                 !
 ! EMTF FCU is free software; you can redistribute it and/or modify it under the   !

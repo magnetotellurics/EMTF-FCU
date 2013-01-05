@@ -8,11 +8,16 @@ module global
   logical, save         :: rotate=.false.
   character(len=10)     :: date, time, zone
   !*********************************************************
-  ! The version only changes if the XML schema changes
-  character(len=3)      :: version='2.0'
+  ! WGS84 - common standard global datum
+  ! NAD83 - used in North America
+  ! ETRS89 - used in Europe
+  ! For example, in Sydney there is a 200 m  difference
+  ! between GPS coordinates configured in GDA (based on
+  ! global standard WGS84) and AGD (used for most local maps)
+  character(len=10)     :: datum='WGS84'
   !*********************************************************
-  ! The network is always 'EM' !!!
-  character(len=2)      :: network='EM'
+  ! The version only changes if the XML schema changes
+  character(len=3)      :: version='3.0'
   !*********************************************************
   ! The sign convention is always going to be +1
   character(len=16)     :: sign_convention='exp(+ i\omega t)'
@@ -30,6 +35,14 @@ module global
   !*********************************************************
 
 
+  !************************************************************************
+  ! MT TF info block
+  character(len=2)      :: network='EM'
+  character(len=20)     :: subType='MT_TF'
+  character(len=200)    :: subTypeInfo='Magnetotelluric Transfer Functions'
+  character(len=20)     :: tags='impedance,tipper'
+
+
   type :: Person_t
     character(len=80) :: Name
     character(len=80) :: Email
@@ -38,12 +51,25 @@ module global
     character(len=80) :: OrgLogoUrl
   end type Person_t
 
+  type :: Copyright_t
+    type(Person_t)    :: Author(10)
+    character(len=80) :: Year
+    character(len=800):: Name
+    character(len=80) :: DOI
+    character(len=800):: Reference ! optionally replaces data DOI
+    character(len=80) :: ReleaseStatus
+    character(len=800):: ConditionsOfUse
+  end type Copyright_t
+
   type :: UserInfo_t
+    character(len=2)  :: Network
+    character(len=80) :: SubType
+    character(len=80) :: Description
+    character(len=80) :: Tags
+    type(Copyright_t) :: Copyright
     character(len=80) :: Project
     character(len=80) :: Survey
     character(len=80) :: YearCollected    
-    character(len=80) :: Tags
-    character(len=80) :: ReleaseStatus
     character(len=80) :: AcquiredBy
     type(Person_t)	  :: Creator
     type(Person_t)	  :: Submitter
@@ -58,6 +84,7 @@ module global
   end type UserInfo_t
 
   type :: Location_t
+    character(10)     :: datum
 	real(8)           :: lat
 	real(8)           :: lon
 	real(8)           :: elev
@@ -80,7 +107,9 @@ module global
 	real(8)			   :: GoodFromPeriod
 	real(8)			   :: GoodToPeriod
 	character(len=200) :: QualityComments
- 	character(len=19)  :: Start
+    integer            :: WarningFlag ! 0/1
+    character(len=200) :: WarningComments
+  	character(len=19)  :: Start
 	character(len=19)  :: End
 	character(len=200) :: RunList
   end type Site_t
@@ -151,27 +180,47 @@ module global
 
 contains
 
-	subroutine init_user_info(Info)
-		type(UserInfo_t), intent(out)  :: Info
+	subroutine init_copyright(Info)
+		type(Copyright_t), intent(out)  :: Info
+		! local
+		integer i
 
-		Info%Project = 'USArray'
-		Info%Survey = 'TA'
-		Info%YearCollected = ''
-		Info%Tags = 'impedance,tipper'
-		Info%ReleaseStatus = 'Unrestricted Release'
-		Info%AcquiredBy = 'UNKNOWN'
-		call init_person(Info%Creator)
-		call init_person(Info%Submitter)
-		Info%ProcessedBy = 'UNKNOWN'
-		Info%ProcessingSoftware = 'UNKNOWN'
-		Info%ProcessingSoftwareLastMod = 'UNKNOWN'
-		Info%ProcessingSoftwareAuthor = 'UNKNOWN'
-		Info%OrthogonalGeographic = 0
-		Info%RunList = 'Runs.xml'
-		Info%SiteList = 'Sites.xml'
-		Info%ChannelList = 'Channels.xml'
+		do i=1,size(Info%Author)
+		    call init_person(Info%Author(i))
+		end do
+		Info%Year = ''
+		Info%Name = 'USArray TA Magnetotelluric Transfer Functions'
+		Info%DOI = 'Unassigned'
+        Info%Reference = ''
+		Info%ReleaseStatus = 'UNKNOWN'
+		Info%ConditionsOfUse = 'Please refer to the IRIS data use policy for conditions of use.'
 		
-	end subroutine init_user_info
+	end subroutine init_copyright
+
+    subroutine init_user_info(Info)
+        type(UserInfo_t), intent(out)  :: Info
+
+        Info%Network = network
+        Info%SubType = subType
+        Info%Description = subTypeInfo
+        Info%Tags = tags
+        call init_copyright(Info%Copyright)
+        Info%Project = 'USArray'
+        Info%Survey = 'TA'
+        Info%YearCollected = ''
+        Info%AcquiredBy = 'UNKNOWN'
+        call init_person(Info%Creator)
+        call init_person(Info%Submitter)
+        Info%ProcessedBy = 'UNKNOWN'
+        Info%ProcessingSoftware = 'UNKNOWN'
+        Info%ProcessingSoftwareLastMod = 'UNKNOWN'
+        Info%ProcessingSoftwareAuthor = 'UNKNOWN'
+        Info%OrthogonalGeographic = 0
+        Info%RunList = 'Runs.xml'
+        Info%SiteList = 'Sites.xml'
+        Info%ChannelList = 'Channels.xml'
+
+    end subroutine init_user_info
 
 	subroutine init_person(Person)
 		type(Person_t), intent(out)  :: Person
@@ -189,6 +238,7 @@ contains
 
 		Site%ID = ' '
 		Site%Description = ' '
+        Site%Location%datum = datum
 		Site%Location%lon = 0.0d0
 		Site%Location%lat = 0.0d0
 		Site%Location%elev = 0.0d0
@@ -197,6 +247,8 @@ contains
 		Site%GoodFromPeriod = 0.0d0
 		Site%GoodToPeriod = 0.0d0
 		Site%QualityComments = ' '
+        Site%WarningFlag = -1 ! unknown
+        Site%WarningComments = ' '
 		Site%Start = ' '
 		Site%End = ' '
 		Site%RunList = ' '
@@ -213,6 +265,7 @@ contains
 		Run%InstrumentName = ' '
 		Run%InstrumentID = ' '
 		Run%Manufacturer = ' '
+		Run%Location%datum = datum
 		Run%Location%lon = 0.0d0
 		Run%Location%lat = 0.0d0
 		Run%Location%elev = 0.0d0

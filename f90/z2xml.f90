@@ -165,10 +165,10 @@ program z2xml
 
   if (len_trim(xmlLocalSite%ID)>0) then
 
-  	call add_USArray_MT_header(xmlLocalSite, UserInfo, Info, Notes)
+  	call add_xml_header(xmlLocalSite, UserInfo, Info, Notes)
   else
 
-  	call add_USArray_MT_header(zLocalSite, UserInfo, Info, Notes)
+  	call add_xml_header(zLocalSite, UserInfo, Info, Notes)
   end if
 
   ! Read runs (e.g. start and end times) information for each of the runs
