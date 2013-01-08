@@ -52,13 +52,14 @@ module global
   end type Person_t
 
   type :: Copyright_t
+    integer           :: NumAuthors
     type(Person_t)    :: Author(10)
     character(len=80) :: Year
     character(len=800):: Name
     character(len=80) :: DOI
     character(len=800):: Reference ! optionally replaces data DOI
     character(len=80) :: ReleaseStatus
-    character(len=800):: ConditionsOfUse
+    character(len=100):: ConditionsOfUse(100)
   end type Copyright_t
 
   type :: UserInfo_t
@@ -185,6 +186,7 @@ contains
 		! local
 		integer i
 
+        Info%NumAuthors = 0
 		do i=1,size(Info%Author)
 		    call init_person(Info%Author(i))
 		end do
@@ -193,7 +195,9 @@ contains
 		Info%DOI = 'Unassigned'
         Info%Reference = ''
 		Info%ReleaseStatus = 'UNKNOWN'
-		Info%ConditionsOfUse = 'Please refer to the IRIS data use policy for conditions of use.'
+		do i=1,size(Info%ConditionsOfUse)
+		    Info%ConditionsOfUse = ''
+		end do
 		
 	end subroutine init_copyright
 

@@ -171,6 +171,22 @@ contains
 ! identity(): outputs an identity matrix of the same size as the input
 ! (C) Anna Kelbert, 2009
 
+logical function isempty(str)
+
+  character(len=*), intent(in) :: str
+
+  if (len_trim(adjustl(str))==0) then
+    isempty = .true.
+  else
+    isempty = .false.
+  end if
+
+end function isempty
+
+! **********************************************************************
+! identity(): outputs an identity matrix of the same size as the input
+! (C) Anna Kelbert, 2009
+
 subroutine identity(a)
 
   real(8), intent(inout), dimension(:,:) :: a

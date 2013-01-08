@@ -186,9 +186,35 @@ contains
     
     call xml_NewElement(xmlfile, 'Copyright')
 
+    do i = 1,UserInfo%Copyright%NumAuthors
+        call xml_NewElement(xmlfile, 'Author')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Author(i)%Name))
+        call xml_EndElement(xmlfile, 'Author')
+    end do
+    call xml_NewElement(xmlfile, 'Year')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Year))
+    call xml_EndElement(xmlfile, 'Year')
+    call xml_NewElement(xmlfile, 'Name')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Name))
+    call xml_EndElement(xmlfile, 'Name')
+    call xml_NewElement(xmlfile, 'DOI')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%DOI))
+    call xml_EndElement(xmlfile, 'DOI')
     call xml_NewElement(xmlfile, 'ReleaseStatus')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ReleaseStatus))
     call xml_EndElement(xmlfile, 'ReleaseStatus')
+    if (.not. isempty(UserInfo%Copyright%ConditionsOfUse(1))) then
+        call xml_NewElement(xmlfile, 'ConditionsOfUse')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ConditionsOfUse(1)))
+        do i=2,size(UserInfo%Copyright%ConditionsOfUse)
+            if (isempty(UserInfo%Copyright%ConditionsOfUse(i))) then
+                exit
+            end if
+            call xml_AddCharacters(xmlfile, achar(ascii_cr))
+            call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ConditionsOfUse(i)))
+        end do
+        call xml_EndElement(xmlfile, 'ConditionsOfUse')
+    end if
 
     call xml_EndElement(xmlfile, 'Copyright')
 
