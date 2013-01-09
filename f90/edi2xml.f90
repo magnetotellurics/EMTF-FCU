@@ -7,13 +7,13 @@ program edi2xml
   implicit none
 
   character(len=80) :: input_dir='./'
-  character(len=80) :: z_file=''
+  character(len=80) :: edi_file=''
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
-  character(len=80) :: zsitename, basename, verbose=''
+  character(len=80) :: edisitename, basename, verbose=''
   type(RemoteRef_t) :: Info
   type(UserInfo_t)  :: UserInfo
-  type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
+  type(Site_t)      :: ediLocalSite, xmlLocalSite, xmlRemoteSite
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
   type(FreqInfo_t), dimension(:), allocatable :: F
   type(Channel_t), dimension(:), pointer	  :: InputChannel
@@ -35,14 +35,14 @@ program edi2xml
      write(0,*) 'Please specify the name of the input Z-file'
      stop
   else if (n>=1) then
-     call get_command_argument(1,z_file)
+     call get_command_argument(1,edi_file)
   end if
 
   if (n>1) then
      call get_command_argument(2,xml_file)
   else
-     l = len_trim(z_file)
-     basename = z_file(1:l-4)
+     l = len_trim(edi_file)
+     basename = edi_file(1:l-4)
      xml_file = trim(basename)//'.xml'
   end if
 
@@ -59,9 +59,9 @@ program edi2xml
   end if
 
   ! Look for configuration file in the input directory
-  i = index(z_file,'/',.true.)
+  i = index(edi_file,'/',.true.)
   if (i>0) then
-    input_dir = z_file(1:i-1)
+    input_dir = edi_file(1:i-1)
   end if
   config_file = trim(input_dir)//'/'//trim(config_file)
   if (.not. silent) then
@@ -82,6 +82,12 @@ program edi2xml
   	write(0,*) '	<Survey>TA</Survey>'
   	write(0,*) '	<YearCollected>2011</YearCollected>'
   	write(0,*) '	<Tags>impedance,tipper</Tags>' 
+    write(0,*) '    <Citation>'
+    write(0,*) '      <Title>USArray TA Magnetotelluric Transfer Functions</Title>'
+    write(0,*) '      <Authors>Adam Schultz, Gary D. Egbert, Anna Kelbert</Authors>'
+    write(0,*) '      <Year>2012</Year>'
+    write(0,*) '      <DOI>Unassigned</DOI>'
+    write(0,*) '    </Citation>'
   	write(0,*) '	<ReleaseStatus>Unrestricted Release</ReleaseStatus>'
   	write(0,*) '	<AcquiredBy>Zonge Inc.</AcquiredBy>'
   	write(0,*) '	<Creator>'
@@ -125,9 +131,9 @@ program edi2xml
 
   ! Read the Z-file in full
 
-  call initialize_z_input(z_file)
+  call initialize_edi_input(edi_file)
 
-  call read_z_header(zsitename, zLocalSite, Info)
+  call read_edi_header(edisitename, ediLocalSite, Info)
 
   ! Allocate space for channels and transfer functions
   allocate(InputChannel(2), OutputChannel(nch-2), stat=istat)
@@ -135,26 +141,16 @@ program edi2xml
   allocate(InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2), stat=istat)
   allocate(U(2,2), V(nch-2,nch-2), stat=istat)
 
-  call read_z_channels(InputChannel, OutputChannel, zLocalSite%Declination)
-
-  ! Initialize conversion to orthogonal geographic coords
-  if (UserInfo%OrthogonalGeographic > 0) then
-     call rotate_z_channels(InputChannel, OutputChannel, U, V)
-  end if
+  call read_edi_channels(InputChannel, OutputChannel, ediLocalSite%Declination)
 
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
-     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
-
-     ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
-     if (UserInfo%OrthogonalGeographic > 0) then
-     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
-     end if
+     call read_edi_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
   end do
 
-  call read_z_notes(Notes)
+  call read_edi_info(Notes)
 
   ! Finished reading Z-file
 
@@ -163,7 +159,7 @@ program edi2xml
   	call add_xml_header(xmlLocalSite, UserInfo, Info, Notes)
   else
 
-  	call add_xml_header(zLocalSite, UserInfo, Info, Notes)
+  	call add_xml_header(ediLocalSite, UserInfo, Info, Notes)
   end if
 
   ! Processing notes follow
@@ -212,7 +208,7 @@ program edi2xml
   deallocate(InputChannel, OutputChannel)
   deallocate(F, TF, TFVar, InvSigCov, ResidCov)
 
-  call end_z_input
+  call end_edi_input
 
   call end_xml_output('EM_TF')
 
