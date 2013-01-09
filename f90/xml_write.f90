@@ -186,17 +186,15 @@ contains
     
     call xml_NewElement(xmlfile, 'Copyright')
 
-    do i = 1,UserInfo%Copyright%NumAuthors
-        call xml_NewElement(xmlfile, 'Author')
-        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Author(i)%Name))
-        call xml_EndElement(xmlfile, 'Author')
-    end do
+    call xml_NewElement(xmlfile, 'Title')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Title))
+    call xml_EndElement(xmlfile, 'Title')
+    call xml_NewElement(xmlfile, 'Authors')
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Authors))
+    call xml_EndElement(xmlfile, 'Authors')
     call xml_NewElement(xmlfile, 'Year')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Year))
     call xml_EndElement(xmlfile, 'Year')
-    call xml_NewElement(xmlfile, 'Name')
-    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Name))
-    call xml_EndElement(xmlfile, 'Name')
     call xml_NewElement(xmlfile, 'DOI')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%DOI))
     call xml_EndElement(xmlfile, 'DOI')

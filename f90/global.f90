@@ -52,12 +52,11 @@ module global
   end type Person_t
 
   type :: Copyright_t
-    integer           :: NumAuthors
-    type(Person_t)    :: Author(10)
+    character(len=800):: Title
+    character(len=800):: Authors
     character(len=80) :: Year
-    character(len=800):: Name
     character(len=80) :: DOI
-    character(len=800):: Reference ! optionally replaces data DOI
+    character(len=800):: RelatedPublication ! optionally replaces data DOI
     character(len=80) :: ReleaseStatus
     character(len=100):: ConditionsOfUse(100)
   end type Copyright_t
@@ -186,14 +185,11 @@ contains
 		! local
 		integer i
 
-        Info%NumAuthors = 0
-		do i=1,size(Info%Author)
-		    call init_person(Info%Author(i))
-		end do
+		Info%Title = 'USArray TA Magnetotelluric Transfer Functions'
+		Info%Authors = ''
 		Info%Year = ''
-		Info%Name = 'USArray TA Magnetotelluric Transfer Functions'
 		Info%DOI = 'Unassigned'
-        Info%Reference = ''
+        Info%RelatedPublication = ''
 		Info%ReleaseStatus = 'UNKNOWN'
 		do i=1,size(Info%ConditionsOfUse)
 		    Info%ConditionsOfUse = ''

@@ -158,10 +158,6 @@ program edi2xml
 
   ! Finished reading Z-file
 
-  ! Read information for this site from a list. If successfully read,
-  ! trust this information rather than that from the Z-file
-  call read_site_list(UserInfo%SiteList, zLocalSite%ID, xmlLocalSite, site_list_exists)
-
   if (len_trim(xmlLocalSite%ID)>0) then
 
   	call add_xml_header(xmlLocalSite, UserInfo, Info, Notes)
@@ -170,32 +166,9 @@ program edi2xml
   	call add_xml_header(zLocalSite, UserInfo, Info, Notes)
   end if
 
-  ! Read runs (e.g. start and end times) information for each of the runs
-  ! which were used in processing the data found in the Z-file
-  call read_run_list(UserInfo%RunList, zLocalSite%RunList, Run, run_list_exists)
-
-  ! Field notes go first
-  if (run_list_exists) then
-  	do i=1,size(Run)
-		call read_channel_list(UserInfo%ChannelList, Run(i)%ID, InputChannel, channel_list_exists)
-		call read_channel_list(UserInfo%ChannelList, Run(i)%ID, OutputChannel, channel_list_exists)
-		if (channel_list_exists) then
-			call add_FieldNotes(Run(i),InputChannel,OutputChannel)
-		else
-			call add_FieldNotes(Run(i))
-		end if
-  	end do
-  end if
-  
   ! Processing notes follow
   if (Info%remote_ref) then
-  	call read_site_list(UserInfo%SiteList, Info%remote_site_id, xmlRemoteSite, site_list_exists)
-	call read_run_list (UserInfo%RunList, xmlRemoteSite%RunList, RemoteRun, run_list_exists)
-  	if (run_list_exists) then
-		call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite, RemoteRun)
-	else
-		call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite)
-	end if
+	call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite)
   else
   	call add_ProcessingInfo(UserInfo, Info)
   end if

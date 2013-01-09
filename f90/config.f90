@@ -36,14 +36,9 @@ contains
 	Info%Tags = getString(doc,"Tags")
 
     copyright => item(getElementsByTagName(doc, "Citation"),0)
-    authors => getElementsByTagName(copyright, "Author")
-    do i = 0, getLength(authors)-1
-        author => item(authors, i)
-        Info%Copyright%Author(i+1)%Name = getTextContent(author)
-    end do
-    Info%Copyright%NumAuthors = getLength(authors)
+    Info%Copyright%Authors = getString(copyright,"Authors")
+    Info%Copyright%Title = getString(copyright,"Title")
     Info%Copyright%Year = getString(copyright,"Year")
-    Info%Copyright%Name = getString(copyright,"Name")
     Info%Copyright%DOI = getString(copyright,"DOI")
 	Info%Copyright%ReleaseStatus = getString(doc,"ReleaseStatus")
 	
