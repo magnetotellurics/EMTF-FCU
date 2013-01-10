@@ -37,6 +37,10 @@ module global
 
   !************************************************************************
   ! MT TF info block
+  ! In general, site names are unique within the 2-char Network.
+  ! However, all MT stuff has been given a single network name ('EM').
+  ! Recently, that has been changed, and new MT surveys will have unique
+  ! networks. Still, most of the historic MT is in 'EM'.
   character(len=2)      :: network='EM'
   character(len=20)     :: subType='MT_TF'
   character(len=200)    :: subTypeInfo='Magnetotelluric Transfer Functions'

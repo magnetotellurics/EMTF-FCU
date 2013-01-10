@@ -22,9 +22,6 @@ program edi2xml
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   character(10), dimension(:,:), allocatable   :: TFName
-  complex(8), dimension(:,:,:), allocatable    :: InvSigCov
-  complex(8), dimension(:,:,:), allocatable    :: ResidCov
-  real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
   logical           :: config_exists, site_list_exists
   logical			:: run_list_exists, channel_list_exists
   integer           :: i, j, k, n, l, istat
@@ -86,7 +83,7 @@ program edi2xml
     write(0,*) '      <Title>USArray TA Magnetotelluric Transfer Functions</Title>'
     write(0,*) '      <Authors>Adam Schultz, Gary D. Egbert, Anna Kelbert</Authors>'
     write(0,*) '      <Year>2012</Year>'
-    write(0,*) '      <DOI>Unassigned</DOI>'
+    write(0,*) '      <DOI>(omit if not assigned)</DOI>'
     write(0,*) '    </Citation>'
   	write(0,*) '	<ReleaseStatus>Unrestricted Release</ReleaseStatus>'
   	write(0,*) '	<AcquiredBy>Zonge Inc.</AcquiredBy>'
@@ -108,21 +105,13 @@ program edi2xml
   	write(0,*) '		<LastMod>1987-10-12</LastMod>'
   	write(0,*) '		<Author>Gary Egbert</Author>'
   	write(0,*) '	</ProcessingSoftware>'
-  	write(0,*) '	<OrthogonalGeographic>1</OrthogonalGeographic>'
-  	write(0,*) '	<RunList>Runs.xml</RunList>'
-  	write(0,*) '	<SiteList>Sites.xml</SiteList>'
-  	write(0,*) '	<ChannelList>Channels.xml</ChannelList>'
   	write(0,*) '<Configuration>'
   	write(0,*)
   	write(0,*) 'Project and YearCollected (if present) help identify'
     write(0,*) 'a product in SPADE. They should not contain spaces.'
-  	write(0,*) 'The optional OrthogonalGeographic field, if true,'
-  	write(0,*) 'will rotate the data to orthogonal geographic coords.'
-  	write(0,*) 'Use with caution: information about the original '
-  	write(0,*) 'measurement coordinates might be lost in the process.'
-    write(0,*) 'Rotation only works if there are four or five channels.'
-  	write(0,*) 'Leave the RunList and SiteList elements out or empty'
-  	write(0,*) 'if you do not have XML lists for this experiment.'
+  	write(0,*) 'EDI files do not have enough information for rotation'
+    write(0,*) 'so output data will be in the same coordinate system'
+    write(0,*) 'as they are in the original EDI file. Use caution.'
   	stop
   end if
 
@@ -131,28 +120,26 @@ program edi2xml
 
   ! Read the Z-file in full
 
-  call initialize_edi_input(edi_file)
+  call initialize_edi_input(edi_file, edisitename)
 
   call read_edi_header(edisitename, ediLocalSite, Info)
+
+  !call read_edi_info(Notes)
 
   ! Allocate space for channels and transfer functions
   allocate(InputChannel(2), OutputChannel(nch-2), stat=istat)
   allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), TFName(nch-2,2), stat=istat)
-  allocate(InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2), stat=istat)
-  allocate(U(2,2), V(nch-2,nch-2), stat=istat)
 
-  call read_edi_channels(InputChannel, OutputChannel, ediLocalSite%Declination)
+  !call read_edi_channels(InputChannel, OutputChannel, ediLocalSite%Declination)
 
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
-     call read_edi_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     !call read_edi_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
   end do
 
-  call read_edi_info(Notes)
-
-  ! Finished reading Z-file
+  ! Finished reading EDI-file
 
   if (len_trim(xmlLocalSite%ID)>0) then
 
@@ -169,35 +156,33 @@ program edi2xml
   	call add_ProcessingInfo(UserInfo, Info)
   end if
 
-  call new_channel_block('InputChannels')
-  do i=1,2
-     call add_Channel(InputChannel(i), location=.false.)
-  end do
-  call end_block('InputChannels')
-
-  call new_channel_block('OutputChannels')
-  do i=1,nch-2
-     call add_Channel(OutputChannel(i), location=.false.)
-  end do
-  call end_block('OutputChannels')
-
-  ! Read and write frequency blocks: transfer functions, variance, covariance
-  call initialize_xml_freq_block_output(nf)
-
-  do k=1,nf
-
-	 call new_data_block('Period',F(k))
-
-     call add_TF(TF(k,:,:), InputChannel, OutputChannel)
-     call add_TFVar(TFVar(k,:,:), InputChannel, OutputChannel)
-     call add_InvSigCov(InvSigCov(k,:,:), InputChannel)
-     call add_ResidCov(ResidCov(k,:,:), OutputChannel)
-
-     call end_block('Period')
-
-  end do
-
-  call end_xml_freq_block_output
+!  call new_channel_block('InputChannels')
+!  do i=1,2
+!     call add_Channel(InputChannel(i), location=.false.)
+!  end do
+!  call end_block('InputChannels')
+!
+!  call new_channel_block('OutputChannels')
+!  do i=1,nch-2
+!     call add_Channel(OutputChannel(i), location=.false.)
+!  end do
+!  call end_block('OutputChannels')
+!
+!  ! Read and write frequency blocks: transfer functions, variance, covariance
+!  call initialize_xml_freq_block_output(nf)
+!
+!  do k=1,nf
+!
+!	 call new_data_block('Period',F(k))
+!
+!     call add_TF(TF(k,:,:), InputChannel, OutputChannel)
+!     call add_TFVar(TFVar(k,:,:), InputChannel, OutputChannel)
+!
+!     call end_block('Period')
+!
+!  end do
+!
+!  call end_xml_freq_block_output
 
   !call add_PeriodRange(F)
 
@@ -206,7 +191,7 @@ program edi2xml
   if (associated(RemoteRun)) deallocate(RemoteRun)
   if (associated(Notes)) deallocate(Notes)
   deallocate(InputChannel, OutputChannel)
-  deallocate(F, TF, TFVar, InvSigCov, ResidCov)
+  deallocate(F, TF, TFVar)
 
   call end_edi_input
 

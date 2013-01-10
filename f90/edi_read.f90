@@ -7,10 +7,14 @@ module edi_read
   private
 
   integer                        :: edifile
-  character(len=120)             :: temp
+  character(len=200)             :: temp
+  logical                        :: new_block, new_section
+  character(len=80)              :: this_block, this_section
   integer                        :: ios,i,j
 
   save   :: edifile
+  save   :: new_block, new_section
+  save   :: this_block, this_section
 
   public :: initialize_edi_input
   public :: read_edi_header
@@ -19,11 +23,13 @@ module edi_read
   public :: read_edi_info
   public :: end_edi_input
 
+
 contains
 
-  subroutine initialize_edi_input(fname)
-     character(len=*), intent(in) :: fname
-     integer			  :: ios
+  subroutine initialize_edi_input(fname,sitename)
+     character(len=*), intent(in)   :: fname
+     character(len=80), intent(out) :: sitename
+     integer			  :: i,ios
      character(20)		  :: str
 
      ! passed an empty string
@@ -39,131 +45,121 @@ contains
         write(0,*) 'Error opening file:', fname
      endif
 
+     ! parse the EDI file name for site name:
+     ! the only robust source for a unique ID
+     i = index(trim(fname),'.edi')
+     if (i > 0) then
+        sitename = trim(fname(1:i-1))
+        if (.not.silent) then
+            write(6,*) 'Initialized reading site ',trim(sitename),' from EDI file'
+        end if
+     else
+        write(0,*) 'Error: ',trim(fname),' is not an EDI file'
+     end if
+
   end subroutine initialize_edi_input
 
-  !--------------------------------------------------------------------
-  ! Parses the station, as written into a Gary Egbert's Z-file, or the
-  ! name of a Z-file, such as: WAA05bc_A4
-  ! Assumes no extra characters at the end of this string, and uses
-  ! the following convention:
-  ! a) no underscore - assume single station
-  ! b) 2-char after the underscore - insert a zero, e.g. A4 -> WAA04
-  ! c) 3-char atter the underscore - assume 2 digits, e.g. A11 -> WAA11
-  ! d) <2-char or >3-char after the underscore - do not attempt to parse
-  ! Most importantly, assumes a 5-digit site name!!!!!!
-  ! Please manually correct the station name in your Z-file to satisfy
-  ! these criteria before attempting to run this program.
-  subroutine parse_edi_site_name(sitename, SiteID, RemoteSiteID, RunList)
-  	character(len=80), intent(in)    :: sitename
-  	character(len=5), intent(out)    :: SiteID
-  	character(len=5), intent(out)    :: RemoteSiteID
-  	character(len=80), intent(out)   :: RunList
-  	character(len=80)                :: info
-	character(len=20)                :: list, abbrev
-  	integer                          :: l, k, i
 
-  	SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//toupper(sitename(3:3))//sitename(4:5)
-	RunList = ' '
+  subroutine parse_edi_line(line, var, value)
+    character(len=200), intent(in)   :: line
+    character(len=200), intent(out)  :: var, value
+    ! local
+    character(len=1)                 :: edichar1, edichar2
+    integer                          :: i, N=200
 
-    ! Find spaces in the sitename
-    i = index(trim(sitename),' ')
-    if (i > 0) then
-        l = i-1
-    else
-  	    l = len_trim(sitename)
-  	end if
-
-  	if (l>5) then
-  		i = index(sitename,'_')
-		if (i==0) then ! Single Station - create the run list and exit
-			list = sitename(6:l)
-			abbrev = ' '
-		else ! Remote Reference - parse the name of the remote site
-			list = sitename(6:i-1)
-			abbrev = sitename(i+1:l)
-		end if
-		! In either case, make a list of run names, store them in a string
-		do k=1,len_trim(list)
-			RunList = trim(RunList)//' '//trim(SiteID)//list(k:k)
-		end do
-	end if
-
-  	if (len_trim(abbrev)==0) then
-  		RemoteSiteID = ' '
-  	else if (len_trim(abbrev)==2) then
-  		RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
-  	else if (len_trim(abbrev)>=3) then
-  		if (isdigit(abbrev(3:3))) then
-  			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
-  		else ! Account for additional characters at the end e.g. ORG05bc_H6x
-   			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
-  		end if
-	else
-		write(0,*) 'Unable to extract remote reference site from the string ',trim(sitename)
-		RemoteSiteID = ' '
-	end if
-
-    i = index(sitename,'remote')
-    l = len_trim(sitename)
-    if (i > 0) then
-        write(*,*) 'Using remote site ID from the Z-file header...'
-        RemoteSiteID = sitename(i+7:l)
+    ! Does this contain a new block? new section? a comment?
+    ! Use the first two non-space characters to determine
+    new_block = .false.
+    new_section = .false.
+    temp = adjustl(line)
+    edichar1 = temp(1:1)
+    edichar2 = temp(2:2)
+    if (edichar1 == '>') then
+        select case (edichar2)
+        case ('=')
+            new_section = .true.
+            this_section = trim(adjustl(temp(3:N)))
+            var = 'SECTION'
+            value = this_section
+            return
+        case ('!')
+            var = 'COMMENT'
+            value = trim(adjustl(temp(3:N)))
+            return
+        case default
+            ! this block reads the first word in line
+            ! but save full info in value
+            new_block = .true.
+            read (temp(2:N),*) this_block
+            var = 'BLOCK'
+            value = trim(adjustl(temp(2:N)))
+            return
+        end select
     end if
 
-  end subroutine parse_edi_site_name
+    ! In all other circumstances, continue parsing the line
+    i = index(trim(temp),'=')
+    if (i > 0) then
+        var = trim(temp(1:i-1))
+        value = trim(adjustl(temp(i+1:N)))
+        edichar1 = value(1:1)
+        if (isdigit(edichar1)) then
+            ! just save the full line; could be date or anything
+        elseif (edichar1 == char(ascii_qtm)) then
+            ! find the second double quote and read what's in between
+            i = index(trim(value(2:N)),char(ascii_qtm))
+            value = trim(value(2:i))
+         else
+            ! read the first word in line as the value
+            read (temp(i+1:N),*) value
+        end if
+    else
+        ! Note: empty info line is still an info line;
+        ! this preserves the formatting
+        if (trim(this_block) == 'INFO') then
+            var = 'INFO'
+        elseif (isempty(line)) then
+            var = 'EMPTY'
+        else
+            var = 'DATA'
+        end if
+        value = line
+    end if
+
+  end subroutine parse_edi_line
 
 
   subroutine read_edi_header(sitename, Site, Info)
-    character(len=80), intent(out)   :: sitename
+    character(len=80), intent(inout) :: sitename
     type(Site_t),  intent(out)       :: Site
 	type(RemoteRef_t), intent(out)   :: Info
+	! local
+    character(len=200)               :: line, var, value
 
 	call init_remote_ref(Info)
 	call init_site_info(Site)
 
-    read (edifile,*) temp
-    read (edifile,*) temp
-    read (edifile,'(a80)') Info%remote_ref_type
-    read (edifile,'(a12,a80)') temp, sitename
-
-	call parse_edi_site_name(sitename, Site%ID, Info%remote_site_id, Site%RunList)
-
-    if (.not.silent) then
-       write(*,*) trim(sitename),': local ',Site%ID,' remote ',Info%remote_site_id
+    read (edifile,'(a200)',iostat=ios) line !read the first line in file
+    call parse_edi_line(line,var,value)
+    if (.not. (trim(var) == 'BLOCK' .or. trim(value) == 'HEAD')) then
+        write(0,*) 'Error reading the first line of EDI header:'
+        write(0,*) line
     end if
 
-	if (index(Info%remote_ref_type,'Remote Reference')>0) then
-		if (len_trim(Info%remote_site_id)>0) then
-			Info%remote_ref = .TRUE.
-		end if
-	end if
+	do
+        read (edifile,'(a200)',iostat=ios) line
+	    if (ios /= 0) then
+	        exit
+	    end if
+        call parse_edi_line(line,var,value)
+        if (.not.silent) then
+            write(*,*) 'Reading ',trim(var),' line: ',trim(value)
+        end if
+    end do
 
-	!Info%processed_by = processed_by
-	Info%processing_tag = sitename
-	!Info%software = 'EMTF'
-
-    read (edifile,'(a120)',iostat=ios) temp
-    i = index(temp,'coordinate')
-    j = index(temp,'declination')
-
-    read (temp(i+12:j-1),*) Site%Location%lat, Site%Location%lon
-    read (temp(j+12:120),*) Site%Declination
-    
     if(Site%Location%lon > 180.0d0) then
 		Site%Location%lon = Site%Location%lon - 360.0d0
 	end if
-
-    read (edifile,'(a120)',iostat=ios) temp
-    i = index(temp,'channels')
-    j = index(temp,'frequencies')
-
-    read (temp(i+9:j-1),*) nch
-    read (temp(j+12:120),*) nf
-
-    if (.not.silent) then
-       write(*,*) 'Number of channels ', nch
-       write(*,*) 'Number of periods  ', nf
-    end if
 
   end subroutine read_edi_header
 
