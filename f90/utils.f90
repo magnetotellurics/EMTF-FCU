@@ -15,12 +15,12 @@ public                     ::  inverse22, inverse33
 ! **********************************************************************
 !  ascii character functions
 
-public                     ::  toupper, isdigit
+public                     ::  toupper, isdigit, isempty
 
 ! **********************************************************************
 !  utility subroutines
 
-public                     ::  deg2char, sortidx
+public                     ::  deg2dms, dms2deg, sortidx, datestr
 
 
 ! **********************************************************************
@@ -168,8 +168,93 @@ integer, public, parameter :: ascii_del = 127                        ! delete
 contains
 
 ! **********************************************************************
-! identity(): outputs an identity matrix of the same size as the input
-! (C) Anna Kelbert, 2009
+! datestr(): converts date/time string from one format to another;
+! limited functionality
+! (C) Anna Kelbert, 2013
+
+character(len=80) function datestr(time1,format1,format2) result (time2)
+
+  character(len=*), intent(in) :: time1,format1,format2
+  ! local
+  character(len=2)             :: month, day, hour, minute, second
+  character(len=4)             :: year
+
+  select case (trim(format1))
+  case ('YYYY-MM-DDThh:mm:ss','YYYY-MM-DD','XML') ! XML date and time format
+    year = time1(1:4)
+    month = time1(6:7)
+    day = time1(9:10)
+    if (len_trim(time1) >= 19) then
+        hour = time1(12:13)
+        minute = time1(15:16)
+        second = time1(18:19)
+    else
+        hour = '00'
+        minute = '00'
+        second = '00'
+    end if
+  case ('YYYY') ! Year only
+    year = time1(1:4)
+    month = '00'
+    day = '00'
+    hour = '00'
+    minute = '00'
+    second = '00'
+  case ('MM/DD/YY') ! USA EDI format
+    ! allow for years 2000's, 2010's and 2020's;
+    ! assume 20th century for everything else
+    if (iachar(time1(7:7)) <= ascii_2) then
+        year = '20'//time1(7:8)
+    else
+        year = '19'//time1(7:8)
+    end if
+    month = time1(1:2)
+    day = time1(4:5)
+    hour = '00'
+    minute = '00'
+    second = '00'
+  case ('DD/MM/YY') ! European EDI format
+    ! allow for years 2000's, 2010's and 2020's;
+    ! assume 20th century for everything else
+    if (iachar(time1(7:7)) <= ascii_2) then
+        year = '20'//time1(7:8)
+    else
+        year = '19'//time1(7:8)
+    end if
+    month = time1(4:5)
+    day = time1(1:2)
+    hour = '00'
+    minute = '00'
+    second = '00'
+  case default
+    write(0,*) 'Warning: unknown input time format ',format1,' for ',time1
+    time2 = time1
+    return
+  end select
+
+  select case (trim(format2))
+  case ('YYYY-MM-DDThh:mm:ss','XML') ! XML date and time format
+    time2 = year//'-'//month//'-'//day//'T'//hour//':'//minute//':'//second
+  case ('YYYY-MM-DD') ! XML date format
+    time2 = year//'-'//month//'-'//day
+  case ('YYYY') ! Year only
+    time2 = year
+  case ('MM/DD/YY')
+    time2 = month//'/'//day//'/'//year(3:4)
+  case ('DD/MM/YY')
+    time2 = day//'/'//month//'/'//year(3:4)
+  case default
+    write(0,*) 'Warning: unknown output time format ',format2,' for ',time1
+    time2 = time1
+    return
+  end select
+
+end function datestr
+
+
+! **********************************************************************
+! isempty(): checks for an empty string; outputs true or false
+! (C) Anna Kelbert, 2013
 
 logical function isempty(str)
 
@@ -352,10 +437,11 @@ end function isdigit
 ! the result is a character string length 16.
 ! Written by: Anna Kelbert, 3 Nov 2007
 ! Last Mod. : 30 Jun 2011 to add leading zeros to mins
+! See also  : dms2deg
 ! This subroutine is distributed under the terms of
 ! the GNU Lesser General Public License.
 
-  function deg2char(loc) result (cloc)
+  function deg2dms(loc) result (cloc)
 
   	real(8), intent(in)     :: loc
 
@@ -391,7 +477,49 @@ end function isdigit
 
 ! ----------------------------------------------------------------------
 
-  end function deg2char
+  end function deg2dms
+
+! **********************************************************************
+! Convert latitude or longitude from sexagesimal system
+! (degrees, minutes & seconds) to degrees.
+! Input is a character string length 16.
+! Output is a real value.
+! Written by: Anna Kelbert, 9 Jan 2013
+! See also  : deg2dms
+! This subroutine is distributed under the terms of
+! the GNU Lesser General Public License.
+
+  function dms2deg(cloc) result (loc)
+
+    character(len=*), intent(in)  :: cloc
+
+    real(8)                 :: aloc
+    real(8)                 :: loc
+    integer                 :: i1,i2
+    integer                 :: d,m
+    real                    :: s
+    character(len=4)        :: cdeg
+    character(len=2)        :: cmin
+    character(len=5)        :: csec
+
+! ----------------------------------------------------------------------
+
+    i1 = index(cloc,':')
+    i2 = i1+index(cloc(i1+1:16),':')
+    cdeg = cloc(1:i1-1)
+    cmin = cloc(i1:i2-1)
+    csec = trim(cloc(i2:16))
+
+    read(cdeg,*) d
+    read(cmin,*) m
+    read(csec,*) s
+
+    loc = d + (60*m + s)/3600
+
+! ----------------------------------------------------------------------
+
+  end function dms2deg
+
 
 ! **********************************************************************
 ! (C) 2002-2005 J. K. Dewhurst, S. Sharma and C. Ambrosch-Draxl.

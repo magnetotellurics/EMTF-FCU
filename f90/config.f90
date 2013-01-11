@@ -33,6 +33,7 @@ contains
 	Info%Project = getString(doc,"Project")
 	Info%Survey = getString(doc,"Survey")
 	Info%YearCollected = getString(doc,"YearCollected")
+    Info%Country = getString(doc,"Country")
 	Info%Tags = getString(doc,"Tags")
 
     copyright => item(getElementsByTagName(doc, "Citation"),0)
@@ -89,6 +90,7 @@ contains
 	Info%ProcessingSoftwareLastMod = getString(software,"LastMod")
 	Info%ProcessingSoftwareAuthor = getString(software,"Author")
 
+    Info%DateFormat = getString(doc,"DateFormat")
 	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")

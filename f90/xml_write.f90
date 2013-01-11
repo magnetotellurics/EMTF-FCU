@@ -9,7 +9,7 @@ module xml_write
 
   type(xmlf_t)                 :: xmlfile
   character(len=19)            :: xml_time
-  integer                      :: i, j
+  integer                      :: i, j, N
 
   save   :: xmlfile
 
@@ -102,11 +102,12 @@ contains
 
 
 
-  subroutine add_xml_header(Site, UserInfo, Info, Notes)
+  subroutine add_xml_header(Site, UserInfo, Info, Notes, NotesLength)
     type(Site_t), intent(in)     :: Site
     type(UserInfo_t), intent(in) :: UserInfo
     type(RemoteRef_t), intent(in):: Info
     character(len=*), dimension(:), pointer, optional :: Notes
+    integer, optional            :: NotesLength
 
     call xml_NewElement(xmlfile, 'Description')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Description))
@@ -268,10 +269,15 @@ contains
 
     if (present(Notes)) then
     	if (associated(Notes)) then
+                if (present(NotesLength)) then
+                    N = NotesLength
+                else
+                    N = size(Notes)
+                end if
     		    call xml_NewElement(xmlfile, 'Comments')
 				call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%ProcessedBy))
     		    call xml_AddCharacters(xmlfile, trim(Notes(1)))
-    		    do i=2,size(Notes)
+    		    do i=2,N
     				call xml_AddCharacters(xmlfile, achar(ascii_cr))
     				call xml_AddCharacters(xmlfile, trim(Notes(i)))
     			end do
@@ -348,6 +354,12 @@ contains
 		call xml_NewElement(xmlfile, 'ProcessedBy')
 		call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessedBy))
 		call xml_EndElement(xmlfile, 'ProcessedBy')
+
+        if (.not. isempty(UserInfo%ProcessDate)) then
+            call xml_NewElement(xmlfile, 'ProcessDate')
+            call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessDate))
+            call xml_EndElement(xmlfile, 'ProcessDate')
+        end if
 
 		call xml_NewElement(xmlfile, 'ProcessingSoftware')
 		call xml_NewElement(xmlfile, 'Name')

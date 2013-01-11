@@ -119,7 +119,7 @@ contains
         if (trim(this_block) == 'INFO') then
             var = 'INFO'
         elseif (isempty(line)) then
-            var = 'EMPTY'
+            var = 'DUMMY' ! avoiding conflict with EMPTY value in header
         else
             var = 'DATA'
         end if
@@ -132,12 +132,18 @@ contains
   subroutine read_edi_header(sitename, Site, Info)
     character(len=80), intent(inout) :: sitename
     type(Site_t),  intent(out)       :: Site
-	type(RemoteRef_t), intent(out)   :: Info
+	type(UserInfo_t), intent(out)    :: Info
 	! local
     character(len=200)               :: line, var, value
+    character(len=200)               :: country, state, county
+    character(len=2)                 :: elevunits
 
-	call init_remote_ref(Info)
+	call init_user_info(Info)
 	call init_site_info(Site)
+	country = ''
+	state = ''
+	county = ''
+	elevunits = 'M'
 
     read (edifile,'(a200)',iostat=ios) line !read the first line in file
     call parse_edi_line(line,var,value)
@@ -152,16 +158,148 @@ contains
 	        exit
 	    end if
         call parse_edi_line(line,var,value)
+        if (trim(this_block) .ne. 'HEAD') then ! next block encountered
+            exit
+        end if
         if (.not.silent) then
             write(*,*) 'Reading ',trim(var),' line: ',trim(value)
         end if
+
+        select case (trim(var))
+        case ('DATAID')
+            ! do nothing: info extracted from file name more reliable
+        case ('ACQBY')
+            Info%AcquiredBy = value
+        case ('FILEBY')
+            Info%ProcessedBy = value
+        case ('ACQDATE') ! date of (start of) data acquisition
+            Site%Start = datestr(value,Info%DateFormat,'XML')
+            if (.not. silent) then
+                write(*,*) 'Acquired date in XML format: ',trim(Site%Start)
+            end if
+        case ('ENDDATE')
+            Site%End = datestr(value,Info%DateFormat,'XML')
+        case ('FILEDATE')
+            Info%ProcessDate = datestr(value,Info%DateFormat,'YYYY-MM-DD')
+        case ('COUNTRY')
+            country = value
+        case ('STATE')
+            state = value
+        case ('COUNTY')
+            county = value
+        case ('PROSPECT')
+            Info%Survey = value
+        case ('LOC')
+            Site%Description = value
+        case ('LAT')
+            Site%Location%lat=dms2deg(value)
+            if (.not. silent) then
+                write(*,*) 'Latitude conversion: ',value,' to ',Site%Location%lat
+            end if
+        case ('LONG')
+            Site%Location%lon=dms2deg(value)
+            if (.not. silent) then
+                write(*,*) 'Longitude conversion: ',value,' to ',Site%Location%lon
+            end if
+        case ('ELEV')
+            Site%Location%elev=dms2deg(value)
+        case ('UNITS') ! units for elevation
+            elevunits = value
+        case ('STDVERS,MAXSECT')
+            ! EDI file information; ignore - needed only for reading
+        case ('PROGVERS')
+            Info%ProcessingSoftware = value
+        case ('PROGDATE')
+            Info%ProcessDate = value
+        case ('BINDATA')
+            ! ignore for now; may revisit if needed
+            write(0,*) 'Warning: BINDATA value ',value,' ignored'
+        case ('EMPTY') ! represents 'no data'
+            Info%DummyDataValue = value
+        case ('DUMMY')
+            ! empty line
+        case default
+            write(0,*) 'Warning: HEAD block ',trim(var),' value ',trim(value),' ignored'
+        end select
     end do
 
+    ! typical case: ENDDATE not present in the EDI file; use ACQDATE
+    if(isempty(Site%End)) then
+        Site%End = Site%Start
+    end if
+    Info%YearCollected = datestr(Site%End,'XML','YYYY')
+
+    ! typical case: LOC not present; use COUNTRY etc for site description
+    if(isempty(Site%Description)) then
+        Site%Description = trim(country)//', '//trim(state)//', '//trim(county)
+    end if
+
+    ! convert elevation to meters
+    if(trim(elevunits) .eq. 'FT') then
+        Site%Location%elev = 0.3048 * Site%Location%elev
+    end if
+
+    ! make sure the longitude is -180 to 180
     if(Site%Location%lon > 180.0d0) then
 		Site%Location%lon = Site%Location%lon - 360.0d0
 	end if
 
   end subroutine read_edi_header
+
+
+  subroutine read_edi_info(Site,Notes,n)
+    type(Site_t),  intent(out)            :: Site
+    character(200), dimension(:), pointer :: Notes
+    integer, intent(out)                  :: n
+    ! local
+    character(len=200)                    :: line, var, value
+
+    read (edifile,'(a200)',iostat=ios) line !read the first line in file
+    call parse_edi_line(line,var,value)
+    if (.not. (trim(var) == 'MAXINFO')) then
+        write(0,*) 'Error reading the first line of EDI INFO block:'
+        write(0,*) line
+    end if
+    read (value,'(i8)',iostat=ios) n
+
+    if (associated(Notes)) deallocate(Notes)
+
+    allocate(Notes(n))
+
+    do i=1,n
+        read (edifile,'(a200)',iostat=ios) line
+        if (ios /= 0 .or. .not. (trim(this_block) == 'INFO')) then
+            n = i-1
+            exit
+        end if
+        Notes(i) = line
+
+        call parse_edi_line(line,var,value)
+        if (.not.silent) then
+            write(*,*) 'Reading ',trim(var),' line: ',trim(value)
+        end if
+
+        ! to parse the INFO block, first find an occurence of the site ID
+        ! then allow parsing of only one value of each type after site ID
+
+        select case (trim(var))
+        case ('AZIMUTH')
+            read(value,*) Site%Location%lat
+        case ('LATITUDE') ! assume it's decimal if found in INFO block
+            read(value,*) Site%Location%lat
+        case ('LONGITUDE') ! assume it's decimal if found in INFO block
+            read(value,*) Site%Location%lon
+        case ('ELEVATION')
+            read(value,*) Site%Location%elev
+        case ('INFO','DUMMY','COMMENT')
+            ! these are already saved in the Notes if needed
+        case default
+            ! but there might be something else that requires parsing
+            write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
+        end select
+    end do
+
+  end subroutine read_edi_info
 
 
   subroutine read_edi_channels(Input, Output, decl)
@@ -282,27 +420,6 @@ contains
     end do
 
   end subroutine read_edi_period
-
-
-  subroutine read_edi_info(Notes)
-  	character(100), dimension(:), pointer :: Notes
-	integer                               :: n
-
-	read (edifile,'(i8)',iostat=ios) n
-	if (ios/=0) then
-		if (associated(Notes)) deallocate(Notes)
-		return
-	end if
-
-	if (associated(Notes)) deallocate(Notes)
-
-	allocate(Notes(n))
-
-	do i=1,n
-		read (edifile,'(a100)',iostat=ios) Notes(i)
-	end do
-
-  end subroutine read_edi_info
 
 
   subroutine end_edi_input

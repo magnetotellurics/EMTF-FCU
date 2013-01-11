@@ -12,18 +12,19 @@ program edi2xml
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: edisitename, basename, verbose=''
   type(RemoteRef_t) :: Info
-  type(UserInfo_t)  :: UserInfo
+  type(UserInfo_t)  :: UserInfo, ediUserInfo
   type(Site_t)      :: ediLocalSite, xmlLocalSite, xmlRemoteSite
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
   type(FreqInfo_t), dimension(:), allocatable :: F
   type(Channel_t), dimension(:), pointer	  :: InputChannel
   type(Channel_t), dimension(:), pointer	  :: OutputChannel
-  character(100), dimension(:), pointer       :: Notes
+  character(200), dimension(:), pointer       :: Notes
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   character(10), dimension(:,:), allocatable   :: TFName
   logical           :: config_exists, site_list_exists
   logical			:: run_list_exists, channel_list_exists
+  integer           :: NotesLength
   integer           :: i, j, k, n, l, istat
 
   n = command_argument_count()
@@ -78,6 +79,7 @@ program edi2xml
   	write(0,*) '	<Project>USArray</Project>'
   	write(0,*) '	<Survey>TA</Survey>'
   	write(0,*) '	<YearCollected>2011</YearCollected>'
+    write(0,*) '    <Country>USA</Country>'
   	write(0,*) '	<Tags>impedance,tipper</Tags>' 
     write(0,*) '    <Citation>'
     write(0,*) '      <Title>USArray TA Magnetotelluric Transfer Functions</Title>'
@@ -105,10 +107,12 @@ program edi2xml
   	write(0,*) '		<LastMod>1987-10-12</LastMod>'
   	write(0,*) '		<Author>Gary Egbert</Author>'
   	write(0,*) '	</ProcessingSoftware>'
+    write(0,*) '    <DateFormat>MM/DD/YY</DateFormat>'
   	write(0,*) '<Configuration>'
   	write(0,*)
   	write(0,*) 'Project and YearCollected (if present) help identify'
     write(0,*) 'a product in SPADE. They should not contain spaces.'
+    write(0,*) 'DateFormat (e.g., MM/DD/YY) helps read EDI files.'
   	write(0,*) 'EDI files do not have enough information for rotation'
     write(0,*) 'so output data will be in the same coordinate system'
     write(0,*) 'as they are in the original EDI file. Use caution.'
@@ -122,9 +126,9 @@ program edi2xml
 
   call initialize_edi_input(edi_file, edisitename)
 
-  call read_edi_header(edisitename, ediLocalSite, Info)
+  call read_edi_header(edisitename, ediLocalSite, ediUserInfo)
 
-  !call read_edi_info(Notes)
+  call read_edi_info(ediLocalSite, Notes, NotesLength)
 
   ! Allocate space for channels and transfer functions
   allocate(InputChannel(2), OutputChannel(nch-2), stat=istat)
@@ -143,10 +147,10 @@ program edi2xml
 
   if (len_trim(xmlLocalSite%ID)>0) then
 
-  	call add_xml_header(xmlLocalSite, UserInfo, Info, Notes)
+  	call add_xml_header(xmlLocalSite, UserInfo, Info, Notes, NotesLength)
   else
 
-  	call add_xml_header(ediLocalSite, UserInfo, Info, Notes)
+  	call add_xml_header(ediLocalSite, UserInfo, Info, Notes, NotesLength)
   end if
 
   ! Processing notes follow

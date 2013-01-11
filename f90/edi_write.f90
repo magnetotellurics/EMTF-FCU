@@ -227,8 +227,8 @@ contains
 !-LAT
 !-LONG
 !-ELEV
-      clat=deg2char(lat)
-      clong=deg2char(long)
+      clat=deg2dms(lat)
+      clong=deg2dms(long)
       write(celev,'(i4)') int(elev)
 
       lclat=16

@@ -73,14 +73,18 @@ module global
     type(Copyright_t) :: Copyright
     character(len=80) :: Project
     character(len=80) :: Survey
+    character(len=80) :: Country
     character(len=80) :: YearCollected    
     character(len=80) :: AcquiredBy
     type(Person_t)	  :: Creator
     type(Person_t)	  :: Submitter
     character(len=80) :: ProcessedBy
+    character(len=80) :: ProcessDate
     character(len=80) :: ProcessingSoftware
     character(len=80) :: ProcessingSoftwareLastMod
     character(len=80) :: ProcessingSoftwareAuthor
+    character(len=80) :: DateFormat ! for EDI input/output
+    character(len=80) :: DummyDataValue ! for EDI input/output
     integer           :: OrthogonalGeographic
     character(len=80) :: RunList
     character(len=80) :: SiteList
@@ -211,14 +215,18 @@ contains
         call init_copyright(Info%Copyright)
         Info%Project = 'USArray'
         Info%Survey = 'TA'
+        Info%Country = 'USA'
         Info%YearCollected = ''
         Info%AcquiredBy = 'UNKNOWN'
         call init_person(Info%Creator)
         call init_person(Info%Submitter)
         Info%ProcessedBy = 'UNKNOWN'
+        Info%ProcessDate = ''
         Info%ProcessingSoftware = 'UNKNOWN'
         Info%ProcessingSoftwareLastMod = 'UNKNOWN'
         Info%ProcessingSoftwareAuthor = 'UNKNOWN'
+        Info%DateFormat = 'MM/DD/YY'
+        Info%DummyDataValue = ''
         Info%OrthogonalGeographic = 0
         Info%RunList = 'Runs.xml'
         Info%SiteList = 'Sites.xml'
