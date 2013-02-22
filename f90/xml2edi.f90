@@ -13,8 +13,7 @@ program xml2edi
   character(len=80) :: description='My favorite station'
   character(len=80) :: zsitename, basename, verbose=''
   type(UserInfo_t)  :: UserInfo
-  type(RemoteRef_t) :: Info
-  type(Site_t)                               :: zLocalSite, xmlLocalSite, xmlRemoteSite
+  type(Site_t)                               :: xmlLocalSite, xmlRemoteSite
   type(Run_t), dimension(:), allocatable     :: Run
   type(FreqInfo_t), dimension(:), allocatable:: F
   type(Channel_t), dimension(:), allocatable :: InputChannel
@@ -54,10 +53,14 @@ program xml2edi
  	edi_file = trim(edi_file)//'.edi'
   end if
   
+  ! Initialize site structures
+  call init_site_info(xmlLocalSite)
+  call init_site_info(xmlRemoteSite)
+
   ! Initialize input and output
   call initialize_xml_input(xml_file, xml_time)
 
-  call read_xml_header(zsitename, xmlLocalSite, UserInfo, Info)
+  call read_xml_header(zsitename, xmlLocalSite, UserInfo)
 
   ! Read and write channels
   allocate(InputChannel(2), OutputChannel(nch-2))
@@ -74,7 +77,7 @@ program xml2edi
   edi_date = xml_time(6:7)//'/'//xml_time(9:10)//'/'//xml_time(3:4)
 
   call write_edi_file(edi_file,edi_date,zsitename,xmlLocalSite, &
-  			InputChannel,OutputChannel,F,TF,TFVar,Info,UserInfo)
+  			InputChannel,OutputChannel,F,TF,TFVar,UserInfo)
 
   ! Exit nicely
   deallocate(InputChannel, OutputChannel)

@@ -30,14 +30,12 @@ module edi_write
 contains
 
   subroutine write_edi_file(fname,edi_date,sectid,Site, &
-  			InputChannel,OutputChannel,F,TF,TFVar, &
-  			Info,UserInfo)
+  			InputChannel,OutputChannel,F,TF,TFVar,UserInfo)
   	character(len=*), intent(in)                   :: fname
 	character(len=*), intent(in)                   :: edi_date
   	character(len=*), intent(in)                   :: sectid
   	type(Site_t), intent(in)                       :: Site
-  	type(UserInfo_t), optional, intent(in)         :: UserInfo
-  	type(RemoteRef_t), intent(in)                  :: Info
+  	type(UserInfo_t), intent(in)                   :: UserInfo
   	type(Channel_t), dimension(:), intent(in)      :: InputChannel
   	type(Channel_t), dimension(:), intent(in)      :: OutputChannel
   	type(FreqInfo_t), dimension(:), intent(in)     :: F
@@ -100,11 +98,8 @@ contains
 	elev = Site%Location%elev
 	tipper_present = .true. ! assume tipper is always present
 	azimuth = InputChannel(1)%orientation ! orientation of Hx
-	if (present(UserInfo)) then
-		acqby = UserInfo%AcquiredBy
-	else
-		acqby = 'UNKNOWN'
-	end if
+	acqby = UserInfo%AcquiredBy
+
 	if (len_trim(Site%RunList) > 70) then
 		runlist = 'UNKNOWN'
 	else
@@ -112,25 +107,17 @@ contains
 	end if
 	
 	! create a block of additional information
-	if (present(UserInfo)) then
-	    write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
-		write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
-		write(info_block(3),*) 'YEAR=',trim(UserInfo%YearCollected)	
-		write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
-		write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
-	else
-	    write(info_block(1),*) 'PROJECT=UNKNOWN'
-		write(info_block(2),*) 'SURVEY=UNKNOWN'
-		write(info_block(3),*) 'YEAR=UNKNOWN'
-		write(info_block(4),*) 'PROCESSEDBY=UNKNOWN'
-		write(info_block(5),*) 'PROCESSINGSOFTWARE=UNKNOWN'
-	end if	
-	write(info_block(6),*) 'PROCESSINGTAG=',trim(Info%processing_tag)
+	write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
+	write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
+	write(info_block(3),*) 'YEAR=',trim(UserInfo%YearCollected)
+	write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
+	write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
+	write(info_block(6),*) 'PROCESSINGTAG=',trim(UserInfo%ProcessingTag)
 	write(info_block(7),*) 'SITENAME=',trim(Site%Description)
 	write(info_block(8),*) 'RUNLIST=',trim(runlist)
-	write(info_block(9),*) 'REMOTEREF=',trim(Info%remote_ref_type)
-	write(info_block(10),*) 'REMOTESITE=',trim(Info%remote_site_id)
-	write(info_block(11),*) 'SIGNCONVENTION=',trim(Info%sign_convention)
+	write(info_block(9),*) 'REMOTEREF=',trim(UserInfo%RemoteRefType)
+	write(info_block(10),*) 'REMOTESITE=',trim(UserInfo%RemoteSiteID)
+	write(info_block(11),*) 'SIGNCONVENTION=',trim(UserInfo%SignConvention)
 	
 	call wrt_edi(fname,dataid,sectid,acqby,info_block, &
 			freq,zvar,tvar,z,t,lat,long,elev, &

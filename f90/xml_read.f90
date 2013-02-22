@@ -42,18 +42,16 @@ contains
   end subroutine initialize_xml_input
 
 
-  subroutine read_xml_header(id, Site, UserInfo, Info)
+  subroutine read_xml_header(id, Site, UserInfo)
     character(len=80), intent(out)  :: id
     type(Site_t), intent(out)       :: Site
     type(UserInfo_t), intent(out)   :: UserInfo
-    type(RemoteRef_t), intent(out)  :: Info
 	type(Node), pointer             :: infoNode
 	character(len=80)               :: project
 
 	! Initialize site information
 	call init_site_info(Site)
 	call init_user_info(UserInfo)
-	call init_remote_ref(Info)
 
 	UserInfo%Project = getString(doc,"Project")
 	UserInfo%Survey = getString(doc,"Survey")
@@ -81,14 +79,13 @@ contains
 
 	infoNode => item(getElementsByTagName(doc, "ProcessingInfo"),0)
 
-	call init_remote_ref(Info)
-  	Info%remote_ref_type = getStringAttr(infoNode,"RemoteRef","type")
-  	if (index(Info%remote_ref_type,'Remote Reference')>0) then
-		Info%remote_ref = .true.
+  	UserInfo%RemoteRefType = getStringAttr(infoNode,"RemoteRef","type")
+  	if (index(UserInfo%RemoteRefType,'Remote Reference')>0) then
+		UserInfo%RemoteRef = .true.
 	end if
-	Info%sign_convention = getString(infoNode,"SignConvention")
-	Info%remote_site_id = getString(infoNode,"Id")
-	Info%processing_tag = id
+	UserInfo%SignConvention = getString(infoNode,"SignConvention")
+	UserInfo%RemoteSiteID = getString(infoNode,"Id")
+	UserInfo%ProcessingTag = id
 
   end subroutine read_xml_header
   

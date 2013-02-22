@@ -12,7 +12,6 @@ program z2xml
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: zsitename, basename, verbose=''
-  type(RemoteRef_t) :: Info
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
@@ -127,6 +126,11 @@ program z2xml
   	stop
   end if
 
+  ! Initialize site structures
+  call init_site_info(zLocalSite)
+  call init_site_info(xmlLocalSite)
+  call init_site_info(xmlRemoteSite)
+
   ! Initialize input and output
   call initialize_xml_output(xml_file,'EM_TF')
 
@@ -134,7 +138,7 @@ program z2xml
 
   call initialize_z_input(z_file)
 
-  call read_z_header(zsitename, zLocalSite, Info)
+  call read_z_header(zsitename, zLocalSite, UserInfo)
 
   ! Allocate space for channels and transfer functions
   allocate(InputChannel(2), OutputChannel(nch-2), stat=istat)
@@ -171,10 +175,10 @@ program z2xml
 
   if (len_trim(xmlLocalSite%ID)>0) then
 
-  	call add_xml_header(xmlLocalSite, UserInfo, Info, Notes)
+  	call add_xml_header(xmlLocalSite, UserInfo, Notes)
   else
 
-  	call add_xml_header(zLocalSite, UserInfo, Info, Notes)
+  	call add_xml_header(zLocalSite, UserInfo, Notes)
   end if
 
   ! Read runs (e.g. start and end times) information for each of the runs
@@ -195,16 +199,16 @@ program z2xml
   end if
   
   ! Processing notes follow
-  if (Info%remote_ref) then
-  	call read_site_list(UserInfo%SiteList, Info%remote_site_id, xmlRemoteSite, site_list_exists)
+  if (UserInfo%RemoteRef) then
+  	call read_site_list(UserInfo%SiteList, UserInfo%RemoteSiteID, xmlRemoteSite, site_list_exists)
 	call read_run_list (UserInfo%RunList, xmlRemoteSite%RunList, RemoteRun, run_list_exists)
   	if (run_list_exists) then
-		call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite, RemoteRun)
+		call add_ProcessingInfo(UserInfo, xmlRemoteSite, RemoteRun)
 	else
-		call add_ProcessingInfo(UserInfo, Info, xmlRemoteSite)
+		call add_ProcessingInfo(UserInfo, xmlRemoteSite)
 	end if
   else
-  	call add_ProcessingInfo(UserInfo, Info)
+  	call add_ProcessingInfo(UserInfo)
   end if
 
   call new_channel_block('InputChannels')

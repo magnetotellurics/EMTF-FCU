@@ -23,13 +23,18 @@ contains
     ! local
     character(len=100) copyright_file
     logical copyright_exists
-    integer i,ios,fileid
+    integer i,ios,fileid,ediparse,ediwrite,tsinfo
 
   	call init_user_info(Info)
 
   	! Load in the document
   	doc => parseFile(xmlFile)
 
+    tsinfo = getInteger(doc,"TimeSeriesArchived")
+    if (tsinfo>0) then
+        Info%TimeSeriesArchived = .TRUE.
+    end if
+    Info%Network = getString(doc,"Network")
 	Info%Project = getString(doc,"Project")
 	Info%Survey = getString(doc,"Survey")
 	Info%YearCollected = getString(doc,"YearCollected")
@@ -91,6 +96,20 @@ contains
 	Info%ProcessingSoftwareAuthor = getString(software,"Author")
 
     Info%DateFormat = getString(doc,"DateFormat")
+    ediparse = -1
+    ediparse = getInteger(doc,"ParseEDIInfo")
+    if (ediparse==1) then
+        Info%ParseEDIInfo = .TRUE.
+    elseif (ediparse==0) then
+        Info%ParseEDIInfo = .FALSE.
+    end if
+    ediwrite = -1
+    ediwrite = getInteger(doc,"WriteEDIInfo")
+    if (ediwrite==1) then
+        Info%WriteEDIInfo = .TRUE.
+    elseif (ediwrite==0) then
+        Info%WriteEDIInfo = .FALSE.
+    end if
 	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")

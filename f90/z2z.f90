@@ -11,9 +11,8 @@ program z2z
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: zsitename, basename, ext, verbose='',coords=''
   character(len=80) :: header1, header2
-  type(RemoteRef_t) :: Info
-  type(UserInfo_t)  :: UserInfo
-  type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
+  type(UserInfo_t)  :: Info
+  type(Site_t)      :: zLocalSite
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
   type(FreqInfo_t), dimension(:), allocatable :: F
   type(Channel_t), dimension(:), allocatable :: InputChannel
@@ -73,6 +72,9 @@ program z2z
  	z_file_out = trim(z_file_out)//trim(ext)
   end if
 
+  ! Initialize site structures
+  call init_site_info(zLocalSite)
+
   ! Initialize output
 
   call initialize_z_output(z_file_out)
@@ -80,6 +82,8 @@ program z2z
   ! Read the Z-file in full
 
   call initialize_z_input(z_file)
+
+  call init_user_info(Info)
 
   call read_z_header(zsitename, zLocalSite, Info)
 

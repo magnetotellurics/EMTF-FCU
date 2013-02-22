@@ -118,31 +118,29 @@ contains
   subroutine read_z_header(sitename, Site, Info)
     character(len=80), intent(out)   :: sitename
     type(Site_t),  intent(out)       :: Site
-	type(RemoteRef_t), intent(out)   :: Info
+	type(UserInfo_t), intent(inout)  :: Info
 
-	call init_remote_ref(Info)
 	call init_site_info(Site)
 
     read (zfile,*) temp
     read (zfile,*) temp
-    read (zfile,'(a80)') Info%remote_ref_type
+    read (zfile,'(a80)') Info%RemoteRefType
     read (zfile,'(a12,a80)') temp, sitename
 
-	call parse_z_site_name(sitename, Site%ID, Info%remote_site_id, Site%RunList)
+	call parse_z_site_name(sitename, Site%ID, Info%RemoteSiteID, Site%RunList)
 
     if (.not.silent) then
-       write(*,*) trim(sitename),': local ',Site%ID,' remote ',Info%remote_site_id
+       write(*,*) trim(sitename),': local ',Site%ID,' remote ',Info%RemoteSiteID
     end if
 
-	if (index(Info%remote_ref_type,'Remote Reference')>0) then
-		if (len_trim(Info%remote_site_id)>0) then
-			Info%remote_ref = .TRUE.
+	if (index(Info%RemoteRefType,'Remote Reference')>0) then
+		if (len_trim(Info%RemoteSiteID)>0) then
+			Info%RemoteRef = .TRUE.
 		end if
 	end if
 
-	!Info%processed_by = processed_by
-	Info%processing_tag = sitename
-	!Info%software = 'EMTF'
+	Info%ProcessingSoftware = 'EMTF'
+	Info%ProcessingTag = sitename
 
     read (zfile,'(a120)',iostat=ios) temp
     i = index(temp,'coordinate')

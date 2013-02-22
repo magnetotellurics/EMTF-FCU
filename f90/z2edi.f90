@@ -11,9 +11,8 @@ program z2edi
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favourite station'
   character(len=80) :: zsitename, basename, verbose=''
-  type(UserInfo_t)  :: UserInfo
-  type(RemoteRef_t) :: Info
-  type(Site_t)                                 :: zLocalSite, xmlLocalSite, xmlRemoteSite
+  type(UserInfo_t)  :: Info
+  type(Site_t)                                 :: zLocalSite
   type(Run_t), dimension(:), allocatable       :: Run
   type(FreqInfo_t), dimension(:), allocatable  :: F
   type(Channel_t), dimension(:), allocatable   :: InputChannel
@@ -55,8 +54,13 @@ program z2edi
  	edi_file = trim(edi_file)//'.edi'
   end if
 
+  ! Initialize site structures
+  call init_site_info(zLocalSite)
+
   ! Initialize input
   call initialize_z_input(z_file)
+
+  call init_user_info(Info)
 
   call read_z_header(zsitename, zLocalSite, Info)
 

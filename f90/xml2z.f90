@@ -12,8 +12,7 @@ program xml2z
   character(len=80) :: description='My favourite station'
   character(len=80) :: zsitename, basename, verbose=''
   type(UserInfo_t)  :: UserInfo
-  type(RemoteRef_t) :: Info
-  type(Site_t)                               :: zLocalSite, xmlLocalSite, xmlRemoteSite
+  type(Site_t)                               :: xmlLocalSite, xmlRemoteSite
   type(Run_t), dimension(:), allocatable     :: Run
   type(FreqInfo_t)                           :: F
   type(Channel_t), dimension(:), allocatable :: InputChannel
@@ -48,14 +47,18 @@ program xml2z
      end if
   end if
 
+  ! Initialize site structures
+  call init_site_info(xmlLocalSite)
+  call init_site_info(xmlRemoteSite)
+
   ! Initialize input and output
   call initialize_xml_input(xml_file)
 
-  call read_xml_header(zsitename, xmlLocalSite, UserInfo, Info)
+  call read_xml_header(zsitename, xmlLocalSite, UserInfo)
   
   ! Update output file name (../ or ./ allowed) and initialize output
   if (index(z_file,'.')<=2) then
-  	if (Info%remote_ref) then
+  	if (UserInfo%RemoteRef) then
  		z_file = trim(z_file)//'.zrr'
   	else
  		z_file = trim(z_file)//'.zss'  
@@ -64,7 +67,7 @@ program xml2z
 
   call initialize_z_output(z_file)
 
-  call write_z_header(zsitename, xmlLocalSite, Info)
+  call write_z_header(zsitename, xmlLocalSite, UserInfo)
 
   ! Read and write channels
   allocate(InputChannel(2), OutputChannel(nch-2))

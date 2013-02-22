@@ -102,10 +102,9 @@ contains
 
 
 
-  subroutine add_xml_header(Site, UserInfo, Info, Notes, NotesLength)
+  subroutine add_xml_header(Site, UserInfo, Notes, NotesLength)
     type(Site_t), intent(in)     :: Site
     type(UserInfo_t), intent(in) :: UserInfo
-    type(RemoteRef_t), intent(in):: Info
     character(len=*), dimension(:), pointer, optional :: Notes
     integer, optional            :: NotesLength
 
@@ -130,14 +129,16 @@ contains
     call xml_AddCharacters(xmlfile, trim(UserInfo%Tags))
     call xml_EndElement(xmlfile, 'Tags')
 
-    call xml_NewElement(xmlfile, 'ExternalUrl')
-    call xml_NewElement(xmlfile, 'Description')
-    call xml_AddCharacters(xmlfile, 'IRIS DMC MetaData')
-    call xml_EndElement(xmlfile, 'Description')
-    call xml_NewElement(xmlfile, 'Url')
-    call xml_AddCharacters(xmlfile, 'http://www.iris.edu/mda/'//UserInfo%Network//'/'//Site%ID)
-    call xml_EndElement(xmlfile, 'Url')
-    call xml_EndElement(xmlfile, 'ExternalUrl')
+    if (UserInfo%TimeSeriesArchived) then
+        call xml_NewElement(xmlfile, 'ExternalUrl')
+        call xml_NewElement(xmlfile, 'Description')
+        call xml_AddCharacters(xmlfile, 'IRIS DMC MetaData')
+        call xml_EndElement(xmlfile, 'Description')
+        call xml_NewElement(xmlfile, 'Url')
+        call xml_AddCharacters(xmlfile, 'http://www.iris.edu/mda/'//UserInfo%Network//'/'//Site%ID)
+        call xml_EndElement(xmlfile, 'Url')
+        call xml_EndElement(xmlfile, 'ExternalUrl')
+    end if
 
 	call date_and_time(date, time, zone)
 
@@ -239,32 +240,34 @@ contains
     call xml_AddCharacters(xmlfile, trim(Site%RunList))
     call xml_EndElement(xmlfile, 'RunList')
 
-    call xml_NewElement(xmlfile, 'DataQualityNotes')
-    call xml_NewElement(xmlfile, 'Rating')
-    call xml_AddCharacters(xmlfile, Site%QualityRating)
-    call xml_EndElement(xmlfile, 'Rating')
-    call xml_NewElement(xmlfile, 'GoodFromPeriod')
-    call xml_AddCharacters(xmlfile, Site%GoodFromPeriod, fmt="r3")
-    call xml_EndElement(xmlfile, 'GoodFromPeriod')
-    call xml_NewElement(xmlfile, 'GoodToPeriod')
-    call xml_AddCharacters(xmlfile, Site%GoodToPeriod, fmt="r3")
-    call xml_EndElement(xmlfile, 'GoodToPeriod')
-    call xml_NewElement(xmlfile, 'Comments')
-	call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%Creator%Name))
-    call xml_AddCharacters(xmlfile, trim(Site%QualityComments))
-    call xml_EndElement(xmlfile, 'Comments')
-    call xml_EndElement(xmlfile, 'DataQualityNotes')
+    if (Site%QualityRating > 0) then
+        call xml_NewElement(xmlfile, 'DataQualityNotes')
+        call xml_NewElement(xmlfile, 'Rating')
+        call xml_AddCharacters(xmlfile, Site%QualityRating)
+        call xml_EndElement(xmlfile, 'Rating')
+        call xml_NewElement(xmlfile, 'GoodFromPeriod')
+        call xml_AddCharacters(xmlfile, Site%GoodFromPeriod, fmt="r3")
+        call xml_EndElement(xmlfile, 'GoodFromPeriod')
+        call xml_NewElement(xmlfile, 'GoodToPeriod')
+        call xml_AddCharacters(xmlfile, Site%GoodToPeriod, fmt="r3")
+        call xml_EndElement(xmlfile, 'GoodToPeriod')
+        call xml_NewElement(xmlfile, 'Comments')
+        call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%Creator%Name))
+        call xml_AddCharacters(xmlfile, trim(Site%QualityComments))
+        call xml_EndElement(xmlfile, 'Comments')
+        call xml_EndElement(xmlfile, 'DataQualityNotes')
+    end if
 
     if (Site%WarningFlag >= 0) then
-    call xml_NewElement(xmlfile, 'DataQualityWarnings')
-    call xml_NewElement(xmlfile, 'Flag')
-    call xml_AddCharacters(xmlfile, Site%WarningFlag)
-    call xml_EndElement(xmlfile, 'Flag')
-    call xml_NewElement(xmlfile, 'Comments')
-    call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%Creator%Name))
-    call xml_AddCharacters(xmlfile, trim(Site%WarningComments))
-    call xml_EndElement(xmlfile, 'Comments')
-    call xml_EndElement(xmlfile, 'DataQualityWarnings')
+        call xml_NewElement(xmlfile, 'DataQualityWarnings')
+        call xml_NewElement(xmlfile, 'Flag')
+        call xml_AddCharacters(xmlfile, Site%WarningFlag)
+        call xml_EndElement(xmlfile, 'Flag')
+        call xml_NewElement(xmlfile, 'Comments')
+        call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%Creator%Name))
+        call xml_AddCharacters(xmlfile, trim(Site%WarningComments))
+        call xml_EndElement(xmlfile, 'Comments')
+        call xml_EndElement(xmlfile, 'DataQualityWarnings')
     end if
 
     if (present(Notes)) then
@@ -317,19 +320,18 @@ contains
 	end subroutine add_Site_header
 	
 	
-	subroutine add_ProcessingInfo(UserInfo, Info, RemoteSite, RemoteRun)
+	subroutine add_ProcessingInfo(UserInfo, RemoteSite, RemoteRun)
 		type(UserInfo_t), intent(in)                    :: UserInfo
- 		type(RemoteRef_t), intent(in)                   :: Info
     	type(Site_t), optional, intent(in)              :: RemoteSite
     	type(Run_t), optional, dimension(:), intent(in) :: RemoteRun 
 
 		call xml_NewElement(xmlfile, 'ProcessingInfo')
 		call xml_NewElement(xmlfile, 'SignConvention')
-		call xml_AddCharacters(xmlfile, trim(Info%sign_convention))
+		call xml_AddCharacters(xmlfile, trim(UserInfo%SignConvention))
 		call xml_EndElement(xmlfile, 'SignConvention')
 		
 		call xml_NewElement(xmlfile, 'RemoteRef')
-		call xml_AddAttribute(xmlfile, 'type', trim(Info%remote_ref_type))
+		call xml_AddAttribute(xmlfile, 'type', trim(UserInfo%RemoteRefType))
 		call xml_EndElement(xmlfile, 'RemoteRef')
 		
 		if (present(RemoteSite)) then
@@ -374,7 +376,7 @@ contains
 		call xml_EndElement(xmlfile, 'ProcessingSoftware')
 		
 		call xml_NewElement(xmlfile, 'ProcessingTag')
-        call xml_AddCharacters(xmlfile, trim(Info%processing_tag))
+        call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessingTag))
         call xml_EndElement(xmlfile, 'ProcessingTag')
 		call xml_EndElement(xmlfile, 'ProcessingInfo')
     	

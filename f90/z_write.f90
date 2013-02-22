@@ -37,7 +37,7 @@ contains
   subroutine write_z_header(sitename, Site, Info, header1, header2)
     character(len=80), intent(in)    :: sitename
     type(Site_t),  intent(in)        :: Site
-	type(RemoteRef_t), intent(in)    :: Info
+	type(UserInfo_t), intent(in)     :: Info
 	character(len=80), optional, intent(in)  :: header1, header2
 	real(8)							 :: lon, lat
 
@@ -57,7 +57,7 @@ contains
 !...  declination does not mean what you think it does:
 !...  it is set to zero if channel orientations are correct.
 
-    write (zfile,'(a80)') Info%remote_ref_type
+    write (zfile,'(a80)') Info%RemoteRefType
     write (zfile,'(a12,a80)') 'station    :', sitename
 
 	lon = Site%Location%lon

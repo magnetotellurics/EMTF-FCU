@@ -8,6 +8,12 @@ module global
   logical, save         :: rotate=.false.
   character(len=10)     :: date, time, zone
   !*********************************************************
+  ! IRIS requires site ID to have no more than 5 chars
+  ! respectively, run ID has no more than 6 chars
+  ! This restriction does not hold to data not archived
+  ! with IRIS, so make this a parameter
+  integer, parameter    :: nid=6
+  !*********************************************************
   ! WGS84 - common standard global datum
   ! NAD83 - used in North America
   ! ETRS89 - used in Europe
@@ -44,7 +50,7 @@ module global
   character(len=2)      :: network='EM'
   character(len=20)     :: subType='MT_TF'
   character(len=200)    :: subTypeInfo='Magnetotelluric Transfer Functions'
-  character(len=20)     :: tags='impedance,tipper'
+  character(len=200)    :: tags='impedance,tipper'
 
 
   type :: Person_t
@@ -66,6 +72,7 @@ module global
   end type Copyright_t
 
   type :: UserInfo_t
+    logical           :: TimeSeriesArchived
     character(len=2)  :: Network
     character(len=80) :: SubType
     character(len=80) :: Description
@@ -78,13 +85,20 @@ module global
     character(len=80) :: AcquiredBy
     type(Person_t)	  :: Creator
     type(Person_t)	  :: Submitter
+    character(len=80) :: SignConvention
+    logical           :: RemoteRef
+    character(len=80) :: RemoteRefType
+    character(len=nid):: RemoteSiteID
     character(len=80) :: ProcessedBy
     character(len=80) :: ProcessDate
     character(len=80) :: ProcessingSoftware
     character(len=80) :: ProcessingSoftwareLastMod
     character(len=80) :: ProcessingSoftwareAuthor
+    character(len=80) :: ProcessingTag ! for Z-file input/output
     character(len=80) :: DateFormat ! for EDI input/output
     character(len=80) :: DummyDataValue ! for EDI input/output
+    logical           :: ParseEDIInfo ! for EDI input/output
+    logical           :: WriteEDIInfo ! for EDI input/output
     integer           :: OrthogonalGeographic
     character(len=80) :: RunList
     character(len=80) :: SiteList
@@ -100,14 +114,14 @@ module global
 
 
   type :: TimePeriod_t
-	character(len=6)  :: RunID
+	character(len=nid+1) :: RunID
 	character(len=19) :: StartTime
 	character(len=19) :: EndTime
   end type TimePeriod_t
 
 
   type :: Site_t
-  	character(len=5)   :: ID
+  	character(len=nid) :: ID
 	character(len=80)  :: Description
   	type(Location_t)   :: Location
 	real(8)            :: Declination
@@ -124,8 +138,8 @@ module global
 
 
   type :: Run_t
-  	character(len=6)   :: ID
-  	character(len=5)   :: SiteID
+  	character(len=nid+1) :: ID
+  	character(len=nid)   :: SiteID
    	character(len=80)  :: Instrument
 	character(len=80)  :: InstrumentName
  	character(len=80)  :: InstrumentID
@@ -172,19 +186,13 @@ module global
   end type FreqInfo_t
 
 
-  type :: RemoteRef_t
-  	!character(len=80) :: processed_by
-  	character(len=80) :: processing_tag
-  	character(len=80) :: sign_convention
-  	!character(len=80) :: software
-  	!character(len=80) :: software_lastmod
-  	!character(len=80) :: software_author
-	character(len=80) :: remote_ref_type
-	logical           :: remote_ref
-	character(len=5)  :: remote_site_id
-  	!type(Site_t)     :: remote_site
-	!character(len=2) :: remote_ref_abbrev
-  end type RemoteRef_t
+!  type :: RemoteRef_t
+!  	character(len=80) :: sign_convention
+!	character(len=80) :: remote_ref_type
+!	logical           :: remote_ref
+!	character(len=5)  :: remote_site_id
+!  	character(len=80) :: processing_tag
+!  end type RemoteRef_t
 
 contains
 
@@ -208,25 +216,33 @@ contains
     subroutine init_user_info(Info)
         type(UserInfo_t), intent(out)  :: Info
 
+        Info%TimeSeriesArchived = .FALSE.
         Info%Network = network
         Info%SubType = subType
         Info%Description = subTypeInfo
         Info%Tags = tags
         call init_copyright(Info%Copyright)
-        Info%Project = 'USArray'
-        Info%Survey = 'TA'
-        Info%Country = 'USA'
+        Info%Project = '' ! 'USArray'
+        Info%Survey = '' ! 'TA'
+        Info%Country = '' ! 'USA'
         Info%YearCollected = ''
-        Info%AcquiredBy = 'UNKNOWN'
+        Info%AcquiredBy = ' '
         call init_person(Info%Creator)
         call init_person(Info%Submitter)
-        Info%ProcessedBy = 'UNKNOWN'
-        Info%ProcessDate = ''
-        Info%ProcessingSoftware = 'UNKNOWN'
-        Info%ProcessingSoftwareLastMod = 'UNKNOWN'
-        Info%ProcessingSoftwareAuthor = 'UNKNOWN'
+        Info%SignConvention = sign_convention
+        Info%RemoteRef = .FALSE.
+        Info%RemoteRefType = ' '
+        Info%RemoteSiteID = ' '
+        Info%ProcessedBy = ' '
+        Info%ProcessDate = ' '
+        Info%ProcessingSoftware = ' '
+        Info%ProcessingSoftwareLastMod = ' '
+        Info%ProcessingSoftwareAuthor = ' '
+        Info%ProcessingTag = ' '
         Info%DateFormat = 'MM/DD/YY'
         Info%DummyDataValue = ''
+        Info%ParseEDIInfo = .TRUE.
+        Info%WriteEDIInfo = .TRUE.
         Info%OrthogonalGeographic = 0
         Info%RunList = 'Runs.xml'
         Info%SiteList = 'Sites.xml'
@@ -298,22 +314,16 @@ contains
 	end subroutine init_run_info
 
 
-	subroutine init_remote_ref(Info)
-		type(RemoteRef_t), intent(out)  :: Info
-
-		!Info%processed_by = ' '
-		Info%processing_tag = ' '
-		Info%sign_convention = sign_convention
-		!Info%software = ' '
-		!Info%software_lastmod = ' '
-		!Info%software_author = ' '
-  		Info%remote_ref_type = ' '
-		Info%remote_ref = .FALSE.
-		Info%remote_site_id = ' '
-
-		!call init_site_info(Info%remote_site)
-
-	end subroutine init_remote_ref
+!	subroutine init_remote_ref(Info)
+!		type(RemoteRef_t), intent(out)  :: Info
+!
+!		Info%processing_tag = ' '
+!		Info%sign_convention = sign_convention
+!  		Info%remote_ref_type = ' '
+!		Info%remote_ref = .FALSE.
+!		Info%remote_site_id = ' '
+!
+!	end subroutine init_remote_ref
 
 
 	subroutine init_freq_info(Freq)

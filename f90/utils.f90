@@ -364,6 +364,25 @@ subroutine inverse33(a,b)
 
 end subroutine inverse33
 
+function to_upper(strIn) result(strOut)
+! Adapted from http://www.star.le.ac.uk/~cgp/fortran.html (25 May 2012)
+
+     implicit none
+
+     character(len=*), intent(in) :: strIn
+     character(len=len(strIn)) :: strOut
+     integer :: i,j
+
+     do i = 1, len(strIn)
+          j = iachar(strIn(i:i))
+          if (j>= iachar("a") .and. j<=iachar("z") ) then
+               strOut(i:i) = achar(iachar(strIn(i:i))-32)
+          else
+               strOut(i:i) = strIn(i:i)
+          end if
+     end do
+
+end function to_upper
 
 ! **********************************************************************
 !  toupper(): if lowercase, change to uppercase
@@ -507,8 +526,8 @@ end function isdigit
     i1 = index(cloc,':')
     i2 = i1+index(cloc(i1+1:16),':')
     cdeg = cloc(1:i1-1)
-    cmin = cloc(i1:i2-1)
-    csec = trim(cloc(i2:16))
+    cmin = cloc(i1+1:i2-1)
+    csec = trim(cloc(i2+1:16))
 
     read(cdeg,*) d
     read(cmin,*) m
