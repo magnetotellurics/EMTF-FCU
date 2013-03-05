@@ -265,6 +265,11 @@ contains
     integer, intent(out)                  :: n
     ! local
     character(len=200)                    :: line, var, value
+    character(len=2)                      :: elevunits
+    logical                               :: readlat,readlon,readelev
+    logical                               :: readinfo
+
+    elevunits = 'M'
 
     read (edifile,'(a200)',iostat=ios) line !read the first line in file
     call parse_edi_line(line,var,value)
@@ -299,98 +304,189 @@ contains
 
         ! to parse the INFO block, first find an occurence of the site ID
         ! then allow parsing of only one value of each type after site ID
+        if (trim(var) .eq. 'INFO') then
+            if (index(to_upper(value),trim(to_upper(Site%ID)))>0) then
+                readinfo = .true.
+                readlat = .false.
+                readlon = .false.
+                readelev = .false.
+            end if
+        end if
 
+        if (readinfo) then
         select case (trim(var))
         case ('AZIMUTH')
-            read(value,*) Site%Location%lat
+            !read(value,*) Site%Declination
         case ('LATITUDE') ! assume it's decimal if found in INFO block
             read(value,*) Site%Location%lat
+            readlat = .true.
         case ('LONGITUDE') ! assume it's decimal if found in INFO block
             read(value,*) Site%Location%lon
+            readlon = .true.
         case ('ELEVATION')
             read(value,*) Site%Location%elev
+            readelev = .true.
         case ('INFO','DUMMY','COMMENT')
             ! these are already saved in the Notes if needed
         case default
             ! but there might be something else that requires parsing
             write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
         end select
+        end if
+
+        ! exit the reading loop when everything has been read
+        if (readlat .and. readlon .and. readelev) then
+            readinfo = .false.
+        end if
+
     end do
+
+    ! convert elevation to meters
+    if(trim(elevunits) .eq. 'FT') then
+        Site%Location%elev = 0.3048 * Site%Location%elev
+    end if
 
   end subroutine read_edi_info
 
 
   subroutine parse_edi_channel(value, Channel)
-    character(len=200), intent(in)   :: value
+    character(len=*), intent(in)     :: value
     type(Channel_t), intent(out)     :: Channel
     ! local
     character(len=200)               :: line, var
     character(len=1)                 :: edichar1, edichar2
-    integer                          :: i, N=200
+    integer                          :: i, j(10), N=200
 
-    ! Use the first two non-space characters to determine channel type
-    temp = adjustl(line)
+    ! Use the first non-space character to determine channel type
+    call init_channel_info(Channel)
+    temp = adjustl(value)
+    N = len_trim(value)
+    i = 0
+    j(:) = 0
     edichar1 = temp(1:1)
-    edichar2 = temp(2:2)
+
     select case (edichar1)
     case ('E')
         ! electric field channel
         i = index(trim(temp),'CHTYPE=')
         if (i > 0) then
-            var = trim(temp(i:i+2))
+            var = trim(temp(i+7:i+8))
+            edichar2 = var(2:2) !temp(i+8:i+8)
+        else
+            write(*,*) 'Error: unknown EDI channel type'
+            return
         end if
-        write(*,*) 'Channel ',trim(var)
+        Channel%ID = trim(var)
+        call init_channel_units(Channel)
+        ! read in the numeric ID
+        i = index(trim(temp),'ID=')
+        read(temp(i+3:N),*) Channel%NumericID
+        ! read in the XYZ coordinates
+        i = index(trim(temp),'X=')
+        read(temp(i+2:N),*) Channel%X
+        i = index(trim(temp),'Y=')
+        read(temp(i+2:N),*) Channel%Y
+        i = index(trim(temp),'Z=')
+        if (i > 0) then
+            read(temp(i+2:N),*) Channel%Z
+        end if
+        i = index(trim(temp),'X2=')
+        read(temp(i+3:N),*) Channel%X2
+        i = index(trim(temp),'Y2=')
+        read(temp(i+3:N),*) Channel%Y2
+        i = index(trim(temp),'Z2=')
+        if (i > 0) then
+            read(temp(i+3:N),*) Channel%Z2
+        end if
+        ! compute the dipole length
+        select case (edichar2)
+        case ('X')
+            Channel%DipoleLength = abs(Channel%X2 - Channel%X)
+        case ('Y')
+            Channel%DipoleLength = abs(Channel%Y2 - Channel%Y)
+        end select
+        ! for now, the optional metadata will be ignored: have never
+        ! seen it yet in a real EDI file. Will deal with it later!
+        j(1) = index(trim(temp),'ACQCHAN=')
+        j(2) = index(trim(temp),'FILTER=')
+        j(3) = index(trim(temp),'GAIN=')
+        j(4) = index(trim(temp),'MEASDATE=')
+        if (sum(j) > 0) then
+            write(*,*) 'Warning: optional metadata ignored for channel ',trim(Channel%ID)
+        end if
+
     case ('H')
         ! magnetic field channel
         i = index(trim(temp),'CHTYPE=')
         if (i > 0) then
-            var = trim(temp(i:i+2))
+            var = trim(temp(i+7:i+9))
+        else
+            write(*,*) 'Error: unknown EDI channel type'
+            return
         end if
-        write(*,*) 'Channel ',trim(var)
+        Channel%ID = trim(var)
+        call init_channel_units(Channel)
+        ! read in the numeric ID
+        i = index(trim(temp),'ID=')
+        read(temp(i+3:N),*) Channel%NumericID
+        ! read in the XYZ coordinates
+        i = index(trim(temp),'AZM=')
+        read(temp(i+4:N),*) Channel%Orientation
+        i = index(trim(temp),'X=')
+        read(temp(i+2:N),*) Channel%X
+        i = index(trim(temp),'Y=')
+        read(temp(i+2:N),*) Channel%Y
+        i = index(trim(temp),'Z=')
+        if (i > 0) then
+            read(temp(i+2:N),*) Channel%Z
+        end if
+        i = index(trim(temp),'DIP=')
+        if (i > 0) then
+            read(temp(i+4:N),*) Channel%Tilt
+        end if
+        ! for now, the optional metadata will be ignored: have never
+        ! seen it yet in a real EDI file. Will deal with it later!
+        j(1) = index(trim(temp),'ACQCHAN=')
+        j(2) = index(trim(temp),'FILTER=')
+        j(3) = index(trim(temp),'SENSOR=')
+        j(4) = index(trim(temp),'GAIN=')
+        j(5) = index(trim(temp),'MEASDATE=')
+        if (sum(j) > 0) then
+            write(*,*) 'Warning: optional metadata ignored for channel ',trim(Channel%ID)
+        end if
+
     case default
         write(*,*) 'Warning: not a known EDI channel line: ',trim(value)
         return
     end select
 
-
-!    do i=1,2
-!       read (edifile,*) num, orientation, tilt, temp, chname
-!       call init_channel_info(Input(i))
-!       Input(i)%ID = chname
-!       Input(i)%orientation = orientation + declination
-!       Input(i)%tilt = tilt
-!       call init_channel_units(Input(i))
-!    end do
-!
-!    do i=1,nch-2
-!       read (edifile,*) num, orientation, tilt, temp, chname
-!       call init_channel_info(Output(i))
-!       Output(i)%ID = chname
-!       Output(i)%orientation = orientation + declination
-!       Output(i)%tilt = tilt
-!       call init_channel_units(Output(i))
-!    end do
-
   end subroutine parse_edi_channel
 
-
-  subroutine read_edi_channels(Input, Output, UserInfo, RemoteSite)
-    type(Channel_t), dimension(:), intent(inout) :: Input
-    type(Channel_t), dimension(:), intent(inout) :: Output
-    type(UserInfo_t), intent(inout)              :: UserInfo
-    type(Site_t), intent(inout)                  :: RemoteSite
+  ! From the channel block >=DEFINEMEAS we obtain:
+  ! Site XYZ cartesian coordinates relative to an origin;
+  ! Site lat/lon/z location (IF not present in the header OR info blocks);
+  ! Channel location *relative to the site* (NOT to the origin);
+  ! Dipole lengths;
+  ! Channel orientations unless overwritten by data rotation angles;
+  ! Other instrument information.
+  subroutine read_edi_channels(Input, Output, Site, UserInfo)
+    type(Channel_t), dimension(:), pointer, intent(out) :: Input
+    type(Channel_t), dimension(:), pointer, intent(out) :: Output
+    type(Site_t), intent(inout)                  :: Site
+    type(UserInfo_t), intent(in)                 :: UserInfo
     ! local
     type(Channel_t)                  :: Channel
     character(len=200)               :: line, var, value
-    character(len=2)                 :: elevunits
-    real(8)                          :: declination
-    character(len=3)                 :: temp
-    integer                          :: num
-    character(len=80)                :: chname
-    real                             :: orientation
-    real                             :: tilt
+    integer                          :: num,chin,chout,i,istat
+    real(8)                          :: xy(2,1),ll(2,1)
 
-    nch = 5 ! default number of channels; replaces the number preallocated on input
+    nch = 5 ! default number of channels; number of input channels hardcoded
+    nchout = nch - nchin
+    allocate(Input(nchin), Output(nchout), stat=istat)
+
+    chin = 0 ! start counting input channels
+    chout = 0 ! start counting output channels
+    num = 0 ! start counting channels
 
     do
         read (edifile,'(a200)',iostat=ios) line
@@ -407,32 +503,43 @@ contains
 
         select case (trim(var))
         case ('MAXCHAN')
+            ! NOTE: if present, this always comes before
+            ! the channel block lines so safe to reallocate
             read(value,*) nch
+            nchout = nch - nchin
+            deallocate(Output, stat=istat)
+            allocate(Output(nchout), stat=istat)
         case ('BLOCK')
+            num = num+1
             call parse_edi_channel(value,Channel)
+            if (num<=nchin) then
+                chin = chin+1
+                Input(chin) = Channel
+            else
+                chout = chout+1
+                Output(chout) = Channel
+            end if
         case ('REFLOC')
-            UserInfo%RemoteRef = .TRUE.
-            UserInfo%RemoteRefType = 'Remote Reference'
-            UserInfo%RemoteSiteID = trim(value)
+            Site%Coords%Origin%ID = trim(value)
         case ('REFLAT')
-            RemoteSite%Location%lat=dms2deg(value)
+            Site%Coords%Origin%lat=dms2deg(value)
             if (.not. silent) then
-                write(*,*) 'Latitude conversion: ',trim(value),' to ',RemoteSite%Location%lat
+                write(*,*) 'Latitude conversion for the origin: ',trim(value),' to ',Site%Coords%Origin%lat
             end if
         case ('REFLONG')
-            RemoteSite%Location%lon=dms2deg(value)
+            Site%Coords%Origin%lon=dms2deg(value)
             if (.not. silent) then
-                write(*,*) 'Longitude conversion: ',trim(value),' to ',RemoteSite%Location%lon
+                write(*,*) 'Longitude conversion for the origin: ',trim(value),' to ',Site%Coords%Origin%lon
             end if
         case ('REFELEV')
-            read(value,*) RemoteSite%Location%elev
-        case ('UNITS') ! units for elevation
-            elevunits = value
+            read(value,*) Site%Coords%Origin%elev
+        case ('UNITS') ! units for the cartesian location
+            Site%Coords%Units = trim(value)
         case ('REFTYPE')
             ! this isn't used correctly in practical EDI files
-            ! UserInfo%RemoteRefType = trim(value)
+            Site%Coords%Type = trim(value)
         case ('MAXRUN','MAXMEAS')
-            ! do nothing - these aren't really used in practice
+            ! do nothing - these are only used to parse the numeric channel ID
         case ('DUMMY')
             ! empty line
         case default
@@ -441,12 +548,58 @@ contains
         end select
     end do
 
-    ! save the remote site ID
-    RemoteSite%ID = UserInfo%RemoteSiteID
+    ! first convert site and channel locations to meters, if needed
+    if(trim(Site%Coords%Units) .eq. 'FT') then
+        Site%Coords%X = 0.3048 * Site%Coords%X
+        Site%Coords%Y = 0.3048 * Site%Coords%Y
+        Site%Coords%Z = 0.3048 * Site%Coords%Z
+        Site%Coords%Units = 'meters'
+        do i=1,nchin
+            call convert_channel_to_meters(Input(i))
+        end do
+        do i=1,nchout
+            call convert_channel_to_meters(Output(i))
+        end do
+    end if
 
-    ! convert elevation to meters
-    if(trim(elevunits) .eq. 'FT') then
-        RemoteSite%Location%elev = 0.3048 * RemoteSite%Location%elev
+    ! now, obtain site coordinates relative to an origin from the channels
+    ! (use the first input channel - usually Hx - for the absolute "site location")
+    Site%Coords%X = Input(1)%X
+    Site%Coords%Y = Input(1)%Y
+    Site%Coords%Z = Input(1)%Z
+
+    ! adjust the channel location so that it's now relative to the site
+    do i=1,nchin
+        Input(i)%X = Input(i)%X - Site%Coords%X
+        Input(i)%Y = Input(i)%Y - Site%Coords%Y
+        Input(i)%Z = Input(i)%Z - Site%Coords%Z
+        Input(i)%Units = Site%Coords%Units
+    end do
+    do i=1,nchout
+        Output(i)%X = Output(i)%X - Site%Coords%X
+        Output(i)%Y = Output(i)%Y - Site%Coords%Y
+        Output(i)%Z = Output(i)%Z - Site%Coords%Z
+        ! for electric output channels, also update the end of the dipole
+        if (index(Output(i)%ID,'E')>0) then
+            Output(i)%X2 = Output(i)%X2 - Site%Coords%X
+            Output(i)%Y2 = Output(i)%Y2 - Site%Coords%Y
+            Output(i)%Z2 = Output(i)%Z2 - Site%Coords%Z
+        end if
+        Output(i)%Units = Site%Coords%Units
+     end do
+
+    ! finally, compute and verify the site lat/lon coordinates
+    xy(1,1) = Site%Coords%X
+    xy(2,1) = Site%Coords%Y
+    call xy2ll(xy,ll,Site%Coords%Origin%lat,Site%Coords%Origin%lon)
+    if (.not. silent) then
+        write(*,*) 'KM per Degree at origin: ',kmPerDeg(Site%Coords%Origin%lat)
+        write(*,*) 'KM per Degree at site  : ',kmPerDeg(Site%Location%lat)
+        write(*,*) 'Computed site latitude : ',ll(1,1)
+        write(*,*) 'Computed site longitude: ',ll(2,1)
+        write(*,*) 'Recorded site latitude : ',Site%Location%lat
+        write(*,*) 'Recorded site longitude: ',Site%Location%lon
+        write(*,*) 'By default, using recorded location'
     end if
 
   end subroutine read_edi_channels

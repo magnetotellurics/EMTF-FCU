@@ -141,14 +141,11 @@ program edi2xml
     call read_edi_info(ediLocalSite, UserInfo, Notes, NotesLength)
   end if
 
-  ! Allocate space for channels and transfer functions
-  nch = 100
-  allocate(InputChannel(2), OutputChannel(nch-2), stat=istat)
-
-  call read_edi_channels(InputChannel, OutputChannel, UserInfo, ediRemoteSite)
+  ! This allocates and fills in the channels and updates the local site coords
+  call read_edi_channels(InputChannel, OutputChannel, ediLocalSite, UserInfo)
 
   call read_edi_data_header(nf,maxblks)
-  allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), TFName(nch-2,2), stat=istat)
+  allocate(F(nf), TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), TFName(nchout,nchin), stat=istat)
   do j=1,maxblks
     !call read_edi_data_block(nf,type,value,info,comp,row,col)
     do k=1,nf
@@ -181,18 +178,20 @@ program edi2xml
   	call add_ProcessingInfo(UserInfo)
   end if
 
-!  call new_channel_block('InputChannels')
-!  do i=1,2
-!     call add_Channel(InputChannel(i), location=.false.)
-!  end do
-!  call end_block('InputChannels')
-!
-!  call new_channel_block('OutputChannels')
-!  do i=1,nch-2
-!     call add_Channel(OutputChannel(i), location=.false.)
-!  end do
-!  call end_block('OutputChannels')
-!
+  call add_GridOrigin(ediLocalSite)
+
+  call new_channel_block('InputChannels')
+  do i=1,nchin
+     call add_Channel(InputChannel(i), location=.false.)
+  end do
+  call end_block('InputChannels')
+
+  call new_channel_block('OutputChannels')
+  do i=1,nchout
+     call add_Channel(OutputChannel(i), location=.false.)
+  end do
+  call end_block('OutputChannels')
+
 !  ! Read and write frequency blocks: transfer functions, variance, covariance
 !  call initialize_xml_freq_block_output(nf)
 !

@@ -7,6 +7,16 @@ module utils
 
 implicit none
 
+!*********************************************************
+! Double precision constants
+real(8), parameter    :: PI  = 3.14159265357898
+real(8), parameter    :: D2R = PI/180.d0
+real(8), parameter    :: R2D = 180.d0/PI
+real(8), parameter    :: EPS = 1.0e-8
+real(8), parameter    :: EarthRad = 6378.137; ! km
+real(8), parameter    :: EarthEcc2 = 0.00669437999014 ! eccentricity squared
+
+
 ! **********************************************************************
 !  subroutines to compute 2x2 and 3x3 matrix inverses
 
@@ -455,7 +465,8 @@ end function isdigit
 ! sexagesimal system (degrees, minutes & seconds);
 ! the result is a character string length 16.
 ! Written by: Anna Kelbert, 3 Nov 2007
-! Last Mod. : 30 Jun 2011 to add leading zeros to mins
+! Modified  : 30 Jun 2011 to add leading zeros to mins
+! Modified  : 3 March 2013 to improve accuracy
 ! See also  : dms2deg
 ! This subroutine is distributed under the terms of
 ! the GNU Lesser General Public License.
@@ -489,8 +500,8 @@ end function isdigit
 	m = floor((aloc-d)*60)
 	write(cmin,'(i2.2)') m
 
-	s = ((aloc-d)*60-m)*60
-	write(csec,'(i2.2,f3.2)') floor(s),s-floor(s)
+	s = ((aloc-dble(d))*60.0d0-dble(m))*60.0d0
+    write(csec,'(i2.2,a1,i2.2)') floor(s),'.',floor(100*(s-floor(s)))
 
 	cloc = cdeg//':'//cmin//':'//csec
 
@@ -504,6 +515,7 @@ end function isdigit
 ! Input is a character string length 16.
 ! Output is a real value.
 ! Written by: Anna Kelbert, 9 Jan 2013
+! Modified  : 3 March 2013 to fix negative longitudes
 ! See also  : deg2dms
 ! This subroutine is distributed under the terms of
 ! the GNU Lesser General Public License.
@@ -533,11 +545,101 @@ end function isdigit
     read(cmin,*) m
     read(csec,*) s
 
-    loc = d + (60*m + s)/3600
+    if (d<0) then
+        loc = dble(d) - (60.0d0*dble(m) + dble(s))/3600.0d0
+    else
+        loc = dble(d) + (60.0d0*dble(m) + dble(s))/3600.0d0
+    end if
 
 ! ----------------------------------------------------------------------
 
   end function dms2deg
+
+! **********************************************************************
+! Tools to convert lat/lon to X/Y and back
+! Written by: Anna Kelbert, 3 March 2013
+! See also  : ll2xy, xy2ll
+! Matlab    :
+!        function res = kmPerDeg(lat0)
+!            a = latlontools.EarthRad;
+!            e2 = latlontools.EarthEcc2;
+!            if nargin > 0
+!                res = pi*a*(1-e2)/(180*(1-e2*sin(lat0*pi/180)^2)^(3/2));
+!            else
+!                res = 1.1119e+02; % for latitude ~ 48 degrees
+!            end
+!        end
+! This subroutine is distributed under the terms of
+! the GNU Lesser General Public License.
+  function kmPerDeg(lat0) result (res)
+
+    real(8), intent(in), optional :: lat0
+    ! local
+    real(8) a,e2,res
+
+    a = EarthRad
+    e2 = EarthEcc2
+    if (present(lat0)) then
+        res = PI*a*(1.0d0-e2)/(180.0d0*(1.0d0-e2*sin(lat0*D2R)**2)**(3/2))
+    else
+        res = 1.1119e+02 ! for latitude ~ 48 degrees
+    end if
+
+  end function kmPerDeg
+
+! **********************************************************************
+! Tools to convert lat/lon to X/Y and back
+! Ideally you would know what sort of projection was used to compute locations in km.
+! The obvious crude (but fine for small areas) approximation is
+! x =(lat-lat0)*a/360 and
+! y = cos(lat)*(lon-lon0)*a/360,
+! where a is the circumference of the earth .... 1 degree ~ 111 km.
+! Written by: Gary Egbert & Anna Kelbert, 3 March 2013
+! See also  : kmPerDeg, xy2ll
+! Matlab    :
+!        function [xy] = ll2xy(ll,lat0,lon0)
+!            xy(1,:) = latlontools.kmPerDeg(lat0)*(ll(1,:)-lat0);
+!            xy(2,:) = latlontools.kmPerDeg(lat0)*(ll(2,:)-lon0).*cos(ll(1,:)*pi/180);
+!        end
+! This subroutine is distributed under the terms of
+! the GNU Lesser General Public License.
+  subroutine ll2xy(ll,xy,lat0,lon0)
+
+    real(8), dimension(:,:), intent(in)  :: ll ! (2,N)
+    real(8), dimension(:,:), intent(out) :: xy ! (2,N)
+    real(8), intent(in)                  :: lat0, lon0
+
+    xy(1,:) = 1.0e3*kmPerDeg(lat0)*(ll(1,:)-lat0)
+    xy(2,:) = 1.0e3*kmPerDeg(lat0)*(ll(2,:)-lon0)*cos(ll(1,:)*D2R)
+
+  end subroutine ll2xy
+
+! **********************************************************************
+! Tools to convert lat/lon to X/Y and back
+! Ideally you would know what sort of projection was used to compute locations in km.
+! The obvious crude (but fine for small areas) approximation is
+! x =(lat-lat0)*a/360 and
+! y = cos(lat)*(lon-lon0)*a/360,
+! where a is the circumference of the earth .... 1 degree ~ 111 km.
+! Written by: Gary Egbert & Anna Kelbert, 3 March 2013
+! See also  : ll2xy, kmPerDeg
+! Matlab    :
+!        function [ll] = xy2ll(xy,lat0,lon0)
+!            ll(1,:) = xy(1,:)/latlontools.kmPerDeg(lat0)+lat0;
+!            ll(2,:) = (xy(2,:)/latlontools.kmPerDeg(lat0))./cos(ll(1,:)*pi/180)+lon0;
+!        end
+! This subroutine is distributed under the terms of
+! the GNU Lesser General Public License.
+  subroutine xy2ll(xy,ll,lat0,lon0)
+
+    real(8), dimension(:,:), intent(in)  :: xy ! (2,N)
+    real(8), dimension(:,:), intent(out) :: ll ! (2,N)
+    real(8), intent(in)                  :: lat0, lon0
+
+    ll(1,:) = xy(1,:)/(1.0e3*kmPerDeg(lat0))+lat0
+    ll(2,:) = ( xy(2,:)/(1.0e3*kmPerDeg(lat0)) )/cos(ll(1,:)*D2R)+lon0
+
+  end subroutine xy2ll
 
 
 ! **********************************************************************

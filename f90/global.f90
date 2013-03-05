@@ -14,6 +14,18 @@ module global
   ! with IRIS, so make this a parameter
   integer, parameter    :: nid=6
   !*********************************************************
+  ! Total number of INPUT channels is determined by the
+  ! method through which the data are obtained.
+  ! The MT assumption requires two polarizations, and there
+  ! are always 2 input channels. Other types of data that
+  ! would potentially be stored in the format may have
+  ! 1 (e.g., C responses) or zero (e.g., fields) input channels.
+  ! We store this number as a global parameter;
+  ! number of OUTPUT channels is much more variable and
+  ! is dynamically allocated but initialized to 3
+  integer, parameter    :: nchin=2
+  integer, save         :: nchout=3
+  !*********************************************************
   ! WGS84 - common standard global datum
   ! NAD83 - used in North America
   ! ETRS89 - used in Europe
@@ -32,12 +44,6 @@ module global
   ! character(len=12)     :: units='[mV/km]/[nT]'
   character(len=12)     :: magnetic_field_units='[nT]'
   character(len=12)     :: electric_field_units='[mV/km]'
-  !*********************************************************
-  ! Double precision constants
-  real(8), parameter    :: PI  = 3.14159265357898
-  real(8), parameter	:: D2R = PI/180.d0
-  real(8), parameter	:: R2D = 180.d0/PI
-  real(8), parameter    :: EPS = 1.0e-8
   !*********************************************************
 
 
@@ -110,8 +116,17 @@ module global
 	real(8)           :: lat
 	real(8)           :: lon
 	real(8)           :: elev
+    character(80)     :: ID
   end type Location_t
 
+  type :: XYZ_t
+    character(10)     :: Type
+    character(10)     :: Units
+    real(8)           :: X
+    real(8)           :: Y
+    real(8)           :: Z
+    type(Location_t)  :: Origin
+  end type XYZ_t
 
   type :: TimePeriod_t
 	character(len=nid+1) :: RunID
@@ -119,10 +134,10 @@ module global
 	character(len=19) :: EndTime
   end type TimePeriod_t
 
-
   type :: Site_t
   	character(len=nid) :: ID
 	character(len=80)  :: Description
+	type(XYZ_t)        :: Coords
   	type(Location_t)   :: Location
 	real(8)            :: Declination
 	integer			   :: QualityRating ! 1-5
@@ -161,6 +176,7 @@ module global
 
   type :: Channel_t
 	character(len=10)  :: ID
+	real               :: NumericID ! from the EDI files
 	real               :: DipoleLength
 	real               :: DipoleAzimuth ! instrument orientation
 	real               :: Orientation   ! orientation in final TF
@@ -174,6 +190,10 @@ module global
 	character(len=80)  :: InstrumentName
 	character(len=80)  :: InstrumentID
 	character(len=80)  :: InstrumentConfig
+    character(len=80)  :: Sensor ! specific run details if known (e.g., from EDI)
+    character(len=80)  :: Filter
+    character(len=80)  :: Gain
+    character(len=19)  :: MeasuredDate
   end type Channel_t
 
 
@@ -185,14 +205,6 @@ module global
 	integer           :: dec_level
   end type FreqInfo_t
 
-
-!  type :: RemoteRef_t
-!  	character(len=80) :: sign_convention
-!	character(len=80) :: remote_ref_type
-!	logical           :: remote_ref
-!	character(len=5)  :: remote_site_id
-!  	character(len=80) :: processing_tag
-!  end type RemoteRef_t
 
 contains
 
@@ -261,15 +273,29 @@ contains
 
 	end subroutine init_person
 
+    subroutine init_location(Location)
+        type(Location_t), intent(out)  :: Location
+
+        Location%datum = datum
+        Location%lat = 0.0d0
+        Location%lon = 0.0d0
+        Location%elev = 0.0d0
+        Location%ID = ' '
+
+    end subroutine init_location
+
 	subroutine init_site_info(Site)
 		type(Site_t), intent(out)  :: Site
 
 		Site%ID = ' '
 		Site%Description = ' '
-        Site%Location%datum = datum
-		Site%Location%lon = 0.0d0
-		Site%Location%lat = 0.0d0
-		Site%Location%elev = 0.0d0
+		Site%Coords%Type = ' '
+		Site%Coords%Units = ' '
+		Site%Coords%X = 0.0d0
+        Site%Coords%Y = 0.0d0
+        Site%Coords%Z = 0.0d0
+        call init_location(Site%Coords%Origin)
+		call init_location(Site%Location)
 		Site%Declination = 0.0d0
 		Site%QualityRating = 0
 		Site%GoodFromPeriod = 0.0d0
@@ -293,10 +319,7 @@ contains
 		Run%InstrumentName = ' '
 		Run%InstrumentID = ' '
 		Run%Manufacturer = ' '
-		Run%Location%datum = datum
-		Run%Location%lon = 0.0d0
-		Run%Location%lat = 0.0d0
-		Run%Location%elev = 0.0d0
+        call init_location(Run%Location)
 		Run%Declination = 0.0d0
 		Run%TimePeriod%RunID = ' '
 		Run%TimePeriod%StartTime = ' '
@@ -314,18 +337,6 @@ contains
 	end subroutine init_run_info
 
 
-!	subroutine init_remote_ref(Info)
-!		type(RemoteRef_t), intent(out)  :: Info
-!
-!		Info%processing_tag = ' '
-!		Info%sign_convention = sign_convention
-!  		Info%remote_ref_type = ' '
-!		Info%remote_ref = .FALSE.
-!		Info%remote_site_id = ' '
-!
-!	end subroutine init_remote_ref
-
-
 	subroutine init_freq_info(Freq)
 		type(FreqInfo_t), intent(inout) :: Freq
 
@@ -341,6 +352,7 @@ contains
          type(Channel_t), intent(inout) :: Channel
 
 		Channel%ID = ' '
+		Channel%NumericID = 0
 		Channel%DipoleLength = 0
 		Channel%DipoleAzimuth = 0
 		Channel%Orientation = 0
@@ -358,13 +370,17 @@ contains
 		Channel%InstrumentName = ' '
 		Channel%InstrumentID = ' '
 		Channel%InstrumentConfig = ' '
+        Channel%Sensor = ' '
+        Channel%Filter = ' '
+        Channel%Gain = ' '
+        Channel%MeasuredDate = ' '
 
     end subroutine init_channel_info
 
     subroutine init_channel_units(Channel)
          type(Channel_t), intent(inout) :: Channel
 
-         if (index(Channel%ID,'H')==1) then
+         if ((index(Channel%ID,'H')==1) .or. (index(Channel%ID,'R')==1)) then
             Channel%Units = magnetic_field_units
          else if (index(Channel%ID,'E')==1) then
             Channel%Units = electric_field_units
@@ -376,7 +392,24 @@ contains
 
     end subroutine init_channel_units
     
-    
+    ! cleaning up the EDI units flexibility (use to_upper if needed)
+    subroutine convert_channel_to_meters(Channel)
+         type(Channel_t), intent(inout) :: Channel
+
+         if (trim(Channel%Units) .eq. 'FT') then
+            Channel%X = 0.3048 * Channel%X
+            Channel%Y = 0.3048 * Channel%Y
+            Channel%Z = 0.3048 * Channel%Z
+            if (index(Channel%ID,'E')>0) then
+                Channel%X2 = 0.3048 * Channel%X2
+                Channel%Y2 = 0.3048 * Channel%Y2
+                Channel%Z2 = 0.3048 * Channel%Z2
+            end if
+            Channel%Units = 'm'
+         end if
+
+    end subroutine convert_channel_to_meters
+
     function TF_name(InputChannel,OutputChannel) result (tfname)
 		  type(Channel_t), intent(in)    :: InputChannel, OutputChannel
 		  character(10)					 :: tfname

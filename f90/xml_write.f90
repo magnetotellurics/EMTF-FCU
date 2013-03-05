@@ -21,6 +21,7 @@ module xml_write
   public :: new_channel_block, new_data_block, end_block
   public :: add_Location, add_Channel
   public :: add_FieldNotes
+  public :: add_GridOrigin
   public :: initialize_xml_freq_block_output
   public :: end_xml_freq_block_output
   public :: add_PeriodRange
@@ -557,6 +558,59 @@ contains
   end subroutine add_Location
 
 
+  subroutine add_SiteCoords(C)
+    type(XYZ_t), intent(in)    :: C
+
+    call xml_NewElement(xmlfile, 'SiteCoords')
+    call xml_AddAttribute(xmlfile, 'type', trim(C%type))
+    call xml_AddAttribute(xmlfile, 'units', trim(C%units))
+
+    call xml_NewElement(xmlfile, 'X')
+    call xml_AddCharacters(xmlfile, C%X, fmt="r6")
+    call xml_EndElement(xmlfile, 'X')
+
+    call xml_NewElement(xmlfile, 'Y')
+    call xml_AddCharacters(xmlfile, C%Y, fmt="r6")
+    call xml_EndElement(xmlfile, 'Y')
+
+    call xml_NewElement(xmlfile, 'Z')
+    call xml_AddCharacters(xmlfile, C%Z,  fmt="r3")
+    call xml_EndElement(xmlfile, 'Z')
+
+    call xml_EndElement(xmlfile, 'SiteCoords')
+
+  end subroutine add_SiteCoords
+
+
+  subroutine add_GridOrigin(Site)
+    type(Site_t), intent(in)         :: Site
+
+    call xml_NewElement(xmlfile, 'GridOrigin')
+    call xml_AddAttribute(xmlfile, 'name', trim(Site%Coords%Origin%ID))
+    call add_Location(Site%Coords%Origin)
+
+    call xml_NewElement(xmlfile, 'SiteCoords')
+    call xml_AddAttribute(xmlfile, 'type', trim(Site%Coords%Type))
+    call xml_AddAttribute(xmlfile, 'units', trim(Site%Coords%Units))
+
+    call xml_NewElement(xmlfile, 'X')
+    call xml_AddCharacters(xmlfile, Site%Coords%X, fmt="r6")
+    call xml_EndElement(xmlfile, 'X')
+
+    call xml_NewElement(xmlfile, 'Y')
+    call xml_AddCharacters(xmlfile, Site%Coords%Y, fmt="r6")
+    call xml_EndElement(xmlfile, 'Y')
+
+    call xml_NewElement(xmlfile, 'Z')
+    call xml_AddCharacters(xmlfile, Site%Coords%Z,  fmt="r3")
+    call xml_EndElement(xmlfile, 'Z')
+
+    call xml_EndElement(xmlfile, 'SiteCoords')
+    call xml_EndElement(xmlfile, 'GridOrigin')
+
+  end subroutine add_GridOrigin
+
+
   subroutine add_Channel(C,location)
     type(Channel_t), intent(in)     :: C
     logical, intent(in)           :: location
@@ -640,6 +694,7 @@ contains
     '
     call xml_NewElement(xmlfile, 'comment')
     !call xml_AddCharacters(xmlfile, comment, ws_significant=.true.)
+    !http://www.iris.edu/dms/products/emtf
     call xml_AddNewLine(xmlfile)
     call xml_AddCharacters(xmlfile, 'Ex = Zxx Hx + Zxy Hy')
     call xml_AddNewLine(xmlfile)
