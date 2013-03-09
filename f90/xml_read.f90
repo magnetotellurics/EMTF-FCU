@@ -9,6 +9,8 @@ module xml_read
 	type(Node), pointer             :: doc
 	type(NodeList), pointer         :: periods
 	type(NodeList), pointer         :: channels
+    type(NodeList), pointer         :: datatypes ! data types metadata
+    type(NodeList), pointer         :: estimates ! statistical estimates
 	integer                         :: i,j
 
 	public  :: initialize_xml_input, end_xml_input
@@ -31,6 +33,10 @@ contains
 	channels => getElementsByTagName(doc, "Channel")
 	nch = getLength(channels)
 	
+    ! Get all data types and count them
+    datatypes => getElementsByTagName(doc, "DataType")
+    ndt = getLength(datatypes)
+
 	if (present(xmlTime)) then
 		xmlTime = getString(doc, "CreateTime")
 	end if
@@ -114,6 +120,37 @@ contains
   end subroutine read_xml_channels
   
   
+  subroutine read_xml_data_types(DataType)
+    type(DataType_t), dimension(:), intent(inout)   :: DataType
+    type(Node), pointer                             :: this
+    character(80)                                   :: str
+
+
+    ! Get all channels and count them
+    datatypes => getElementsByTagName(doc, "DataType")
+    ndt = getLength(datatypes)
+
+    do i=1,ndt
+        this => item(datatypes, i-1)
+        call init_data_type(DataType(i))
+        DataType(i)%Intention = getString(this,"Intention")
+        DataType(i)%Description = getString(this,"Description")
+        DataType(i)%ExternalUrl = getString(this,"ExternalUrl")
+        DataType(i)%Tag = getString(this,"Tag")
+        DataType(i)%Names = getString(this,"Names")
+        DataType(i)%Input = getAttribute(this,"input")
+        DataType(i)%Output = getAttribute(this,"output")
+        str = getAttribute(this,"type")
+        if (index(str,'complex')>0) then
+            DataType(i)%isComplex = .true.
+        else
+            DataType(i)%isComplex = .false.
+        end if
+    end do
+
+  end subroutine read_xml_data_types
+
+
   subroutine read_xml_period(k,F,TF,TFVar,InvSigCov,ResidCov)
   	integer,                    intent(in)    :: k
     type(FreqInfo_t),           intent(out)   :: F

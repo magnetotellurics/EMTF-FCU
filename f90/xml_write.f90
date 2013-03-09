@@ -611,6 +611,70 @@ contains
   end subroutine add_GridOrigin
 
 
+  subroutine add_DataType(D)
+    type(DataType_t), intent(in)     :: D
+
+    call xml_NewElement(xmlfile, 'DataType')
+    if (D%isComplex) then
+        call xml_AddAttribute(xmlfile, 'type', 'complex')
+    else
+        call xml_AddAttribute(xmlfile, 'type', 'real')
+    end if
+    call xml_AddAttribute(xmlfile, 'input', trim(D%Input))
+    call xml_AddAttribute(xmlfile, 'output', trim(D%Output))
+
+    call xml_NewElement(xmlfile, 'Intention')
+    call xml_AddCharacters(xmlfile, trim(D%Intention))
+    call xml_EndElement(xmlfile, 'Intention')
+
+    call xml_NewElement(xmlfile, 'Description')
+    call xml_AddCharacters(xmlfile, trim(D%Description))
+    call xml_EndElement(xmlfile, 'Description')
+
+    call xml_NewElement(xmlfile, 'ExternalUrl')
+    call xml_AddCharacters(xmlfile, 'http://www.iris.edu/dms/products/emtf/'//trim(D%Tag)//'.html')
+    call xml_EndElement(xmlfile, 'ExternalUrl')
+
+    call xml_NewElement(xmlfile, 'Names')
+    call xml_AddCharacters(xmlfile, trim(D%Names))
+    call xml_EndElement(xmlfile, 'Names')
+
+    call xml_EndElement(xmlfile, 'DataType')
+
+  end subroutine add_DataType
+
+
+  subroutine add_Estimate(D)
+    type(DataType_t), intent(in)     :: D ! statistical estimate
+
+    call xml_NewElement(xmlfile, 'Estimate')
+    if (D%isComplex) then
+        call xml_AddAttribute(xmlfile, 'type', 'complex')
+    else
+        call xml_AddAttribute(xmlfile, 'type', 'real')
+    end if
+
+    call xml_NewElement(xmlfile, 'Intention')
+    call xml_AddCharacters(xmlfile, trim(D%Intention))
+    call xml_EndElement(xmlfile, 'Intention')
+
+    call xml_NewElement(xmlfile, 'Description')
+    call xml_AddCharacters(xmlfile, trim(D%Description))
+    call xml_EndElement(xmlfile, 'Description')
+
+    call xml_NewElement(xmlfile, 'ExternalUrl')
+    call xml_AddCharacters(xmlfile, 'http://www.iris.edu/dms/products/emtf/'//trim(D%Tag)//'.html')
+    call xml_EndElement(xmlfile, 'ExternalUrl')
+
+    call xml_NewElement(xmlfile, 'Names')
+    call xml_AddCharacters(xmlfile, trim(D%Names))
+    call xml_EndElement(xmlfile, 'Names')
+
+    call xml_EndElement(xmlfile, 'Estimate')
+
+  end subroutine add_Estimate
+
+
   subroutine add_Channel(C,location)
     type(Channel_t), intent(in)     :: C
     logical, intent(in)           :: location

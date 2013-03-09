@@ -1,0 +1,6 @@
+<DataType type="complex" input="H" output="E">
+	<Intention>primary data type</Intention>
+	<Description>MT impedance</Description>
+	<Tag>impedance</Tag>
+	<Names>Z</Names>
+</DataType>

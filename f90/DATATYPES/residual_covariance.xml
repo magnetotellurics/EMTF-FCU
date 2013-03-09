@@ -1,0 +1,7 @@
+<Estimate type="complex">
+	<Intention>noise</Intention>
+	<Description>Residual Covariance</Description>
+    	<ExternalUrl>http://www.iris.edu/dms/products/emtf/residual_covariance.html</ExternalUrl>
+	<Tag>residual_covariance</Tag>
+	<Names>N</Names>
+</Estimate>

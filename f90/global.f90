@@ -3,7 +3,7 @@ module global
   implicit none
   public
 
-  integer, save         :: nch, nf
+  integer, save         :: nch, nf, ndt
   logical, save         :: silent=.false.
   logical, save         :: rotate=.false.
   character(len=10)     :: date, time, zone
@@ -25,6 +25,8 @@ module global
   ! is dynamically allocated but initialized to 3
   integer, parameter    :: nchin=2
   integer, save         :: nchout=3
+  integer, save         :: nchoutE=2
+  integer, save         :: nchoutH=1
   !*********************************************************
   ! WGS84 - common standard global datum
   ! NAD83 - used in North America
@@ -206,6 +208,37 @@ module global
   end type FreqInfo_t
 
 
+  type :: DataType_t
+     character(len=80) :: Intention ! primary/derived data type
+     character(len=800):: Description
+     character(len=200):: ExternalUrl
+     character(len=80) :: Tag   ! e.g., apparent_resisitivity_and_phase
+     character(len=80) :: Names ! e.g., RHO,PHS
+     character(len=1)  :: Input ! E/H
+     character(len=1)  :: Output ! E/H
+     logical           :: isComplex = .false.
+     !character(len=80) :: Units ! computed from field units
+     !integer           :: nComp ! number of REAL data type components
+  end type DataType_t
+
+
+  type :: Data_t
+    ! this stores the data type, dimensions, data and all allowed
+    ! statistical estimates (not all are used simultaneously)
+    type(DataType_t)  :: Type
+    real(8)           :: Rot  ! rotation angle, ONE FOR ALL FREQUENCIES
+    integer           :: nchin, nchout ! number of input and output channels
+    complex(8),dimension(:,:,:), pointer :: Matrix ! (nf,nchout,nchin)
+    real(8),   dimension(:,:,:), pointer :: Var ! (nf,nchout,nchin)
+    complex(8),dimension(:,:,:), pointer :: Cov ! (nf,nchin*nchout,nchin*nchout)
+    complex(8),dimension(:,:,:), pointer :: InvSigCov ! (nf,nchin,nchin)
+    complex(8),dimension(:,:,:), pointer :: ResidCov ! (nf,nchout,nchout)
+    complex(8),dimension(:,:,:), pointer :: Coh ! (nf,nchout,nchin)
+    complex(8),dimension(:,:,:), pointer :: MultCoh ! (nf,nchout)
+    complex(8),dimension(:,:,:), pointer :: SigAmp ! (nf,nchout)
+    complex(8),dimension(:,:,:), pointer :: SigNoise ! (nf,nchout)
+  end type Data_t
+
 contains
 
 	subroutine init_copyright(Info)
@@ -347,6 +380,30 @@ contains
 		Freq%dec_level = 0
 
 	end subroutine init_freq_info
+
+
+	subroutine init_data_type(DataType)
+        type(DataType_t), intent(inout) :: DataType
+
+	    DataType%Intention = ' '
+	    DataType%Description = ' '
+        DataType%ExternalUrl = ' '
+	    DataType%Tag = ' '
+	    DataType%Names = ' '
+        DataType%Input = ' '
+	    DataType%Output = ' '
+	    DataType%isComplex = .false.
+
+	end subroutine init_data_type
+
+
+    subroutine init_data_info(Data, dataType)
+        type(Data_t), intent(inout)     :: Data
+        type(DataType_t), intent(in)    :: dataType
+
+
+    end subroutine init_data_info
+
 
     subroutine init_channel_info(Channel)
          type(Channel_t), intent(inout) :: Channel
