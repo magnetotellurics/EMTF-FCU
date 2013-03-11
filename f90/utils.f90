@@ -461,6 +461,58 @@ end function isdigit
 
 
 ! **********************************************************************
+! A quick and dirty string parsing routine that divides a string
+! up into segments using a one-char delimiter.
+! For efficiency, uses a hardcoded max number of strings = 100.
+! Written by: Anna Kelbert, 11 March 2013
+! This subroutine is distributed under the terms of
+! the GNU Lesser General Public License.
+
+subroutine parse_str(str,delim,strarray,num)
+     character(len=*), intent(in) :: str
+     character(len=1), intent(in) :: delim
+     character(len=*), pointer    :: strarray(:)
+     integer, intent(out), optional :: num
+     ! local
+     character(len=len(str)) :: strtail,temp
+     integer                 :: i1,i2,istat,L,N,i,j(100)
+
+     L = len(str)
+     strtail = str
+     i1 = 1
+     N = 1
+     j(N) = i1 ! start index for delim-separated string
+     do ! marking and counting
+        i2 = index(strtail,delim)
+        if (i2>i1) then
+            temp = strtail(i1:i2)
+            strtail = trim(str(i2+1:L))
+            i1 = i2 + 1
+            N = N + 1
+            j(N) = i1
+        else ! final text portion
+            temp = trim(strtail)
+            exit
+        end if
+     end do
+
+     if (associated(strarray)) then
+        deallocate(strarray, stat=istat)
+     end if
+     allocate(strarray(N), stat=istat)
+     do i = 1,N-1
+        strarray(i) = trim(str(j(i):j(i+1)-2))
+     end do
+     strarray(N) = trim(str(j(N):L))
+
+     if (present(num)) then
+        num = N
+     end if
+
+end subroutine parse_str
+
+
+! **********************************************************************
 ! Convert latitude or longitude from a decimal to the
 ! sexagesimal system (degrees, minutes & seconds);
 ! the result is a character string length 16.

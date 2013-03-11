@@ -20,6 +20,7 @@ module xml_write
   public :: new_element, end_element
   public :: new_channel_block, new_data_block, end_block
   public :: add_Location, add_Channel
+  public :: add_DataType, add_Estimate
   public :: add_FieldNotes
   public :: add_GridOrigin
   public :: initialize_xml_freq_block_output

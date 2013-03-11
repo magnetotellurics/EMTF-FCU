@@ -7,23 +7,26 @@ module config
 	implicit none
 	private
 
-	type(Node), pointer  :: doc
+	type(Node), pointer     :: doc
+	character(200), pointer :: strarray(:)
 
 	public  :: read_xml_config
 
 contains
 
-  subroutine read_xml_config(xmlFile, Info, listDir)
+  subroutine read_xml_config(xmlFile, Info, DataType, Estimate, listDir)
     character(len=*), intent(in)    :: xmlFile
 	type(UserInfo_t), intent(out)   :: Info
+    type(DataType_t), pointer, intent(inout) :: DataType(:)
+    type(DataType_t), pointer, intent(inout) :: Estimate(:)
 	character(len=*), intent(in), optional :: listDir
 	type(Node), pointer             :: creator,submitter,software
 	type(Node), pointer             :: copyright,author
 	type(NodeList), pointer         :: authors
     ! local
-    character(len=100) copyright_file
-    logical copyright_exists
-    integer i,ios,fileid,ediparse,ediwrite,tsinfo
+    character(len=200) copyright_file, datatype_file
+    logical copyright_exists, datatype_exists
+    integer i,ios,istat,fileid,ediparse,ediwrite,tsinfo,ntags
 
   	call init_user_info(Info)
 
@@ -118,6 +121,43 @@ contains
 	! Clear up all allocated memory
   	call destroy(doc)
 
+    ! Read the tags and initialize data types from files
+    call parse_str(Info%Tags,',',strarray,ntags)
+    if (associated(DataType)) then
+       deallocate(DataType, stat=istat)
+    end if
+    allocate(DataType(ntags), stat=istat)
+    do i = 1,ntags
+        datatype_file = 'DATATYPES/'//trim(strarray(i))//'.xml'
+        inquire (file=datatype_file,exist=datatype_exists)
+        if (datatype_exists) then
+            write(0,*) 'Reading from the data type definition file ',trim(datatype_file)
+            call read_xml_data_type(datatype_file, DataType(i))
+        else
+            write(0,*) 'Unable to find the data type definition file ',trim(datatype_file)
+            write(0,*) 'Please correct your tags or create a new data type definition.'
+            write(0,*) 'Cannot proceed with file conversion. Exiting...'
+            stop
+        end if
+    end do
+
+    ! Read all statistical estimate info from files
+    if (associated(Estimate)) then
+       deallocate(Estimate, stat=istat)
+    end if
+    allocate(Estimate(size(Info%Estimate)), stat=istat)
+    do i = 1,size(Info%Estimate)
+        datatype_file = 'DATATYPES/'//trim(Info%Estimate(i))//'.xml'
+        inquire (file=datatype_file,exist=datatype_exists)
+        if (datatype_exists) then
+            write(0,*) 'Reading statistical estimate definition from file ',trim(datatype_file)
+            call read_xml_data_type(datatype_file, Estimate(i))
+        else
+            write(0,*) 'Unable to find statistical estimate definition file ',trim(datatype_file)
+            write(0,*) 'Warning: Skipping ',trim(Info%Estimate(i)),': not defined.'
+        end if
+    end do
+
   	if (present(listDir)) then
   	  Info%RunList = trim(listDir)//'/'//trim(Info%RunList)
   	  Info%SiteList = trim(listDir)//'/'//trim(Info%SiteList)
@@ -125,7 +165,7 @@ contains
     end if
 
     ! Project name is used to create the ID tags
-   if (index(trim(Info%Project),' ')>0) then
+    if (index(trim(Info%Project),' ')>0) then
         write(0,*) 'Project field in ',trim(xmlFile),' should not contain spaces'
         stop
     end if
@@ -136,5 +176,40 @@ contains
 	end if
 
   end subroutine read_xml_config
+
+
+  subroutine read_xml_data_type(xmlFile, DataType)
+    character(len=*), intent(in)    :: xmlFile
+    type(DataType_t), intent(inout) :: DataType
+    type(Node), pointer             :: dt
+    character(80)                   :: str
+
+    ! Load in the document
+    doc => parseFile(xmlFile)
+
+    call init_data_type(DataType)
+    DataType%Intention = getString(doc,"Intention")
+    DataType%Description = getString(doc,"Description")
+    DataType%Tag = getString(doc,"Tag")
+    DataType%Names = getString(doc,"Names")
+    dt = getFirstChild(doc)
+    if (hasAttribute(dt,"input")) then
+        DataType%Input = getAttribute(dt,"input")
+    end if
+    if (hasAttribute(dt,"output")) then
+        DataType%Output = getAttribute(dt,"output")
+    end if
+    str = getAttribute(dt,"type")
+    if (index(str,'complex')>0) then
+        DataType%isComplex = .true.
+    else
+        DataType%isComplex = .false.
+    end if
+    DataType%allocated = .true.
+
+    ! Clear up all allocated memory
+    call destroy(doc)
+
+  end subroutine read_xml_data_type
 
 end module config

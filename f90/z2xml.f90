@@ -15,6 +15,7 @@ program z2xml
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
+  type(DataType_t), dimension(:), pointer     :: DataType, Estimate
   type(FreqInfo_t), dimension(:), allocatable :: F
   type(Channel_t), dimension(:), pointer	  :: InputChannel
   type(Channel_t), dimension(:), pointer	  :: OutputChannel
@@ -71,7 +72,7 @@ program z2xml
   ! Read the configuration file, if it exists
   inquire (file=config_file,exist=config_exists)
   if (config_exists) then
-  	call read_xml_config(config_file,UserInfo,input_dir)
+  	call read_xml_config(config_file,UserInfo,DataType,Estimate,input_dir)
   else
   	write(0,*) 'Please provide an XML configuration file [config.xml].'
   	write(0,*) 'This file should reside together with the input data.'
@@ -115,7 +116,7 @@ program z2xml
   	write(0,*) '<Configuration>'
   	write(0,*)
   	write(0,*) 'Project and YearCollected (if present) help identify'
-    write(0,*) 'a product in SPADE. They should not contain spaces.'
+    write(0,*) 'a product in SPUD. They should not contain spaces.'
   	write(0,*) 'The optional OrthogonalGeographic field, if true,'
   	write(0,*) 'will rotate the data to orthogonal geographic coords.'
   	write(0,*) 'Use with caution: information about the original '
@@ -210,6 +211,18 @@ program z2xml
   else
   	call add_ProcessingInfo(UserInfo)
   end if
+
+  call new_element('StatisticalEstimates')
+  do i=1,size(Estimate)
+    call add_Estimate(Estimate(i))
+  end do
+  call end_element('StatisticalEstimates')
+
+  call new_element('DataTypes')
+  do i=1,size(DataType)
+    call add_DataType(DataType(i))
+  end do
+  call end_element('DataTypes')
 
   call new_channel_block('InputChannels')
   do i=1,2

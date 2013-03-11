@@ -103,6 +103,7 @@ module global
     character(len=80) :: ProcessingSoftwareLastMod
     character(len=80) :: ProcessingSoftwareAuthor
     character(len=80) :: ProcessingTag ! for Z-file input/output
+    character(len=80) :: Estimate(8) ! statistical estimate types
     character(len=80) :: DateFormat ! for EDI input/output
     character(len=80) :: DummyDataValue ! for EDI input/output
     logical           :: ParseEDIInfo ! for EDI input/output
@@ -217,6 +218,7 @@ module global
      character(len=1)  :: Input ! E/H
      character(len=1)  :: Output ! E/H
      logical           :: isComplex = .false.
+     logical           :: allocated = .false.
      !character(len=80) :: Units ! computed from field units
      !integer           :: nComp ! number of REAL data type components
   end type DataType_t
@@ -292,6 +294,16 @@ contains
         Info%RunList = 'Runs.xml'
         Info%SiteList = 'Sites.xml'
         Info%ChannelList = 'Channels.xml'
+
+        ! hardcode statistical estimates here, but read them from files
+        Info%Estimate(1) = 'variance'
+        Info%Estimate(2) = 'covariance'
+        Info%Estimate(3) = 'inverse_signal_covariance'
+        Info%Estimate(4) = 'residual_covariance'
+        Info%Estimate(5) = 'coherence'
+        Info%Estimate(6) = 'multiple_coherence'
+        Info%Estimate(7) = 'signal_amplitude'
+        Info%Estimate(8) = 'signal_noise'
 
     end subroutine init_user_info
 

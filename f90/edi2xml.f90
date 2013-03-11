@@ -14,6 +14,7 @@ program edi2xml
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: ediLocalSite, ediRemoteSite
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
+  type(DataType_t), dimension(:), pointer     :: DataType, Estimate
   type(FreqInfo_t), dimension(:), allocatable :: F
   type(Channel_t), dimension(:), pointer	  :: InputChannel
   type(Channel_t), dimension(:), pointer	  :: OutputChannel
@@ -70,7 +71,7 @@ program edi2xml
   ! Read the configuration file, if it exists
   inquire (file=config_file,exist=config_exists)
   if (config_exists) then
-  	call read_xml_config(config_file,UserInfo,input_dir)
+  	call read_xml_config(config_file,UserInfo,DataType,Estimate,input_dir)
   else
   	write(0,*) 'Please provide an XML configuration file [config.xml].'
   	write(0,*) 'This file should reside together with the input data.'
@@ -177,6 +178,18 @@ program edi2xml
   else
   	call add_ProcessingInfo(UserInfo)
   end if
+
+  call new_element('StatisticalEstimates')
+  do i=1,size(Estimate)
+    call add_Estimate(Estimate(i))
+  end do
+  call end_element('StatisticalEstimates')
+
+  call new_element('DataTypes')
+  do i=1,size(DataType)
+    call add_DataType(DataType(i))
+  end do
+  call end_element('DataTypes')
 
   call add_GridOrigin(ediLocalSite)
 
