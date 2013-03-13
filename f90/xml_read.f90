@@ -9,9 +9,13 @@ module xml_read
 	type(Node), pointer             :: doc
 	type(NodeList), pointer         :: periods
 	type(NodeList), pointer         :: channels
+    type(NodeList), pointer         :: hichannels
+    type(NodeList), pointer         :: hochannels
+    type(NodeList), pointer         :: eochannels
     type(NodeList), pointer         :: datatypes ! data types metadata
     type(NodeList), pointer         :: estimates ! statistical estimates
-	integer                         :: i,j
+    type(Dimensions_t), save        :: N
+	integer                         :: i,j,iH,iE
 
 	public  :: initialize_xml_input, end_xml_input
 	public  :: read_xml_header, read_xml_channels, read_xml_period
@@ -21,21 +25,37 @@ contains
   subroutine initialize_xml_input(xmlFile, xmlTime)
     character(len=*), intent(in)    :: xmlFile
 	character(len=19), optional, intent(out)  :: xmlTime
+	! local
+	type(Node), pointer   :: parent
   	
   	! Load in the document
   	doc => parseFile(xmlFile)
 
 	! Get all frequencies / periods and count them
 	periods => getElementsByTagName(doc, "Period")
-	nf = getLength(periods)
+	N%f = getLength(periods)
 
 	! Get all channels and count them
-	channels => getElementsByTagName(doc, "Channel")
-	nch = getLength(channels)
+    parent => item(getElementsByTagName(doc, "InputChannels"),0)
+	hichannels => getElementsByTagName(parent, "Magnetic")
+    N%chin = getLength(hichannels)
+
+    parent => item(getElementsByTagName(doc, "OutputChannels"),0)
+    hochannels => getElementsByTagName(parent, "Magnetic")
+    N%choutH = getLength(hochannels)
+    eochannels => getElementsByTagName(parent, "Electric")
+    N%choutE = getLength(eochannels)
+
+    N%chout = N%choutH + N%choutE
+    N%ch = N%chin + N%chout
+
+    !channels => getChildNodes(parent)
+    !hchannels => getElementsByTagName(doc, "Magnetic")
+	!N%ch = getLength(echannels) + getLength(hchannels)
 	
     ! Get all data types and count them
     datatypes => getElementsByTagName(doc, "DataType")
-    ndt = getLength(datatypes)
+    N%dt = getLength(datatypes)
 
 	if (present(xmlTime)) then
 		xmlTime = getString(doc, "CreateTime")
@@ -96,25 +116,33 @@ contains
   end subroutine read_xml_header
   
 
-  subroutine read_xml_channels(Input, Output)
+  subroutine read_xml_channels(Input, OutputH, OutputE)
 	type(Channel_t), dimension(:), intent(inout) :: Input
-    type(Channel_t), dimension(:), intent(inout) :: Output
+    type(Channel_t), dimension(:), intent(inout) :: OutputH,OutputE
 	type(Node), pointer                          :: this
 
-    do i=1,2
-       this => item(channels, i-1)
+    do i=1,N%chin
+       this => item(hichannels, i-1)
        Input(i)%ID = getAttribute(this,"name")
        Input(i)%orientation = getRealAttr(this,"Channel","orientation")
        Input(i)%tilt = 0.0
        !Input(i)%units = getAttribute(this,"units")
     end do
 
-    do i=1,nch-2
-       this => item(channels, i+1)
-       Output(i)%ID = getAttribute(this,"name")
-       Output(i)%orientation = getRealAttr(this,"Channel","orientation")
-       Output(i)%tilt = 0.0
-       !Output(i)%units = getAttribute(this,"units")
+    do i=1,N%choutH
+       this => item(hichannels, i-1)
+       OutputH(i)%ID = getAttribute(this,"name")
+       OutputH(i)%orientation = getRealAttr(this,"Channel","orientation")
+       OutputH(i)%tilt = 0.0
+       !OutputH(i)%units = getAttribute(this,"units")
+    end do
+
+    do i=1,N%choutE
+       this => item(hichannels, i-1)
+       OutputE(i)%ID = getAttribute(this,"name")
+       OutputE(i)%orientation = getRealAttr(this,"Channel","orientation")
+       OutputE(i)%tilt = 0.0
+       !OutputE(i)%units = getAttribute(this,"units")
     end do
 
   end subroutine read_xml_channels
@@ -128,18 +156,20 @@ contains
 
     ! Get all channels and count them
     datatypes => getElementsByTagName(doc, "DataType")
-    ndt = getLength(datatypes)
 
-    do i=1,ndt
+    do i=1,N%dt
         this => item(datatypes, i-1)
         call init_data_type(DataType(i))
         DataType(i)%Intention = getString(this,"Intention")
         DataType(i)%Description = getString(this,"Description")
         DataType(i)%ExternalUrl = getString(this,"ExternalUrl")
         DataType(i)%Tag = getString(this,"Tag")
-        DataType(i)%Names = getString(this,"Names")
+        DataType(i)%Name = getAttribute(this,"name")
         DataType(i)%Input = getAttribute(this,"input")
         DataType(i)%Output = getAttribute(this,"output")
+        if (hasAttribute(this,"units")) then
+            DataType(i)%Units = getAttribute(this,"units")
+        end if
         str = getAttribute(this,"type")
         if (index(str,'complex')>0) then
             DataType(i)%isComplex = .true.
@@ -266,7 +296,7 @@ contains
 			
 	if (.not.(present(ResidCov))) return
 	
-	allocate(v(2*(nch-2)*(nch-2)), stat=istat)
+	allocate(v(2*(N%ch-2)*(N%ch-2)), stat=istat)
 	thisNode => item(getElementsByTagName(thisFreq, "RESIDCOV"),0)
 	str = getString(thisNode,"value")
 	if (.not.silent) then
@@ -274,8 +304,8 @@ contains
 	end if
 	read(str,*) v
 	ind = 1
-	do i=1,nch-2
-		do j=1,nch-2
+	do i=1,N%ch-2
+		do j=1,N%ch-2
 			ResidCov(i,j) = dcmplx(v(ind),v(ind+1))
 			ind = ind+2
 		end do

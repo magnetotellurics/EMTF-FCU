@@ -191,8 +191,11 @@ contains
     DataType%Intention = getString(doc,"Intention")
     DataType%Description = getString(doc,"Description")
     DataType%Tag = getString(doc,"Tag")
-    DataType%Names = getString(doc,"Names")
     dt = getFirstChild(doc)
+    DataType%Name = getAttribute(dt,"name")
+    if (hasAttribute(dt,"units")) then
+        DataType%Units = getAttribute(dt,"units")
+    end if
     if (hasAttribute(dt,"input")) then
         DataType%Input = getAttribute(dt,"input")
     end if
@@ -209,6 +212,13 @@ contains
 
     ! Clear up all allocated memory
     call destroy(doc)
+
+    ! Parse the "Names" and save into Components
+!    call parse_str(DataType%Names,',',strarray,DataType%nComp)
+!    allocate(DataType%Component(len(strarray)), stat=istat)
+!    do i = 1,len(strarray)
+!        DataType%Component(i) = trim(strarray(i))
+!    end do
 
   end subroutine read_xml_data_type
 

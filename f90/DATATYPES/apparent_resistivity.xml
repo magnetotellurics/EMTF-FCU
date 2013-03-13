@@ -1,0 +1,7 @@
+<DataType name="RHO" type="real" input="H" output="E" units="[Ohm m]">
+	<Description>Apparent resistivity computed from MT impedance</Description>
+	<Intention>derived data type</Intention>
+	<Tag>apparent_resistivity</Tag>
+	<DerivedFrom>impedance</DerivedFrom>
+	<SeeAlso>impedance_phase</SeeAlso>
+</DataType>

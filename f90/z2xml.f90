@@ -12,13 +12,16 @@ program z2xml
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: zsitename, basename, verbose=''
+  type(Dimensions_t):: N
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
+  type(Channel_t), dimension(:), pointer      :: InputMagnetic
+  type(Channel_t), dimension(:), pointer      :: OutputMagnetic
+  type(Channel_t), dimension(:), pointer      :: OutputElectric
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
+  type(Data_t), dimension(:), pointer         :: Data
   type(DataType_t), dimension(:), pointer     :: DataType, Estimate
   type(FreqInfo_t), dimension(:), allocatable :: F
-  type(Channel_t), dimension(:), pointer	  :: InputChannel
-  type(Channel_t), dimension(:), pointer	  :: OutputChannel
   character(100), dimension(:), pointer       :: Notes
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
@@ -26,20 +29,22 @@ program z2xml
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
   real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
+
   logical           :: config_exists, site_list_exists
   logical			:: run_list_exists, channel_list_exists
-  integer           :: i, j, k, n, l, istat
+  integer           :: i, j, k, l, narg, istat
+  integer           :: nf, nch, nchin, nchout, nchoutE, nchoutH
 
-  n = command_argument_count()
+  narg = command_argument_count()
 
-  if (n<1) then
+  if (narg<1) then
      write(0,*) 'Please specify the name of the input Z-file'
      stop
-  else if (n>=1) then
+  else if (narg>=1) then
      call get_command_argument(1,z_file)
   end if
 
-  if (n>1) then
+  if (narg>1) then
      call get_command_argument(2,xml_file)
   else
      l = len_trim(z_file)
@@ -47,7 +52,7 @@ program z2xml
      xml_file = trim(basename)//'.xml'
   end if
 
-  if (n>2) then
+  if (narg>2) then
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
@@ -132,6 +137,9 @@ program z2xml
   call init_site_info(xmlLocalSite)
   call init_site_info(xmlRemoteSite)
 
+  ! Initialize dimensions
+  call init_dimensions(N)
+
   ! Initialize input and output
   call initialize_xml_output(xml_file,'EM_TF')
 
@@ -139,31 +147,61 @@ program z2xml
 
   call initialize_z_input(z_file)
 
-  call read_z_header(zsitename, zLocalSite, UserInfo)
+  call read_z_header(zsitename, zLocalSite, UserInfo, N)
 
-  ! Allocate space for channels and transfer functions
-  allocate(InputChannel(2), OutputChannel(nch-2), stat=istat)
+
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, N, zLocalSite%Declination)
+
+  ! Define local dimensions
+  nf = N%f
+  nch = N%ch
+  nchin = N%chin
+  nchout = N%chout
+  nchoutE = N%choutE
+  nchoutH = N%choutH
+
+  ! Allocate space for transfer functions
   allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), TFName(nch-2,2), stat=istat)
   allocate(InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2), stat=istat)
   allocate(U(2,2), V(nch-2,nch-2), stat=istat)
 
-  call read_z_channels(InputChannel, OutputChannel, zLocalSite%Declination)
-
   ! Initialize conversion to orthogonal geographic coords
   if (UserInfo%OrthogonalGeographic > 0) then
-     call rotate_z_channels(InputChannel, OutputChannel, U, V)
+     call rotate_z_channels(InputMagnetic, OutputElectric, U, V, N)
   end if
 
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
-     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
 
      ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
      if (UserInfo%OrthogonalGeographic > 0) then
-     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
      end if
 
+  end do
+
+  ! Create generic Data variables
+  write(*,*) 'Allocating data structure for ',size(DataType),' data types'
+  allocate(Data(size(DataType)), stat=istat)
+  do i=1,size(DataType)
+    select case (DataType(i)%Output)
+    case ('H')
+        call init_data(Data(i),DataType(i),nf,nchin,nchoutH)
+        Data(i)%Matrix = TF(:,1:nchoutH,:)
+        Data(i)%Var = TFVar(:,1:nchoutH,:)
+        Data(i)%InvSigCov = InvSigCov(:,:,:)
+        Data(i)%ResidCov = ResidCov(:,1:nchoutH,1:nchoutH)
+    case ('E')
+        call init_data(Data(i),DataType(i),nf,nchin,nchoutE)
+        Data(i)%Matrix = TF(:,nchoutH+1:nchout,:)
+        Data(i)%Var = TFVar(:,nchoutH+1:nchout,:)
+        Data(i)%InvSigCov = InvSigCov(:,:,:)
+        Data(i)%ResidCov = ResidCov(:,nchoutH+1:nchout,nchoutH+1:nchout)
+    case default
+        write(0,*) 'Error: unable to initialize the data variable #',i
+    end select
   end do
 
   call read_z_notes(Notes)
@@ -189,10 +227,11 @@ program z2xml
   ! Field notes go first
   if (run_list_exists) then
   	do i=1,size(Run)
-		call read_channel_list(UserInfo%ChannelList, Run(i)%ID, InputChannel, channel_list_exists)
-		call read_channel_list(UserInfo%ChannelList, Run(i)%ID, OutputChannel, channel_list_exists)
+		call read_channel_list(UserInfo%ChannelList, Run(i)%ID, InputMagnetic, channel_list_exists)
+        call read_channel_list(UserInfo%ChannelList, Run(i)%ID, OutputElectric, channel_list_exists)
+		call read_channel_list(UserInfo%ChannelList, Run(i)%ID, OutputMagnetic, channel_list_exists)
 		if (channel_list_exists) then
-			call add_FieldNotes(Run(i),InputChannel,OutputChannel)
+			call add_FieldNotes(Run(i),InputMagnetic,OutputElectric)
 		else
 			call add_FieldNotes(Run(i))
 		end if
@@ -225,14 +264,17 @@ program z2xml
   call end_element('DataTypes')
 
   call new_channel_block('InputChannels')
-  do i=1,2
-     call add_Channel(InputChannel(i), location=.false.)
+  do i=1,size(InputMagnetic)
+     call add_Channel(InputMagnetic(i), location=.false.)
   end do
   call end_block('InputChannels')
 
   call new_channel_block('OutputChannels')
-  do i=1,nch-2
-     call add_Channel(OutputChannel(i), location=.false.)
+  do i=1,size(OutputMagnetic)
+     call add_Channel(OutputMagnetic(i), location=.false.)
+  end do
+  do i=1,size(OutputElectric)
+     call add_Channel(OutputElectric(i), location=.false.)
   end do
   call end_block('OutputChannels')
 
@@ -241,14 +283,31 @@ program z2xml
 
   do k=1,nf
 
-	 call new_data_block('Period',F(k))
+	  call new_data_block('Period',F(k))
 
-     call add_TF(TF(k,:,:), InputChannel, OutputChannel)
-     call add_TFVar(TFVar(k,:,:), InputChannel, OutputChannel)
-     call add_InvSigCov(InvSigCov(k,:,:), InputChannel)
-     call add_ResidCov(ResidCov(k,:,:), OutputChannel)
+      do i=1,size(Data)
+        select case (Data(i)%Type%Output)
+        case ('H')
+            call add_Data(Data(i), InputMagnetic, OutputMagnetic, k)
+            call add_Var(Data(i), InputMagnetic, OutputMagnetic, k)
+            call add_InvSigCov(Data(i), InputMagnetic, k)
+            call add_ResidCov(Data(i), OutputMagnetic, k)
+        case ('E')
+            call add_Data(Data(i), InputMagnetic, OutputElectric, k)
+            call add_Var(Data(i), InputMagnetic, OutputElectric, k)
+            call add_InvSigCov(Data(i), InputMagnetic, k)
+            call add_ResidCov(Data(i), OutputElectric, k)
+        case default
+            write(0,*) 'Error: unable to write the data variable #',i
+        end select
+      end do
 
-     call end_block('Period')
+!     call add_TF(TF(k,:,:), InputChannel, OutputChannel)
+!     call add_TFVar(TFVar(k,:,:), InputChannel, OutputChannel)
+!     call add_InvSigCov(InvSigCov(k,:,:), InputChannel)
+!     call add_ResidCov(ResidCov(k,:,:), OutputChannel)
+
+      call end_block('Period')
 
   end do
 
@@ -260,8 +319,12 @@ program z2xml
   deallocate(Run)
   if (associated(RemoteRun)) deallocate(RemoteRun)
   if (associated(Notes)) deallocate(Notes)
-  deallocate(InputChannel, OutputChannel)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
   deallocate(F, TF, TFVar, InvSigCov, ResidCov)
+  do i = 1,size(DataType)
+    call deall_data(Data(i))
+  end do
+  deallocate(Data)
 
   call end_z_input
 

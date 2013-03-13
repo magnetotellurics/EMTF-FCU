@@ -1,6 +1,5 @@
-<DataType type="complex" input="H" output="E">
+<DataType name="Z" type="complex" input="H" output="E" units="[mV/km]/[nT]">
+	<Description>MT impedance - off diagonal components only</Description>
 	<Intention>primary data type</Intention>
-	<Description>MT impedance</Description>
-	<Tag>impedance</Tag>
-	<Names>Z</Names>
+	<Tag>off_diagonal_impedance</Tag>
 </DataType>

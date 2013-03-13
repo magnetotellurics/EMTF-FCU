@@ -1,7 +1,5 @@
-<Estimate type="complex">
-	<Intention>signal</Intention>
-	<Description>Inverse Coherent Signal Power Matrix</Description>
-    	<ExternalUrl>http://www.iris.edu/dms/products/emtf/inverse_signal_covariance.html</ExternalUrl>
-	<Tag>inverse_signal_covariance</Tag>
-	<Names>S</Names>
+<Estimate name="SIGAMP" type="complex">
+	<Description>Signal Amplitude</Description>
+	<Intention>signal power estimate</Intention>
+	<Tag>signal_amplitude</Tag>
 </Estimate>

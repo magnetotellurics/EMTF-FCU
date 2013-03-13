@@ -1,0 +1,7 @@
+<DataType name="PHS" type="real" input="H" output="E" units="degrees">
+	<Description>Impedance phase in degrees</Description>
+	<Intention>derived data type</Intention>
+	<Tag>impedance_phase</Tag>
+	<DerivedFrom>impedance</DerivedFrom>
+	<SeeAlso>apparent_resistivity</SeeAlso>
+</DataType>

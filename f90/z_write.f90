@@ -34,10 +34,11 @@ contains
   end subroutine initialize_z_output
 
 
-  subroutine write_z_header(sitename, Site, Info, header1, header2)
+  subroutine write_z_header(sitename, Site, Info, N, header1, header2)
     character(len=80), intent(in)    :: sitename
     type(Site_t),  intent(in)        :: Site
 	type(UserInfo_t), intent(in)     :: Info
+    type(Dimensions_t), intent(in)   :: N
 	character(len=80), optional, intent(in)  :: header1, header2
 	real(8)							 :: lon, lat
 
@@ -67,7 +68,7 @@ contains
 	end if
 
     write(zfile,105) lat, lon, 0.0d0
-    write(zfile,110) nch,nf
+    write(zfile,110) N%ch,N%f
 
 100   format('station    : ',a20)
 105   format('coordinate ',f9.3,1x,f9.3,1x,'declination ',f8.2)
@@ -76,10 +77,11 @@ contains
   end subroutine write_z_header
 
 
-  subroutine write_z_channels(sitename, Input, Output)
+  subroutine write_z_channels(sitename, Input, OutputH, OutputE, N)
   	character(len=*), intent(in)   :: sitename
     type(Channel_t), dimension(:), intent(in) :: Input
-    type(Channel_t), dimension(:), intent(in) :: Output
+    type(Channel_t), dimension(:), intent(in) :: OutputH, OutputE
+    type(Dimensions_t), intent(in) :: N
     character(len=3)               :: temp
     integer                        :: num
 
@@ -87,14 +89,19 @@ contains
 
 	temp = sitename(1:3)
 
-    do i=1,2
+    do i=1,N%chin
        num = i
        write (zfile,115) num, Input(i)%orientation, Input(i)%tilt, temp, Input(i)%ID
     end do
 
-    do i=1,nch-2
-       num = i+2
-       write (zfile,115) num, Output(i)%orientation, Output(i)%tilt, temp, Output(i)%ID
+    do i=1,N%choutH
+       num = i+N%chin
+       write (zfile,115) num, OutputH(i)%orientation, OutputH(i)%tilt, temp, OutputH(i)%ID
+    end do
+
+    do i=1,N%choutE
+       num = i+N%chin+N%choutH
+       write (zfile,115) num, OutputE(i)%orientation, OutputE(i)%tilt, temp, OutputE(i)%ID
     end do
 
     write (zfile,*) ! write empty line at the end
@@ -104,12 +111,13 @@ contains
   end subroutine write_z_channels
 
 
-  subroutine write_z_period(F, TF, TFVar, InvSigCov, ResidCov)
+  subroutine write_z_period(F, TF, TFVar, InvSigCov, ResidCov, N)
     type(FreqInfo_t),           intent(in)   :: F
     complex(8), dimension(:,:), intent(in)   :: TF
     real(8),    dimension(:,:), intent(in)   :: TFVar
     complex(8), dimension(:,:), intent(in)   :: InvSigCov
     complex(8), dimension(:,:), intent(in)   :: ResidCov
+    type(Dimensions_t), intent(in)           :: N
     real(8)           :: period
     !real              :: sampling_freq
 
@@ -127,7 +135,7 @@ contains
 
 !...        TF (impedance + tipper ... emap dipole etc)
     write(zfile,*) 'Transfer Functions'
-    do i=1,nch-2
+    do i=1,N%ch-2
        do j=1,2
           write (zfile,'(2e12.4)',iostat=ios,advance='no') TF(i,j)
        end do
@@ -145,7 +153,7 @@ contains
 
 !...        RESIDUAL COVARIANCE
     write(zfile,*) 'Residual Covariance'
-    do i=1,nch-2
+    do i=1,N%ch-2
        do j=1,i
           write (zfile,'(2e12.4)',iostat=ios,advance='no') ResidCov(i,j)
        end do

@@ -115,12 +115,14 @@ contains
   end subroutine parse_z_site_name
 
 
-  subroutine read_z_header(sitename, Site, Info)
+  subroutine read_z_header(sitename, Site, Info, N)
     character(len=80), intent(out)   :: sitename
     type(Site_t),  intent(out)       :: Site
 	type(UserInfo_t), intent(inout)  :: Info
+	type(Dimensions_t), intent(out)  :: N
 
 	call init_site_info(Site)
+	call init_dimensions(N)
 
     read (zfile,*) temp
     read (zfile,*) temp
@@ -157,24 +159,27 @@ contains
     i = index(temp,'channels')
     j = index(temp,'frequencies')
 
-    read (temp(i+9:j-1),*) nch
-    read (temp(j+12:120),*) nf
+    read (temp(i+9:j-1),*) N%ch
+    read (temp(j+12:120),*) N%f
 
     if (.not.silent) then
-       write(*,*) 'Number of channels ', nch
-       write(*,*) 'Number of periods  ', nf
+       write(*,*) 'Number of channels ', N%ch
+       write(*,*) 'Number of periods  ', N%f
     end if
 
   end subroutine read_z_header
 
 
-  subroutine read_z_channels(Input, Output, decl)
-    type(Channel_t), dimension(:), intent(inout) :: Input
-    type(Channel_t), dimension(:), intent(inout) :: Output
-    real(8), intent(inout), optional             :: decl
+  subroutine read_z_channels(Input, OutputH, OutputE, N, decl)
+    type(Channel_t), pointer, intent(inout) :: Input(:)
+    type(Channel_t), pointer, intent(inout) :: OutputH(:), OutputE(:)
+    type(Dimensions_t), intent(inout)       :: N
+    real(8), intent(inout), optional        :: decl
+    ! local
+    type(Channel_t), pointer         :: Output(:)
     real(8)                          :: declination
     character(len=3)                 :: temp
-    integer                          :: num
+    integer                          :: num, istat
     character(len=80)                :: chname
     real                             :: orientation
     real                             :: tilt
@@ -187,35 +192,70 @@ contains
     	declination = decl
     end if
 
-    do i=1,2
+    N%chout = N%ch - N%chin
+    N%choutE = 0
+    N%choutH = 0
+
+    write(*,*) 'Reading  input channels from Z-file: ',N%chin
+
+    if (N%chin>0) then
+        allocate(Input(N%chin), stat=istat)
+    end if
+    do i=1,N%chin
        read (zfile,*) num, orientation, tilt, temp, chname
        call init_channel_info(Input(i))
        Input(i)%ID = chname
+       Input(i)%Type = channel_type(chname)
        Input(i)%orientation = orientation + declination
        Input(i)%tilt = tilt
        call init_channel_units(Input(i))
     end do
 
-    do i=1,nch-2
+    write(*,*) 'Reading output channels from Z-file: ',N%chout
+
+    allocate(Output(N%chout), stat=istat)
+    do i=1,N%chout
        read (zfile,*) num, orientation, tilt, temp, chname
+       if (channel_type(chname) .eq. 'H') then
+            N%choutH = N%choutH + 1
+       elseif (channel_type(chname) .eq. 'E') then
+            N%choutE = N%choutE + 1
+       else
+            write(0,*) 'Warning: unknown channel name ',trim(chname),' in Z-file'
+       end if
        call init_channel_info(Output(i))
        Output(i)%ID = chname
+       Output(i)%Type = channel_type(chname)
        Output(i)%orientation = orientation + declination
        Output(i)%tilt = tilt
        call init_channel_units(Output(i))
     end do
 
+    ! we are assuming that all magnetic field channels come first
+    ! (that's always the case in all Z-files to date)
+    if (N%choutH>0) then
+        allocate(OutputH(N%choutH), stat=istat)
+        OutputH(:) = Output(1:N%choutH)
+    end if
+    if (N%choutE>0) then
+        allocate(OutputE(N%choutE), stat=istat)
+        OutputE(:) = Output(N%choutH+1:N%chout)
+    end if
+
+    deallocate(Output, stat=istat)
     read (zfile, *) ! read empty line at the end
+    write(*,*) 'Done reading channels from Z-file'
 
   end subroutine read_z_channels
 
 
-  subroutine read_z_period(F, TF, TFVar, InvSigCov, ResidCov)
+  subroutine read_z_period(F, TF, TFVar, InvSigCov, ResidCov, N)
     type(FreqInfo_t),           intent(out)   :: F
     complex(8), dimension(:,:), intent(inout) :: TF
     real(8),    dimension(:,:), intent(inout) :: TFVar
     complex(8), dimension(:,:), intent(inout) :: InvSigCov
     complex(8), dimension(:,:), intent(inout) :: ResidCov
+    type(Dimensions_t), intent(in)            :: N
     real(8)           :: period
     integer           :: dec_level
     integer           :: num_points
@@ -247,7 +287,7 @@ contains
 
     TF=0.0d0
     read (zfile,*) temp !Transfer Functions
-    do i=1,nch-2
+    do i=1,N%ch-2
        do j=1,2
           read (zfile,'(2E12.3)',iostat=ios,advance='no') TF(i,j)
        end do
@@ -268,7 +308,7 @@ contains
 
     ResidCov=0.0d0
     read (zfile,*) temp !Residual Covariance
-    do i=1,nch-2
+    do i=1,N%ch-2
        do j=1,i
           read (zfile,'(2E12.3)',iostat=ios,advance='no') ResidCov(i,j)
           if (j<i) then
@@ -279,7 +319,7 @@ contains
     end do
 
     TFVar=0.0d0
-    do i=1,nch-2
+    do i=1,N%ch-2
        do j=1,2
           TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))/2
        end do
@@ -287,21 +327,21 @@ contains
 
   end subroutine read_z_period
 
-
-  subroutine rotate_z_channels(Input, Output, U, V, azimuth)
+  ! For now, only use the electric field outputs for rotation:
+  ! no need to rotate the vertical magnetic field
+  subroutine rotate_z_channels(Input, OutputE, U, V, N, azimuth)
     type(Channel_t), dimension(:), intent(inout)   :: Input
-    type(Channel_t), dimension(:), intent(inout)   :: Output
+    type(Channel_t), dimension(:), intent(inout)   :: OutputE
    	real(8),         dimension(:,:), intent(out)   :: U, V ! rotation matrices
+    type(Dimensions_t), intent(in)                 :: N
    	real(8),         optional, intent(inout)       :: azimuth ! new azimuth
     ! local variables
     real(8)                                        :: theta0
     real(8),         dimension(:), allocatable     :: theta, thetanew
-    integer                                        :: nch, i, j, istat
-
-    nch = size(Input) + size(Output)
+    integer                                        :: i, j, istat
 
 	! note: U and V must be allocated before calling this subroutine
-    allocate(theta(nch), thetanew(nch), stat = istat)
+    allocate(theta(2), thetanew(2), stat = istat)
 
 	if (.not. present(azimuth)) then
     	theta0 = 0.0
@@ -309,56 +349,56 @@ contains
     	theta0 = azimuth
 	end if
 
+    ! create the rotation matrix for the two input channels first;
     ! assuming Hx and Hy are the input channels, - pretty much always the case
     theta(1) = Input(1)%orientation; thetanew(1) = theta0
     theta(2) = Input(2)%orientation; thetanew(2) = theta0 + 90.0
+
+    call identity(U)
 
     U(1,1) = cos(D2R*(theta(1) - theta0))
     U(1,2) = sin(D2R*(theta(1) - theta0))
     U(2,1) = cos(D2R*(theta(2) - theta0))
     U(2,2) = sin(D2R*(theta(2) - theta0))
 
-	call inverse22(U,U);
-
-	! if there are 3 output channels, assume the first is Hz; otherwise no Hz
-	if (size(Output) == 3) then
-
-		theta(3) = Output(1)%orientation; thetanew(3) = 0.0
-		theta(4) = Output(2)%orientation; thetanew(4) = theta0
-		theta(5) = Output(3)%orientation; thetanew(5) = theta0 + 90.0
-
-		V(:,:) = 0.0
-		V(1,1) = 1.0
-		V(2,2) = cos(D2R*(theta(4) - theta0))
-		V(2,3) = cos(D2R*(theta(5) - theta0))
-		V(3,2) = sin(D2R*(theta(4) - theta0))
-		V(3,3) = sin(D2R*(theta(5) - theta0))
-
-	else if (size(Output) == 2) then
-
-		theta(3) = Output(1)%orientation; thetanew(3) = theta0
-		theta(4) = Output(2)%orientation; thetanew(4) = theta0 + 90.0
-
-    	V(1,1) = cos(D2R*(theta(3) - theta0))
-    	V(1,2) = cos(D2R*(theta(4) - theta0))
-    	V(2,1) = sin(D2R*(theta(3) - theta0))
-    	V(2,2) = sin(D2R*(theta(4) - theta0))
-
-	else
-		write(*,*) 'Unable to create rotation matrices: too many channels...'
-		deallocate(theta, thetanew)
-		call identity(U)
-		call identity(V)
-		return
-	end if
+	call inverse22(U,U)
 
 	! define the new channel orientations
-    do i=1,2
+    do i=1,size(Input)
 		Input(i)%orientation = thetanew(i)
     end do
 
-    do i=1,nch-2
-		Output(i)%orientation = thetanew(i+2)
+    ! now do output channels;
+    ! we only rotate electric field channels, and we can only do two at a time
+    if (size(OutputE) == 2) then
+	    theta(1) = OutputE(1)%orientation; thetanew(1) = theta0
+	    theta(2) = OutputE(2)%orientation; thetanew(2) = theta0 + 90.0
+	else
+        write(*,*) 'Unable to create rotation matrices: too many electric channels...'
+        stop
+    end if
+
+	call identity(V)
+
+	! if there are 3 or more output channels total, assume that H channels come first
+    if (N%chout == 2) then
+
+    	V(1,1) = cos(D2R*(theta(1) - theta0))
+    	V(1,2) = cos(D2R*(theta(2) - theta0))
+    	V(2,1) = sin(D2R*(theta(1) - theta0))
+    	V(2,2) = sin(D2R*(theta(2) - theta0))
+
+    else if (N%chout > 2) then
+
+		V(N%chout-1,N%chout-1) = cos(D2R*(theta(1) - theta0))
+		V(N%chout-1,N%chout  ) = cos(D2R*(theta(2) - theta0))
+		V(N%chout  ,N%chout-1) = sin(D2R*(theta(1) - theta0))
+		V(N%chout  ,N%chout  ) = sin(D2R*(theta(2) - theta0))
+
+	end if
+
+    do i=1,size(OutputE)
+		OutputE(i)%orientation = thetanew(i)
     end do
 
 	deallocate(theta, thetanew)
@@ -366,13 +406,14 @@ contains
   end subroutine rotate_z_channels
 
 
-  subroutine rotate_z_period(U, V, TF, TFVar, InvSigCov, ResidCov)
+  subroutine rotate_z_period(U, V, TF, TFVar, InvSigCov, ResidCov, N)
    	real(8),         dimension(:,:), intent(in)    :: U ! rotation matrix size 2x2 for input channels
    	real(8),         dimension(:,:), intent(in)    :: V ! rotation matrix size (nch-2)x(nch-2) for output channels
     complex(8),      dimension(:,:), intent(inout) :: TF
     real(8),         dimension(:,:), intent(inout) :: TFVar
     complex(8),      dimension(:,:), intent(inout) :: InvSigCov
     complex(8),      dimension(:,:), intent(inout) :: ResidCov
+    type(Dimensions_t), intent(in)                 :: N
     ! local variables
     integer                                        :: i, j
 
@@ -382,8 +423,8 @@ contains
 	ResidCov = matmul(V, matmul(ResidCov,transpose(V)))
 
 	! finally, update the variances
-    do i=1,size(V,1)
-       do j=1,2
+    do i=1,N%chout
+       do j=1,N%chin
           TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))/2
        end do
     end do
@@ -393,9 +434,9 @@ contains
 
   subroutine read_z_notes(Notes)
   	character(100), dimension(:), pointer :: Notes
-	integer                               :: n
+	integer                               :: nline
 
-	read (zfile,'(i8)',iostat=ios) n
+	read (zfile,'(i8)',iostat=ios) nline
 	if (ios/=0) then
 		if (associated(Notes)) deallocate(Notes)
 		return
@@ -403,9 +444,9 @@ contains
 
 	if (associated(Notes)) deallocate(Notes)
 
-	allocate(Notes(n))
+	allocate(Notes(nline))
 
-	do i=1,n
+	do i=1,nline
 		read (zfile,'(a100)',iostat=ios) Notes(i)
 	end do
 

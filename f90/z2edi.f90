@@ -11,30 +11,32 @@ program z2edi
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favourite station'
   character(len=80) :: zsitename, basename, verbose=''
+  type(Dimensions_t):: N
   type(UserInfo_t)  :: Info
   type(Site_t)                                 :: zLocalSite
   type(Run_t), dimension(:), allocatable       :: Run
   type(FreqInfo_t), dimension(:), allocatable  :: F
-  type(Channel_t), dimension(:), allocatable   :: InputChannel
-  type(Channel_t), dimension(:), allocatable   :: OutputChannel
+  type(Channel_t), dimension(:), pointer       :: InputMagnetic
+  type(Channel_t), dimension(:), pointer       :: OutputMagnetic
+  type(Channel_t), dimension(:), pointer       :: OutputElectric
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
   character(len=80)     :: edi_date,xml_date
   real              :: Ex_len, Ey_len
-  integer           :: i, j, k, n, len
+  integer           :: i, j, k, narg, len, nf, nch
 
-  n = command_argument_count()
+  narg = command_argument_count()
 
-  if (n<1) then
+  if (narg<1) then
      write(0,*) 'Please specify the name of the input Z-file'
      stop
-  else if (n>=1) then
+  else if (narg>=1) then
      call get_command_argument(1,z_file)
   end if
 
-  if (n>1) then
+  if (narg>1) then
      call get_command_argument(2,edi_file)
   else
      len = len_trim(z_file)
@@ -42,7 +44,7 @@ program z2edi
      edi_file = trim(basename)//'.edi'
   end if
 
-  if (n>2) then
+  if (narg>2) then
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
@@ -62,18 +64,21 @@ program z2edi
 
   call init_user_info(Info)
 
-  call read_z_header(zsitename, zLocalSite, Info)
+  call read_z_header(zsitename, zLocalSite, Info, N)
+
+  ! Define local dimensions
+  nf = N%f
+  nch = N%ch
 
   ! Read and write channels
-  allocate(InputChannel(2), OutputChannel(nch-2))
   allocate(F(nf),TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2))
 
-  call read_z_channels(InputChannel, OutputChannel)
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, N)
 
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
-     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
 
   end do
 
@@ -82,10 +87,10 @@ program z2edi
   edi_date = date(5:6)//'/'//date(7:8)//'/'//date(3:4)
 
   call write_edi_file(edi_file,edi_date,zsitename,zLocalSite, &
-										InputChannel,OutputChannel,F,TF,TFVar,Info)
+						InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,Info)
 
   ! Exit nicely
-  deallocate(InputChannel, OutputChannel)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
   deallocate(F,TF, TFVar, InvSigCov, ResidCov)
 
   call end_z_input

@@ -1,7 +1,5 @@
-<Estimate type="complex">
-	<Intention>noise</Intention>
-	<Description>Residual Covariance</Description>
-    	<ExternalUrl>http://www.iris.edu/dms/products/emtf/residual_covariance.html</ExternalUrl>
+<Estimate name="RESIDCOV" type="complex">
+	<Description>Residual Covariance (N)</Description>
+	<Intention>error estimate</Intention>
 	<Tag>residual_covariance</Tag>
-	<Names>N</Names>
 </Estimate>

@@ -1,6 +1,5 @@
-<DataType type="complex" input="H" output="E">
-	<Intention>primary data type</Intention>
+<DataType name="Z" type="complex" output="E" input="H" units="[mV/km]/[nT]">
 	<Description>MT impedance</Description>
+	<Intention>primary data type</Intention>
 	<Tag>impedance</Tag>
-	<Names>Z</Names>
 </DataType>

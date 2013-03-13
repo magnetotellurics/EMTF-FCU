@@ -3,7 +3,7 @@ module global
   implicit none
   public
 
-  integer, save         :: nch, nf, ndt
+  !integer, save         :: nf, ndt
   logical, save         :: silent=.false.
   logical, save         :: rotate=.false.
   character(len=10)     :: date, time, zone
@@ -12,21 +12,7 @@ module global
   ! respectively, run ID has no more than 6 chars
   ! This restriction does not hold to data not archived
   ! with IRIS, so make this a parameter
-  integer, parameter    :: nid=6
-  !*********************************************************
-  ! Total number of INPUT channels is determined by the
-  ! method through which the data are obtained.
-  ! The MT assumption requires two polarizations, and there
-  ! are always 2 input channels. Other types of data that
-  ! would potentially be stored in the format may have
-  ! 1 (e.g., C responses) or zero (e.g., fields) input channels.
-  ! We store this number as a global parameter;
-  ! number of OUTPUT channels is much more variable and
-  ! is dynamically allocated but initialized to 3
-  integer, parameter    :: nchin=2
-  integer, save         :: nchout=3
-  integer, save         :: nchoutE=2
-  integer, save         :: nchoutH=1
+  integer, parameter    :: nid=5
   !*********************************************************
   ! WGS84 - common standard global datum
   ! NAD83 - used in North America
@@ -60,6 +46,16 @@ module global
   character(len=200)    :: subTypeInfo='Magnetotelluric Transfer Functions'
   character(len=200)    :: tags='impedance,tipper'
 
+
+  type :: Dimensions_t
+    integer           :: f ! number of frequencies/periods
+    integer           :: dt ! number of data types (from tags)
+    integer           :: ch ! total number of channels = nchin + nchout
+    integer           :: chin ! number of input channels
+    integer           :: chout ! number of output channels
+    integer           :: choutE ! number of output electric channels
+    integer           :: choutH ! number of output magnetic channels
+  end type Dimensions_t
 
   type :: Person_t
     character(len=80) :: Name
@@ -180,6 +176,8 @@ module global
   type :: Channel_t
 	character(len=10)  :: ID
 	real               :: NumericID ! from the EDI files
+	character(len=10)  :: Type ! E/H
+    character(len=10)  :: Intention ! Input/Output
 	real               :: DipoleLength
 	real               :: DipoleAzimuth ! instrument orientation
 	real               :: Orientation   ! orientation in final TF
@@ -213,14 +211,17 @@ module global
      character(len=80) :: Intention ! primary/derived data type
      character(len=800):: Description
      character(len=200):: ExternalUrl
-     character(len=80) :: Tag   ! e.g., apparent_resisitivity_and_phase
-     character(len=80) :: Names ! e.g., RHO,PHS
+     character(len=80) :: Tag   ! e.g., apparent_resisitivity
+     character(len=80) :: Name  ! e.g., RHO
      character(len=1)  :: Input ! E/H
      character(len=1)  :: Output ! E/H
+     character(len=80) :: Units ! always get them from file! - for derived types, can't compute
+     character(len=80) :: DerivedFrom ! primary data tag
+     character(len=80) :: SeeAlso ! interpret with (tag list)
+     !character(len=80), pointer :: Component(:) ! conceptual components stored in "Names"
+     !integer           :: nComp ! number of conceptual components
      logical           :: isComplex = .false.
      logical           :: allocated = .false.
-     !character(len=80) :: Units ! computed from field units
-     !integer           :: nComp ! number of REAL data type components
   end type DataType_t
 
 
@@ -228,20 +229,50 @@ module global
     ! this stores the data type, dimensions, data and all allowed
     ! statistical estimates (not all are used simultaneously)
     type(DataType_t)  :: Type
-    real(8)           :: Rot  ! rotation angle, ONE FOR ALL FREQUENCIES
-    integer           :: nchin, nchout ! number of input and output channels
+    !real(8)           :: Rot  ! rotation angle, ONE FOR ALL FREQUENCIES
+    integer           :: nf, nchin, nchout ! number of input and output channels
     complex(8),dimension(:,:,:), pointer :: Matrix ! (nf,nchout,nchin)
     real(8),   dimension(:,:,:), pointer :: Var ! (nf,nchout,nchin)
     complex(8),dimension(:,:,:), pointer :: Cov ! (nf,nchin*nchout,nchin*nchout)
     complex(8),dimension(:,:,:), pointer :: InvSigCov ! (nf,nchin,nchin)
     complex(8),dimension(:,:,:), pointer :: ResidCov ! (nf,nchout,nchout)
     complex(8),dimension(:,:,:), pointer :: Coh ! (nf,nchout,nchin)
-    complex(8),dimension(:,:,:), pointer :: MultCoh ! (nf,nchout)
-    complex(8),dimension(:,:,:), pointer :: SigAmp ! (nf,nchout)
-    complex(8),dimension(:,:,:), pointer :: SigNoise ! (nf,nchout)
+    complex(8),dimension(:,:),   pointer :: MultCoh ! (nf,nchout)
+    complex(8),dimension(:,:),   pointer :: SigAmp ! (nf,nchout)
+    complex(8),dimension(:,:),   pointer :: SigNoise ! (nf,nchout)
+    logical          :: allocated = .false.
   end type Data_t
 
 contains
+
+  !************************************************************
+  ! Total number of INPUT channels is determined by the
+  ! method through which the data are obtained.
+  ! The MT assumption requires two polarizations, and there
+  ! are always 2 input channels. Other types of data that
+  ! would potentially be stored in the format may have
+  ! 1 (e.g., C responses) or zero (e.g., fields) input channels.
+  ! We store this number as a global parameter;
+  ! number of OUTPUT channels is much more variable and
+  ! is dynamically allocated but initialized to 3
+  ! However, rather than using global variables (not safe)
+  ! we store all these in a derived data type, which we
+  ! initialize and update as needed
+
+  subroutine init_dimensions(N)
+    type(Dimensions_t), intent(out)  ::N
+
+    N%f = 0
+    N%dt = 0
+
+    N%chin = 2
+    N%choutH = 1
+    N%choutE = 2
+
+    N%chout = N%choutE + N%choutH
+    N%ch = N%chin + N%chout
+
+  end subroutine init_dimensions
 
 	subroutine init_copyright(Info)
 		type(Copyright_t), intent(out)  :: Info
@@ -401,20 +432,67 @@ contains
 	    DataType%Description = ' '
         DataType%ExternalUrl = ' '
 	    DataType%Tag = ' '
-	    DataType%Names = ' '
+	    DataType%Name = ' '
         DataType%Input = ' '
 	    DataType%Output = ' '
+        DataType%Units = ' '
+        DataType%DerivedFrom = ' '
+        DataType%SeeAlso = ' '
 	    DataType%isComplex = .false.
+	    DataType%allocated = .false.
 
 	end subroutine init_data_type
 
-
-    subroutine init_data_info(Data, dataType)
+    ! NOTE: the number of input and output channels here
+    !       will be variable depending on the data type
+    subroutine init_data(Data, dataType, nf, nchin, nchout)
         type(Data_t), intent(inout)     :: Data
         type(DataType_t), intent(in)    :: dataType
+        integer, intent(in)             :: nf, nchout, nchin
+        ! local
+        integer istat
+
+        call deall_data(Data)
+
+        Data%Type = dataType
+        Data%nf = nf
+        Data%nchin = nchin
+        Data%nchout = nchout
+
+        allocate(Data%Matrix(nf,nchout,nchin), stat=istat)
+        allocate(Data%Var(nf,nchout,nchin), stat=istat)
+        allocate(Data%Cov(nf,nchin*nchout,nchin*nchout), stat=istat)
+        allocate(Data%InvSigCov(nf,nchin,nchin), stat=istat)
+        allocate(Data%ResidCov(nf,nchout,nchout), stat=istat)
+        allocate(Data%Coh(nf,nchout,nchin), stat=istat)
+        allocate(Data%MultCoh(nf,nchout), stat=istat)
+        allocate(Data%SigAmp(nf,nchout), stat=istat)
+        allocate(Data%SigNoise(nf,nchout), stat=istat)
+        Data%allocated = .true.
+
+    end subroutine init_data
 
 
-    end subroutine init_data_info
+    subroutine deall_data(Data)
+        type(Data_t), intent(inout)     :: Data
+        ! local
+        integer istat
+
+        if (Data%allocated) then
+            deallocate(Data%Matrix, stat=istat)
+            deallocate(Data%Var, stat=istat)
+            deallocate(Data%Cov, stat=istat)
+            deallocate(Data%InvSigCov, stat=istat)
+            deallocate(Data%ResidCov, stat=istat)
+            deallocate(Data%Coh, stat=istat)
+            deallocate(Data%MultCoh, stat=istat)
+            deallocate(Data%SigAmp, stat=istat)
+            deallocate(Data%SigNoise, stat=istat)
+        end if
+
+        Data%allocated = .false.
+
+    end subroutine deall_data
 
 
     subroutine init_channel_info(Channel)
@@ -422,6 +500,8 @@ contains
 
 		Channel%ID = ' '
 		Channel%NumericID = 0
+        Channel%Type = ' '
+        Channel%Intention = ' '
 		Channel%DipoleLength = 0
 		Channel%DipoleAzimuth = 0
 		Channel%Orientation = 0
@@ -461,6 +541,38 @@ contains
 
     end subroutine init_channel_units
     
+
+    function channel_type(id) result (type)
+         character(*), intent(in)   :: id
+         character(1)               :: type
+
+         if ((index(id,'H')==1) .or. (index(id,'R')==1)) then
+            type = 'H'
+         else if (index(id,'E')==1) then
+            type = 'E'
+         else
+            type = ' '
+            write(0,*) 'Warning: unable to determine channel type from ',trim(id)
+         end if
+
+    end function channel_type
+
+
+    function TF_name(DataType,InputChannel,OutputChannel) result (tfname)
+          type(DataType_t), intent(in)   :: DataType
+		  type(Channel_t), intent(in)    :: InputChannel, OutputChannel
+		  character(10)					 :: tfname
+
+          select case (DataType%Name)
+          case ('T')
+            tfname = trim(DataType%Name)//trim(InputChannel%ID(2:10))
+          case default
+		    tfname = trim(DataType%Name)//trim(OutputChannel%ID(2:10))//trim(InputChannel%ID(2:10))
+          end select
+
+	end function TF_name
+
+
     ! cleaning up the EDI units flexibility (use to_upper if needed)
     subroutine convert_channel_to_meters(Channel)
          type(Channel_t), intent(inout) :: Channel
@@ -479,18 +591,6 @@ contains
 
     end subroutine convert_channel_to_meters
 
-    function TF_name(InputChannel,OutputChannel) result (tfname)
-		  type(Channel_t), intent(in)    :: InputChannel, OutputChannel
-		  character(10)					 :: tfname
-		  
-		  if (index(OutputChannel%ID,'H')==1) then
-		     tfname = 'T'//trim(InputChannel%ID(2:10))
-		  else if (index(OutputChannel%ID,'E')==1) then
-		     tfname = 'Z'//trim(OutputChannel%ID(2:10))//trim(InputChannel%ID(2:10))
-		  else
-		     tfname = 'UNKNOWN'
-		  end if
-		  
-	end function TF_name
+
 
 end module global

@@ -22,6 +22,7 @@ module edi_write
   integer                         :: ldataid,lacqby,lyname
   integer                         :: lcdate,lclat,lclong,lcelev,lsectid
   integer                         :: ios,i,j,k,ii,jj,kk,ns
+  integer                         :: nf,nch,nchin,nchoutH,nchoutE
   real                            :: c1,s1,rot,a
   integer                         :: irun=1,istation=100 ! needed to create HMEAS/EMEAS ID's
 
@@ -30,14 +31,15 @@ module edi_write
 contains
 
   subroutine write_edi_file(fname,edi_date,sectid,Site, &
-  			InputChannel,OutputChannel,F,TF,TFVar,UserInfo)
+  			InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,UserInfo)
   	character(len=*), intent(in)                   :: fname
 	character(len=*), intent(in)                   :: edi_date
   	character(len=*), intent(in)                   :: sectid
   	type(Site_t), intent(in)                       :: Site
   	type(UserInfo_t), intent(in)                   :: UserInfo
-  	type(Channel_t), dimension(:), intent(in)      :: InputChannel
-  	type(Channel_t), dimension(:), intent(in)      :: OutputChannel
+  	type(Channel_t), dimension(:), intent(in)      :: InputMagnetic
+    type(Channel_t), dimension(:), intent(in)      :: OutputMagnetic
+  	type(Channel_t), dimension(:), intent(in)      :: OutputElectric
   	type(FreqInfo_t), dimension(:), intent(in)     :: F
   	complex(8), dimension(:,:,:), intent(in)       :: TF
   	real(8),    dimension(:,:,:), intent(in)       :: TFVar
@@ -53,6 +55,8 @@ contains
 	real(8), dimension(:,:), allocatable           :: tvar
 	real(8), dimension(:,:), allocatable           :: zvar
 	
+	nf = size(F)
+
 	allocate(freq(nf),t(nf,2),z(nf,(nch-3)*2),tvar(nf,2),zvar(nf,(nch-3)*2))
 	
 	freq = 0.0d0
@@ -61,7 +65,11 @@ contains
 	tvar = 0.0d0
 	zvar = 0.0d0
 
-	if (nch<5) then
+	nchin = size(InputMagnetic)
+	nchoutH = size(OutputMagnetic)
+	nchoutE = size(OutputElectric)
+
+	if (nchoutE<2) then
 		write(0,*) 'Unable to write the EDI: too few output channels.'
 		return
 	end if
@@ -97,7 +105,7 @@ contains
 	long = Site%Location%lon
 	elev = Site%Location%elev
 	tipper_present = .true. ! assume tipper is always present
-	azimuth = InputChannel(1)%orientation ! orientation of Hx
+	azimuth = InputMagnetic(1)%orientation ! orientation of Hx
 	acqby = UserInfo%AcquiredBy
 
 	if (len_trim(Site%RunList) > 70) then
