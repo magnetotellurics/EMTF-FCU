@@ -68,16 +68,21 @@ contains
   end subroutine initialize_xml_input
 
 
-  subroutine read_xml_header(id, Site, UserInfo)
+  subroutine read_xml_header(id, Site, UserInfo, dimensions)
     character(len=80), intent(out)  :: id
     type(Site_t), intent(out)       :: Site
     type(UserInfo_t), intent(out)   :: UserInfo
+    type(Dimensions_t), intent(out), optional :: dimensions
 	type(Node), pointer             :: infoNode
 	character(len=80)               :: project
 
 	! Initialize site information
 	call init_site_info(Site)
 	call init_user_info(UserInfo)
+
+    if (present(dimensions)) then
+        dimensions = N
+    end if
 
 	UserInfo%Project = getString(doc,"Project")
 	UserInfo%Survey = getString(doc,"Survey")

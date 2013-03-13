@@ -364,6 +364,7 @@ contains
     i = 0
     j(:) = 0
     edichar1 = temp(1:1)
+    Channel%Type = edichar1
 
     select case (edichar1)
     case ('E')
@@ -469,23 +470,23 @@ contains
   ! Dipole lengths;
   ! Channel orientations unless overwritten by data rotation angles;
   ! Other instrument information.
-  subroutine read_edi_channels(Input, Output, Site, UserInfo)
+  subroutine read_edi_channels(Input, OutputH, OutputE, Site, UserInfo, N)
     type(Channel_t), dimension(:), pointer, intent(out) :: Input
-    type(Channel_t), dimension(:), pointer, intent(out) :: Output
+    type(Channel_t), dimension(:), pointer, intent(out) :: OutputH, OutputE
     type(Site_t), intent(inout)                  :: Site
     type(UserInfo_t), intent(in)                 :: UserInfo
+    type(Dimensions_t), intent(inout)            :: N
     ! local
-    type(Channel_t)                  :: Channel
+    type(Channel_t), dimension(:), pointer  :: Channel ! all channels
     character(len=200)               :: line, var, value
-    integer                          :: num,chin,chout,i,istat
+    integer                          :: num,i,j,istat,nchin,nch,hch,ech
     real(8)                          :: xy(2,1),ll(2,1)
 
-    nch = 5 ! default number of channels; number of input channels hardcoded
-    nchout = nch - nchin
-    allocate(Input(nchin), Output(nchout), stat=istat)
+    nch = 5 ! default total number of channels
+    allocate(Channel(nch), stat=istat)
 
-    chin = 0 ! start counting input channels
-    chout = 0 ! start counting output channels
+    hch = 0 ! start counting magnetic channels
+    ech = 0 ! start counting electric channels
     num = 0 ! start counting channels
 
     do
@@ -506,18 +507,17 @@ contains
             ! NOTE: if present, this always comes before
             ! the channel block lines so safe to reallocate
             read(value,*) nch
-            nchout = nch - nchin
-            deallocate(Output, stat=istat)
-            allocate(Output(nchout), stat=istat)
+            deallocate(Channel, stat=istat)
+            allocate(Channel(nch), stat=istat)
         case ('BLOCK')
             num = num+1
-            call parse_edi_channel(value,Channel)
-            if (num<=nchin) then
-                chin = chin+1
-                Input(chin) = Channel
+            call parse_edi_channel(value,Channel(num))
+            if (trim(Channel(num)%Type) .eq. 'H') then
+                hch = hch+1
+            elseif (trim(Channel(num)%Type) .eq. 'E') then
+                ech = ech+1
             else
-                chout = chout+1
-                Output(chout) = Channel
+                write(0,*) 'Warning: Unknown channel type ',Channel(num)%Type,' found for channel #',num
             end if
         case ('REFLOC')
             Site%Coords%Origin%ID = trim(value)
@@ -548,45 +548,69 @@ contains
         end select
     end do
 
+
     ! first convert site and channel locations to meters, if needed
     if(trim(Site%Coords%Units) .eq. 'FT') then
         Site%Coords%X = 0.3048 * Site%Coords%X
         Site%Coords%Y = 0.3048 * Site%Coords%Y
         Site%Coords%Z = 0.3048 * Site%Coords%Z
         Site%Coords%Units = 'meters'
-        do i=1,nchin
-            call convert_channel_to_meters(Input(i))
-        end do
-        do i=1,nchout
-            call convert_channel_to_meters(Output(i))
+        do i=1,nch
+            call convert_channel_to_meters(Channel(i))
         end do
     end if
 
     ! now, obtain site coordinates relative to an origin from the channels
     ! (use the first input channel - usually Hx - for the absolute "site location")
-    Site%Coords%X = Input(1)%X
-    Site%Coords%Y = Input(1)%Y
-    Site%Coords%Z = Input(1)%Z
+    Site%Coords%X = Channel(1)%X
+    Site%Coords%Y = Channel(1)%Y
+    Site%Coords%Z = Channel(1)%Z
 
     ! adjust the channel location so that it's now relative to the site
-    do i=1,nchin
-        Input(i)%X = Input(i)%X - Site%Coords%X
-        Input(i)%Y = Input(i)%Y - Site%Coords%Y
-        Input(i)%Z = Input(i)%Z - Site%Coords%Z
-        Input(i)%Units = Site%Coords%Units
-    end do
-    do i=1,nchout
-        Output(i)%X = Output(i)%X - Site%Coords%X
-        Output(i)%Y = Output(i)%Y - Site%Coords%Y
-        Output(i)%Z = Output(i)%Z - Site%Coords%Z
+    do i=1,nch
+        Channel(i)%X = Channel(i)%X - Site%Coords%X
+        Channel(i)%Y = Channel(i)%Y - Site%Coords%Y
+        Channel(i)%Z = Channel(i)%Z - Site%Coords%Z
         ! for electric output channels, also update the end of the dipole
-        if (index(Output(i)%ID,'E')>0) then
-            Output(i)%X2 = Output(i)%X2 - Site%Coords%X
-            Output(i)%Y2 = Output(i)%Y2 - Site%Coords%Y
-            Output(i)%Z2 = Output(i)%Z2 - Site%Coords%Z
+        if (trim(Channel(i)%Type) .eq. 'E') then
+            Channel(i)%X2 = Channel(i)%X2 - Site%Coords%X
+            Channel(i)%Y2 = Channel(i)%Y2 - Site%Coords%Y
+            Channel(i)%Z2 = Channel(i)%Z2 - Site%Coords%Z
         end if
-        Output(i)%Units = Site%Coords%Units
-     end do
+        Channel(i)%Units = Site%Coords%Units
+    end do
+
+
+    ! now, allocate and initialize input and output channels
+    nchin = 2
+    allocate(Input(nchin), OutputE(ech), stat=istat)
+    if (hch > nchin) then
+        allocate(OutputH(hch-nchin), stat=istat)
+    end if
+    do num=1,nchin
+        i = num
+        Input(i) = Channel(num)
+    end do
+    i = 0
+    j = 0
+    do num=nchin+1,nch
+        if (trim(Channel(num)%Type) .eq. 'H') then
+            i = i+1
+            OutputH(i) = Channel(num)
+        else
+            j = j+1
+            OutputE(j) = Channel(num)
+        end if
+    end do
+    deallocate(Channel, stat=istat)
+
+    ! update the counts for output
+    call init_dimensions(N)
+    N%chin = nchin
+    N%choutH = hch-nchin
+    N%choutE = ech
+    N%chout = N%choutH + N%choutE
+    N%ch = N%chin + N%chout
 
     ! finally, compute and verify the site lat/lon coordinates
     xy(1,1) = Site%Coords%X
@@ -610,7 +634,7 @@ contains
    ! local
     character(len=200)               :: line, var, value
     character(len=3)                 :: temp
-    integer                          :: num
+    integer                          :: num,nch
     character(len=80)                :: chname
 
     maxblks = 100

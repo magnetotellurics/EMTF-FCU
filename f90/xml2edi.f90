@@ -12,28 +12,30 @@ program xml2edi
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favorite station'
   character(len=80) :: zsitename, basename, verbose=''
+  type(Dimensions_t):: N
   type(UserInfo_t)  :: UserInfo
-  type(Site_t)                               :: xmlLocalSite, xmlRemoteSite
+  type(Site_t)      :: xmlLocalSite, xmlRemoteSite
+  type(Channel_t), dimension(:), pointer      :: InputMagnetic
+  type(Channel_t), dimension(:), pointer      :: OutputMagnetic
+  type(Channel_t), dimension(:), pointer      :: OutputElectric
   type(Run_t), dimension(:), allocatable     :: Run
   type(FreqInfo_t), dimension(:), allocatable:: F
-  type(Channel_t), dimension(:), allocatable :: InputChannel
-  type(Channel_t), dimension(:), allocatable :: OutputChannel
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
-  integer           :: i, j, k, n, l
+  integer           :: i, j, k, narg, l
 
-  n = command_argument_count()
+  narg = command_argument_count()
 
-  if (n<1) then
+  if (narg<1) then
      write(0,*) 'Please specify the name of the input XML-file'
      stop
-  else if (n>=1) then
+  else if (narg>=1) then
      call get_command_argument(1,xml_file)
   end if
 
-  if (n>1) then
+  if (narg>1) then
      call get_command_argument(2,edi_file)
   else
      l = len_trim(xml_file)
@@ -41,7 +43,7 @@ program xml2edi
      edi_file = trim(basename)//'.edi'
   end if
 
-  if (n>2) then
+  if (narg>2) then
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
@@ -60,15 +62,14 @@ program xml2edi
   ! Initialize input and output
   call initialize_xml_input(xml_file, xml_time)
 
-  call read_xml_header(zsitename, xmlLocalSite, UserInfo)
+  call read_xml_header(zsitename, xmlLocalSite, UserInfo, N)
 
   ! Read and write channels
-  allocate(InputChannel(2), OutputChannel(nch-2))
-  allocate(F(nf),TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2))
+  allocate(F(N%f),TF(N%f,N%ch-2,2), TFVar(N%f,N%ch-2,2), InvSigCov(N%f,2,2), ResidCov(N%f,N%ch-2,N%ch-2))
 
-  call read_xml_channels(InputChannel, OutputChannel)
+  call read_xml_channels(InputMagnetic, OutputMagnetic, OutputElectric)
 
-  do k=1,nf
+  do k=1,N%f
     
      call read_xml_period(k, F(k), TF(k,:,:), TFVar(k,:,:))     
           
@@ -77,10 +78,10 @@ program xml2edi
   edi_date = xml_time(6:7)//'/'//xml_time(9:10)//'/'//xml_time(3:4)
 
   call write_edi_file(edi_file,edi_date,zsitename,xmlLocalSite, &
-  			InputChannel,OutputChannel,F,TF,TFVar,UserInfo)
+                        InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,UserInfo)
 
   ! Exit nicely
-  deallocate(InputChannel, OutputChannel)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
   deallocate(F, TF, TFVar, InvSigCov, ResidCov)
 
   call end_xml_input

@@ -11,13 +11,15 @@ program edi2xml
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: edisitename, basename, verbose=''
+  type(Dimensions_t):: N
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: ediLocalSite, ediRemoteSite
+  type(Channel_t), dimension(:), pointer      :: InputMagnetic
+  type(Channel_t), dimension(:), pointer      :: OutputMagnetic
+  type(Channel_t), dimension(:), pointer      :: OutputElectric
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
   type(DataType_t), dimension(:), pointer     :: DataType, Estimate
   type(FreqInfo_t), dimension(:), allocatable :: F
-  type(Channel_t), dimension(:), pointer	  :: InputChannel
-  type(Channel_t), dimension(:), pointer	  :: OutputChannel
   character(200), dimension(:), pointer       :: Notes
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
@@ -26,19 +28,20 @@ program edi2xml
   logical           :: config_exists, site_list_exists
   logical			:: run_list_exists, channel_list_exists
   integer           :: NotesLength
-  integer           :: i, j, k, n, l, maxblks, istat
+  integer           :: i, j, k, narg, l, maxblks, istat
+  integer           :: nf, nchin, nchout, nchoutE, nchoutH
   character(80)     :: type
 
-  n = command_argument_count()
+  narg = command_argument_count()
 
-  if (n<1) then
+  if (narg<1) then
      write(0,*) 'Please specify the name of the input Z-file'
      stop
-  else if (n>=1) then
+  else if (narg>=1) then
      call get_command_argument(1,edi_file)
   end if
 
-  if (n>1) then
+  if (narg>1) then
      call get_command_argument(2,xml_file)
   else
      l = len_trim(edi_file)
@@ -46,7 +49,7 @@ program edi2xml
      xml_file = trim(basename)//'.xml'
   end if
 
-  if (n>2) then
+  if (narg>2) then
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
@@ -143,7 +146,13 @@ program edi2xml
   end if
 
   ! This allocates and fills in the channels and updates the local site coords
-  call read_edi_channels(InputChannel, OutputChannel, ediLocalSite, UserInfo)
+  call read_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite, UserInfo, N)
+
+  ! Define channel dimensions
+  nchin = size(InputMagnetic)
+  nchoutH = size(OutputMagnetic)
+  nchoutE = size(OutputElectric)
+  nchout = nchoutH + nchoutE
 
   call read_edi_data_header(nf,maxblks)
   allocate(F(nf), TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), TFName(nchout,nchin), stat=istat)
@@ -195,13 +204,16 @@ program edi2xml
 
   call new_channel_block('InputChannels')
   do i=1,nchin
-     call add_Channel(InputChannel(i), location=.false.)
+     call add_Channel(InputMagnetic(i), location=.false.)
   end do
   call end_block('InputChannels')
 
   call new_channel_block('OutputChannels')
-  do i=1,nchout
-     call add_Channel(OutputChannel(i), location=.false.)
+  do i=1,nchoutH
+     call add_Channel(OutputMagnetic(i), location=.false.)
+  end do
+  do i=1,nchoutE
+     call add_Channel(OutputElectric(i), location=.false.)
   end do
   call end_block('OutputChannels')
 
@@ -227,7 +239,7 @@ program edi2xml
   if (associated(Run)) deallocate(Run)
   if (associated(RemoteRun)) deallocate(RemoteRun)
   if (associated(Notes)) deallocate(Notes)
-  deallocate(InputChannel, OutputChannel)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
   deallocate(F, TF, TFVar, TFName)
 
   call end_edi_input
