@@ -22,6 +22,8 @@ module edi_read
   public :: read_edi_channels
   public :: read_edi_data_header
   public :: read_edi_data_block
+  public :: read_edi_data
+  public :: parse_edi_data_block_name
   public :: read_edi_info
   public :: end_edi_input
 
@@ -727,13 +729,11 @@ contains
   end subroutine read_edi_data_header
 
 
-  subroutine read_edi_data_block(nf,type,data,info,comp,row,col)
+  subroutine read_edi_data_block(nf,TFcomp,data,info)
     integer, intent(in)         :: nf ! number of freq to read
+    character(80), intent(out)  :: TFcomp ! full name of the data block
     real(8), intent(out)        :: data(nf) ! real data values
     character(80), intent(out)  :: info ! ROT etc from block definition
-    character(80), intent(out)  :: type ! which variable (e.g., TF, TFVAR etc)
-    character(4),  intent(out)  :: comp ! real/imag
-    integer, intent(out), optional  :: row,col ! row & column in a matrix
     character(len=200)               :: line, var, value, data_block
     character(len=20000)             :: datalist
 
@@ -761,67 +761,25 @@ contains
         write(*,*) 'Warning: unable to read ',nf,' data values from block ',trim(data_block)
     end if
 
-    select case (trim(data_block))
-    case ('FREQ')
-        type = 'FREQ'
-    case ('ZROT','RHOROT','TROT.EXP')
-        type = 'ROTATION'
-    case ('ZXXR','ZXXI','ZYYR','ZYYI','ZXYR','ZXYI','ZYXR','ZYXI')
-        type = 'TF'
-    case ('ZXXR.VAR','ZXXI.VAR','ZYYR.VAR','ZYYI.VAR','ZXYR.VAR','ZXYI.VAR','ZYXR.VAR','ZYXI.VAR')
-        type = 'TFVARCMPLX'
-    case ('ZXX.VAR','ZYY.VAR','ZXY.VAR','ZYX.VAR')
-        type = 'TFVAR'
-    case ('ZXX.COV','ZYY.COV','ZXY.COV','ZYX.COV')
-        type = 'TFCOV'
-    case ('TXR.EXP','TXI.EXP','TYR.EXP','TYI.EXP')
-        type = 'TF'
-    case ('TXVAR.EXP','TYVAR.EXP')
-        type = 'TFVAR'
-    case ('TIPMAG','TIPPHS')
-        type = 'TIPPER'
-    case ('TIPMAG.VAR','TIPPHS.VAR')
-        type = 'TIPPER'
-    case ('TIPMAG.ERR','TIPPHS.ERR')
-    case ('RHOXX','RHOYY','RHOXY','RHOYX')
-    case ('RHOXX.VAR','RHOYY.VAR','RHOXY.VAR','RHOYX.VAR')
-    case ('RHOXX.ERR','RHOYY.ERR','RHOXY.ERR','RHOYX.ERR')
-    case ('PHSXX','PHSYY','PHSXY','PHSYX')
-    case ('PHSXX.VAR','PHSYY.VAR','PHSXY.VAR','PHSYX.VAR')
-    case ('PHSXX.ERR','PHSYY.ERR','PHSXY.ERR','PHSYX.ERR')
-    case ('ZSTRIKE','ZSKEW','ZELLIP')
-    case ('TSTRIKE','TSKEW','TELLIP')
-    case ('INDMAGR.EXP','INDMAGI.EXP','INDANGR.EXP')
-    case ('COH','EPREDCOH','HPREDCOH','SIGAMP','SIGNOISE')
-    case ('SPECTRA')
-    case ('DUMMY')
-        ! empty line
-    case default
-        ! but there might be something else that requires parsing
-        write(0,*) 'Warning: unknown DATA block ',trim(data_block),' encountered and ignored!'
-    end select
-
-
   end subroutine read_edi_data_block
 
 
-  subroutine read_edi_data(nf,type,data,info,comp,row,col)
+  subroutine read_edi_data(nf,F,Data)
+    type(FreqInfo_t), intent(inout) :: F(:) ! periods
+    type(Data_t), intent(inout)	:: Data(:) ! one for each data type
     integer, intent(in)         :: nf ! number of freq to read
-    real(8), intent(out)        :: data(nf) ! real data values
-    character(80), intent(out)  :: info ! ROT etc from block definition
-    character(80), intent(out)  :: type ! which variable (e.g., TF, TFVAR etc)
-    character(4),  intent(out)  :: comp ! real/imag
-    integer, intent(out), optional  :: row,col ! row & column in a matrix
-    character(len=200)               :: line, var, value, data_block
-    character(len=20000)             :: datalist
+    real(8)        		:: value(nf) ! real data values
+    complex(8)			:: cvalue(nf) ! complex data values
+    character(4)		:: type ! real/imag
+    integer		  	:: row,col ! row & column in a matrix
+    integer		  	:: i,j,k,ind,istat
+    character(len=200)          :: TFcomp, TFname, info, stat
 
-      ! Allocate periods and read in the EDI data
-      allocate(F(nf),value(nf), stat=istat)
       do j=1,maxblks
         call read_edi_data_block(nf,TFcomp,value,info)
         call parse_edi_data_block_name(TFcomp,TFname,row,col,type,stat)
         if (type .eq. 'imag') then
-            cvalue = (0.0d0,value)
+            cvalue = dcmplx(0.0d0,value)
         else
             cvalue = value
         end if
@@ -835,18 +793,18 @@ contains
             case ('DUMMY')
                 ! empty line
             case default
-                ind = find_data_type(DataType,TFname)
+                ind = find_data_type(Data,TFname)
                 if (ind == 0) then
                     write(0,*) 'Error: data type for TF name ',trim(TFname),' not allocated: please update your tags'
                     stop
                 end if
                 select case (trim(stat))
                 case ('EXP','')
-                    Data(i)%Matrix(row,col) = Data(i)%Matrix(row,col) + cvalue
+                    Data(i)%Matrix(:,row,col) = Data(i)%Matrix(:,row,col) + cvalue
                 case ('VAR')
-                    Data(i)%Var(row,col) = dreal(cvalue)
+                    Data(i)%Var(:,row,col) = dreal(cvalue)
                 case ('ERR')
-                    Data(i)%Var(row,col) = dreal(cvalue)**2
+                    Data(i)%Var(:,row,col) = dreal(cvalue)**2
                 case default
                     ! but there might be something else that requires parsing
                     write(0,*) 'Warning: data component ',trim(TFcomp),' not recognized; ignored'
@@ -858,41 +816,18 @@ contains
   end subroutine read_edi_data
 
 
-  subroutine parse_edi_data_block_name(nf,type,data,info,comp,row,col)
-    integer, intent(in)         :: nf ! number of freq to read
-    real(8), intent(out)        :: data(nf) ! real data values
-    character(80), intent(out)  :: info ! ROT etc from block definition
-    character(80), intent(out)  :: type ! which variable (e.g., TF, TFVAR etc)
-    character(4),  intent(out)  :: comp ! real/imag
-    integer, intent(out), optional  :: row,col ! row & column in a matrix
-    character(len=200)               :: line, var, value, data_block
-    character(len=20000)             :: datalist
+  subroutine parse_edi_data_block_name(TFcomp,TFname,row,col,type,stat)
+    character(*), intent(in)    :: TFcomp ! full name of data block
+    character(80), intent(out)  :: TFname ! ROT etc from block definition
+    integer, intent(out)  	:: row,col ! row & column in a matrix
+    character(4),  intent(out)  :: type ! real/imag
+    character(80), intent(out)  :: stat ! VAR, ERR, etc
+    character(len=200)          :: line, var, value, data_block
+    integer			:: i,j
 
-    data_block = this_block
+    i = index(TFcomp,'X')    
 
-    do
-        read (edifile,'(a200)',iostat=ios) line
-        if ((ios /= 0) .or. (trim(this_block) .eq. 'END')) then
-            exit
-        end if
-        call parse_edi_line(line,var,value)
-        if (.not.silent) then
-            write(*,*) 'Reading ',trim(var),' line: ',trim(value)
-        end if
-        ! if we enter a new block, exit
-        if (new_block) then
-            exit
-        else if (trim(var) .eq. 'DATA') then
-            datalist = trim(datalist)//' '//trim(value)
-        end if
-    end do
-
-    read (datalist, *, iostat=ios) data
-    if (ios /= 0) then
-        write(*,*) 'Warning: unable to read ',nf,' data values from block ',trim(data_block)
-    end if
-
-    select case (trim(data_block))
+    select case (trim(TFname))
     case ('FREQ')
         type = 'FREQ'
     case ('ZROT','RHOROT','TROT.EXP')

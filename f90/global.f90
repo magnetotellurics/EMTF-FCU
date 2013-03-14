@@ -558,8 +558,8 @@ contains
     end function channel_type
 
 
-    function find_data_type(DataType,name) result (ind)
-         type(DataType_t), intent(in)   :: DataType(:)
+    function find_data_type(Data,name) result (ind)
+         type(Data_t), intent(in)   	:: Data(:)
          character(*), intent(in)       :: name
          integer                        :: ind
          ! local
@@ -567,8 +567,8 @@ contains
 
          ind = 0
 
-         do i = 1,size(DataType)
-            if (trim(DataType%Name) .eq. trim(name)) then
+         do i = 1,size(Data)
+            if (trim(Data(i)%Type%Name) .eq. trim(name)) then
                 ind = i
                 return
             end if

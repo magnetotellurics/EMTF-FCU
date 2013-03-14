@@ -169,44 +169,8 @@ program edi2xml
   end do
 
   ! Allocate periods and read in the EDI data
-  allocate(F(nf),value(nf), stat=istat)
-  do j=1,maxblks
-    call read_edi_data_block(nf,TFcomp,value,info)
-    call parse_edi_data_block_name(TFcomp,TFname,row,col,type,stat)
-    if (type .eq. 'imag') then
-        cvalue = (0.0d0,value)
-    else
-        cvalue = value
-    end if
-    do k=1,nf
-        select case (trim(type))
-        case ('FREQ')
-            call init_freq_info(F(k))
-            F(k)%value = 1.0d0/value(k)
-            F(k)%units = 'secs'
-            F(k)%info_type  = 'period'
-        case ('DUMMY')
-            ! empty line
-        case default
-            ind = find_data_type(DataType,TFname)
-            if (ind == 0) then
-                write(0,*) 'Error: data type for TF name ',trim(TFname),' not allocated: please update your tags'
-                stop
-            end if
-            select case (trim(stat))
-            case ('EXP','')
-                Data(i)%Matrix(row,col) = Data(i)%Matrix(row,col) + cvalue
-            case ('VAR')
-                Data(i)%Var(row,col) = dreal(cvalue)
-            case ('ERR')
-                Data(i)%Var(row,col) = dreal(cvalue)**2
-            case default
-                ! but there might be something else that requires parsing
-                write(0,*) 'Warning: data component ',trim(TFcomp),' not recognized; ignored'
-            end select
-        end select
-    end do
-  end do
+  allocate(F(nf), stat=istat)
+  call read_edi_data(nf,F,Data)
 
   ! Write XML header
   if (UserInfo%WriteEDIInfo) then
@@ -274,7 +238,7 @@ program edi2xml
   if (associated(RemoteRun)) deallocate(RemoteRun)
   if (associated(Notes)) deallocate(Notes)
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(F,value)
+  deallocate(F)
   do i = 1,size(DataType)
     call deall_data(Data(i))
   end do
