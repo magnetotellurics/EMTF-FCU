@@ -558,6 +558,25 @@ contains
     end function channel_type
 
 
+    function find_data_type(DataType,name) result (ind)
+         type(DataType_t), intent(in)   :: DataType(:)
+         character(*), intent(in)       :: name
+         integer                        :: ind
+         ! local
+         integer i
+
+         ind = 0
+
+         do i = 1,size(DataType)
+            if (trim(DataType%Name) .eq. trim(name)) then
+                ind = i
+                return
+            end if
+         end do
+
+    end function find_data_type
+
+
     function TF_name(DataType,InputChannel,OutputChannel) result (tfname)
           type(DataType_t), intent(in)   :: DataType
 		  type(Channel_t), intent(in)    :: InputChannel, OutputChannel

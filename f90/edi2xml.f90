@@ -18,12 +18,11 @@ program edi2xml
   type(Channel_t), dimension(:), pointer      :: OutputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputElectric
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
+  type(Data_t), dimension(:), pointer         :: Data
   type(DataType_t), dimension(:), pointer     :: DataType, Estimate
   type(FreqInfo_t), dimension(:), allocatable :: F
   character(200), dimension(:), pointer       :: Notes
-  complex(8), dimension(:,:,:), allocatable    :: TF
-  real(8),    dimension(:,:,:), allocatable    :: TFVar
-  character(10), dimension(:,:), allocatable   :: TFName
+  character(10)     :: TFname
   real(8),    dimension(:), allocatable        :: value
   logical           :: config_exists, site_list_exists
   logical			:: run_list_exists, channel_list_exists
@@ -154,10 +153,31 @@ program edi2xml
   nchoutE = size(OutputElectric)
   nchout = nchoutH + nchoutE
 
-  call read_edi_data_header(nf,maxblks)
-  allocate(F(nf), TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), TFName(nchout,nchin), stat=istat)
+  ! Read EDI data header and create generic Data variables
+  call read_edi_data_header(nf)
+  write(*,*) 'Allocating data structure for ',size(DataType),' data types'
+  allocate(Data(size(DataType)), stat=istat)
+  do i=1,size(DataType)
+    select case (DataType(i)%Output)
+    case ('H')
+        call init_data(Data(i),DataType(i),nf,nchin,nchoutH)
+    case ('E')
+        call init_data(Data(i),DataType(i),nf,nchin,nchoutE)
+    case default
+        write(0,*) 'Error: unable to initialize the data variable #',i,' for data type ',DataType(i)%Tag
+    end select
+  end do
+
+  ! Allocate periods and read in the EDI data
+  allocate(F(nf),value(nf), stat=istat)
   do j=1,maxblks
-    !call read_edi_data_block(nf,type,value,info,comp,row,col)
+    call read_edi_data_block(nf,TFcomp,value,info)
+    call parse_edi_data_block_name(TFcomp,TFname,row,col,type,stat)
+    if (type .eq. 'imag') then
+        cvalue = (0.0d0,value)
+    else
+        cvalue = value
+    end if
     do k=1,nf
         select case (trim(type))
         case ('FREQ')
@@ -168,8 +188,22 @@ program edi2xml
         case ('DUMMY')
             ! empty line
         case default
-            ! but there might be something else that requires parsing
-            ! write(0,*) 'Warning: data block ',trim(var),' ignored'
+            ind = find_data_type(DataType,TFname)
+            if (ind == 0) then
+                write(0,*) 'Error: data type for TF name ',trim(TFname),' not allocated: please update your tags'
+                stop
+            end if
+            select case (trim(stat))
+            case ('EXP','')
+                Data(i)%Matrix(row,col) = Data(i)%Matrix(row,col) + cvalue
+            case ('VAR')
+                Data(i)%Var(row,col) = dreal(cvalue)
+            case ('ERR')
+                Data(i)%Var(row,col) = dreal(cvalue)**2
+            case default
+                ! but there might be something else that requires parsing
+                write(0,*) 'Warning: data component ',trim(TFcomp),' not recognized; ignored'
+            end select
         end select
     end do
   end do
@@ -240,7 +274,11 @@ program edi2xml
   if (associated(RemoteRun)) deallocate(RemoteRun)
   if (associated(Notes)) deallocate(Notes)
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(F, TF, TFVar, TFName)
+  deallocate(F,value)
+  do i = 1,size(DataType)
+    call deall_data(Data(i))
+  end do
+  deallocate(Data)
 
   call end_edi_input
 
