@@ -10,11 +10,15 @@ module edi_read
   character(len=200)             :: temp
   logical                        :: new_block, new_section
   character(len=80)              :: this_block, this_section
+  integer                        :: missing_value_count=0
+  character(len=80)              :: dummy_data_value
   integer                        :: ios,i,j,maxblks=0
 
   save   :: edifile
   save   :: new_block, new_section
   save   :: this_block, this_section
+  save   :: missing_value_count
+  save   :: dummy_data_value
   save   :: maxblks
 
   public :: initialize_edi_input
@@ -227,6 +231,7 @@ contains
             write(0,*) 'Warning: BINDATA value ',value,' ignored'
         case ('EMPTY') ! represents 'no data'
             Info%DummyDataValue = value
+            dummy_data_value = value
         case ('DUMMY')
             ! empty line
         case default
@@ -729,20 +734,20 @@ contains
   end subroutine read_edi_data_header
 
 
-  subroutine read_edi_data_block(nf,TFcomp,data,info)
+  subroutine read_edi_data_block(nf,data)
     integer, intent(in)         :: nf ! number of freq to read
-    character(80), intent(out)  :: TFcomp ! full name of the data block
     real(8), intent(out)        :: data(nf) ! real data values
-    character(80), intent(out)  :: info ! ROT etc from block definition
-    character(len=200)               :: line, var, value, data_block
-    character(len=20000)             :: datalist
+    character(len=200)          :: line, var, value, data_block
+    character(len=20000)        :: datalist
+    integer                     :: i
 
     data_block = this_block
+    datalist = ''
 
     do
         read (edifile,'(a200)',iostat=ios) line
         if ((ios /= 0) .or. (trim(this_block) .eq. 'END')) then
-            exit
+            return
         end if
         call parse_edi_line(line,var,value)
         if (.not.silent) then
@@ -755,6 +760,16 @@ contains
             datalist = trim(datalist)//' '//trim(value)
         end if
     end do
+
+    ! if we find a missing value, provide a warning (for now)
+    ! will implement replacing these with NaNs if needed
+    !  - this will require a little book keeping
+    i=index(datalist,dummy_data_value)
+    if (i>0) then
+        write(*,*) 'Warning: found a missing value ',trim(dummy_data_value)
+        write(*,*) 'Warning: replacing with NaN not currently implemented'
+        missing_value_count = missing_value_count + 1
+    end if
 
     read (datalist, *, iostat=ios) data
     if (ios /= 0) then
@@ -771,83 +786,209 @@ contains
     real(8)        		:: value(nf) ! real data values
     complex(8)			:: cvalue(nf) ! complex data values
     character(4)		:: type ! real/imag
-    integer		  	:: row,col ! row & column in a matrix
-    integer		  	:: i,j,k,ind,istat
-    character(len=200)          :: TFcomp, TFname, info, stat
+    integer		  	    :: row,col ! row & column in a matrix
+    integer		  	    :: i,j,k,ind,istat
+    character(len=80)   :: TFcomp, TFname, info, stat
 
       do j=1,maxblks
-        call read_edi_data_block(nf,TFcomp,value,info)
-        call parse_edi_data_block_name(TFcomp,TFname,row,col,type,stat)
+        if ((ios /= 0) .or. (trim(this_block) .eq. 'END')) then
+            if (missing_value_count>0) then
+                write(*,*) 'Found ',missing_value_count,' data type components with missing values'
+                write(*,*) 'Warning: these are not dealt with correctly yet; need to replace with NaNs'
+                write(*,*) 'Warning: the necessary book keeping has not yet been implemented'
+            else
+                write(*,*) 'No missing values encountered in EDI file'
+            end if
+            return
+        end if
+        if (.not.silent) then
+            write(*,*) 'Reading DATA from block ',trim(this_block)
+        end if
+        TFname = ''
+        row = 1
+        col = 1
+        type = 'real'
+        stat = ''
+        value = 0.0d0
+        call parse_edi_data_block_name(this_block,TFname,row,col,type,stat)
+        call read_edi_data_block(nf,value)
         if (type .eq. 'imag') then
             cvalue = dcmplx(0.0d0,value)
         else
-            cvalue = value
+            cvalue = dcmplx(value,0.0d0)
         end if
-        do k=1,nf
-            select case (trim(type))
-            case ('FREQ')
+        ! based on TF name store all periods in Data
+        select case (trim(TFname))
+        case ('FREQ')
+            do k=1,nf
                 call init_freq_info(F(k))
                 F(k)%value = 1.0d0/value(k)
                 F(k)%units = 'secs'
                 F(k)%info_type  = 'period'
-            case ('DUMMY')
-                ! empty line
+            end do
+        case ('DUMMY')
+            ! empty line
+        case default
+            ind = find_data_type(Data,TFname)
+            if (ind == 0) then
+                write(0,*) 'Error: data type for TF name ',trim(TFname),' not allocated: please update your tags'
+                stop
+            end if
+            select case (trim(stat))
+            case ('EXP','')
+                ! initialize data to zero (not NaN!) to make this work
+                Data(ind)%Matrix(:,row,col) = Data(ind)%Matrix(:,row,col) + cvalue
+            case ('ROT')
+                Data(ind)%Rot(:) = dreal(cvalue) ! SAVING BUT WON'T USE THIS!!!
+            case ('VAR')
+                Data(ind)%Var(:,row,col) = dreal(cvalue)
+            case ('ERR')
+                Data(ind)%Var(:,row,col) = dreal(cvalue)**2
             case default
-                ind = find_data_type(Data,TFname)
-                if (ind == 0) then
-                    write(0,*) 'Error: data type for TF name ',trim(TFname),' not allocated: please update your tags'
-                    stop
-                end if
-                select case (trim(stat))
-                case ('EXP','')
-                    Data(i)%Matrix(:,row,col) = Data(i)%Matrix(:,row,col) + cvalue
-                case ('VAR')
-                    Data(i)%Var(:,row,col) = dreal(cvalue)
-                case ('ERR')
-                    Data(i)%Var(:,row,col) = dreal(cvalue)**2
-                case default
-                    ! but there might be something else that requires parsing
-                    write(0,*) 'Warning: data component ',trim(TFcomp),' not recognized; ignored'
-                end select
+                ! but there might be something else that requires parsing
+                write(0,*) 'Warning: data component ',trim(TFcomp),' not recognized; ignored'
             end select
-        end do
+        end select
       end do
 
   end subroutine read_edi_data
 
-
-  subroutine parse_edi_data_block_name(TFcomp,TFname,row,col,type,stat)
-    character(*), intent(in)    :: TFcomp ! full name of data block
+  ! TF names that are supported:
+  ! Z, RHO, PHS, ZSTRIKE, ZSKEW, ZELLIP
+  ! T, TIPMAG, TIPPHS, TSTRIKE, TSKEW, TELLIP, INDMAG, INDANG
+  ! Statistics that are supported:
+  ! VAR, ERR
+  ! We also intent to support (but haven't parsed yet):
+  ! COH, EPREDCOH, HPREDCOH, SIGAMP, SIGNOISE
+  ! Exceptions that are not supported:
+  ! SPECTRA, RES1D, DEP1D
+  ! & COV statistic (which doesn't make sense unless it's pairwise between TF components)
+  subroutine parse_edi_data_block_name(blockdef,TFname,row,col,type,stat)
+    character(*), intent(in)    :: blockdef ! full name of data block
     character(80), intent(out)  :: TFname ! ROT etc from block definition
-    integer, intent(out)  	:: row,col ! row & column in a matrix
+    integer, intent(out)  	    :: row,col ! row & column in a matrix
     character(4),  intent(out)  :: type ! real/imag
     character(80), intent(out)  :: stat ! VAR, ERR, etc
     character(len=200)          :: line, var, value, data_block
-    integer			:: i,j
+    character(len=80)           :: TFcomp,info,str,str1,str2
+    integer			            :: i,j,lenstr,len1,len2,idot
+    logical                     :: isComplex
 
-    i = index(TFcomp,'X')    
+    str = adjustl(blockdef)
+    i = index(str,' ')
+    if (i>0) then
+        TFcomp = trim(str(1:i-1))
+        info = trim(str(i+2:80))
+    else
+        TFcomp = trim(str)
+        info = ''
+    end if
 
-    select case (trim(TFname))
+    ! separate the TF component name into before & after the dot
+    lenstr = len_trim(TFcomp)
+    idot = index(TFcomp,'.')
+    if (idot>0) then
+        len1 = idot - 1
+        len2 = lenstr - len1 - 1
+    else
+        len1 = lenstr
+        len2 = 0
+    end if
+    str1 = trim(TFcomp(1:len1))
+    str2 = trim(TFcomp(len1+2:lenstr))
+
+    ! deal with a special case: rotations (ZROT,TROT,RHOROT)
+    i = index(str1,'ROT')
+    if (i>0) then
+        str1 = trim(str1(1:len1-3))
+        len1 = len1 - 3
+        str2 = 'ROT'
+        len2 = 3
+    end if
+
+    ! deal with another special case: TXVAR.EXP, TYVAR.EXP:
+    ! if VAR comes before the dot, cut it out out into stat
+    i = index(str1,'VAR')
+    if (i>0) then
+        str1 = trim(str1(1:len1-3))
+        len1 = len1 - 3
+        str2 = 'VAR'
+        len2 = 3
+    end if
+
+    ! real/imag
+    if (str1(len1:len1) .eq. 'R') then
+        len1 = len1 - 1
+        isComplex = .true.
+        type = 'real'
+    else if (str1(len1:len1) .eq. 'I') then
+        len1 = len1 - 1
+        isComplex = .true.
+        type = 'imag'
+    else
+        isComplex = .false.
+        type = 'real'
+    end if
+
+    ! statistic: VAR, ERR etc
+    select case (trim(str2))
+    case ('EXP','')
+        stat = ''
+    case default
+        stat = trim(str2)
+    end select
+
+    ! now, separate into TFname and X/Y
+    row = 1
+    col = 1
+    if (index(str1,'XX')>0) then
+        row = 1
+        col = 1
+        TFname = str1(1:len1-2)
+    elseif (index(str1,'XY')>0) then
+        row = 1
+        col = 2
+        TFname = str1(1:len1-2)
+    elseif (index(str1,'YX')>0) then
+        row = 2
+        col = 1
+        TFname = str1(1:len1-2)
+    elseif (index(str1,'YY')>0) then
+        row = 2
+        col = 2
+        TFname = str1(1:len1-2)
+    elseif (index(str1,'X')>0) then
+        row = 1
+        col = 1
+        TFname = str1(1:len1-1)
+    elseif (index(str1,'Y')>0) then
+        row = 1
+        col = 2
+        TFname = str1(1:len1-1)
+    else
+        TFname = trim(str1)
+    end if
+
+    if (.not.silent) then
+        if (len_trim(stat)>0) then
+            write(*,*) 'Reading ',trim(stat),' for variable ',trim(TFname),' from block ',trim(TFcomp)
+        else
+            write(*,*) 'Reading variable ',trim(TFname),' from block ',trim(TFcomp)
+        end if
+    end if
+
+
+    select case (trim(TFcomp))
     case ('FREQ')
-        type = 'FREQ'
-    case ('ZROT','RHOROT','TROT.EXP')
-        type = 'ROTATION'
+    case ('ZROT','TROT','RHOROT')
     case ('ZXXR','ZXXI','ZYYR','ZYYI','ZXYR','ZXYI','ZYXR','ZYXI')
-        type = 'TF'
     case ('ZXXR.VAR','ZXXI.VAR','ZYYR.VAR','ZYYI.VAR','ZXYR.VAR','ZXYI.VAR','ZYXR.VAR','ZYXI.VAR')
-        type = 'TFVARCMPLX'
     case ('ZXX.VAR','ZYY.VAR','ZXY.VAR','ZYX.VAR')
-        type = 'TFVAR'
     case ('ZXX.COV','ZYY.COV','ZXY.COV','ZYX.COV')
-        type = 'TFCOV'
     case ('TXR.EXP','TXI.EXP','TYR.EXP','TYI.EXP')
-        type = 'TF'
     case ('TXVAR.EXP','TYVAR.EXP')
-        type = 'TFVAR'
     case ('TIPMAG','TIPPHS')
-        type = 'TIPPER'
     case ('TIPMAG.VAR','TIPPHS.VAR')
-        type = 'TIPPER'
     case ('TIPMAG.ERR','TIPPHS.ERR')
     case ('RHOXX','RHOYY','RHOXY','RHOYX')
     case ('RHOXX.VAR','RHOYY.VAR','RHOXY.VAR','RHOYX.VAR')
@@ -859,12 +1000,13 @@ contains
     case ('TSTRIKE','TSKEW','TELLIP')
     case ('INDMAGR.EXP','INDMAGI.EXP','INDANGR.EXP')
     case ('COH','EPREDCOH','HPREDCOH','SIGAMP','SIGNOISE')
+    case ('RES1D','DEP1D')
     case ('SPECTRA')
     case ('DUMMY')
         ! empty line
     case default
         ! but there might be something else that requires parsing
-        write(0,*) 'Warning: unknown DATA block ',trim(data_block),' encountered and ignored!'
+        write(0,*) 'Warning: unknown DATA block ',trim(TFcomp),' encountered and ignored!'
     end select
 
 

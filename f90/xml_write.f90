@@ -761,10 +761,10 @@ contains
     call xml_AddAttribute(xmlfile, 'max', maxPeriod, fmt="r5")
     call xml_EndElement(xmlfile, 'PeriodRange')
 
-    call xml_NewElement(xmlfile, 'FrequencyRange')
-    call xml_AddAttribute(xmlfile, 'min', minFreq, fmt="s5")
-    call xml_AddAttribute(xmlfile, 'max', maxFreq, fmt="s5")
-    call xml_EndElement(xmlfile, 'FrequencyRange')
+    !call xml_NewElement(xmlfile, 'FrequencyRange')
+    !call xml_AddAttribute(xmlfile, 'min', minFreq, fmt="s5")
+    !call xml_AddAttribute(xmlfile, 'max', maxFreq, fmt="s5")
+    !call xml_EndElement(xmlfile, 'FrequencyRange')
 
   end subroutine add_PeriodRange
   
@@ -790,14 +790,18 @@ contains
 
     do i=1,Data%nchout
        do j=1,Data%nchin
+          if (isnan(dreal(Data%Matrix(iPer,i,j))) .or. isnan(dimag(Data%Matrix(iPer,i,j)))) then
+            write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' period ',iPer
+            cycle
+          end if
           call xml_NewElement(xmlfile, 'value')
           call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type,Input(j),Output(i))))
           call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
           call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
-          call xml_AddCharacters(xmlfile, dreal(Data%Matrix(iPer,i,j)), fmt="s5")
+          call xml_AddCharacters(xmlfile, dreal(Data%Matrix(iPer,i,j)), fmt="s7")
           if (Data%Type%isComplex) then
             call xml_AddCharacters(xmlfile, ' ')
-            call xml_AddCharacters(xmlfile, dimag(Data%Matrix(iPer,i,j)), fmt="s5")
+            call xml_AddCharacters(xmlfile, dimag(Data%Matrix(iPer,i,j)), fmt="s7")
           end if
           call xml_EndElement(xmlfile, 'value')
        end do
@@ -822,11 +826,15 @@ contains
 
     do i=1,Data%nchout
        do j=1,Data%nchin
+          if (isnan(Data%Var(iPer,i,j))) then
+            write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' VAR period ',iPer
+            cycle
+          end if
           call xml_NewElement(xmlfile, 'value')
           call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type,Input(j),Output(i))))
           call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
           call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
-          call xml_AddCharacters(xmlfile, Data%Var(iPer,i,j), fmt="s5")
+          call xml_AddCharacters(xmlfile, Data%Var(iPer,i,j), fmt="s7")
           call xml_EndElement(xmlfile, 'value')
        end do
     end do
@@ -853,9 +861,9 @@ contains
           call xml_NewElement(xmlfile, 'value')
           call xml_AddAttribute(xmlfile, 'output', trim(Input(i)%ID))
           call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
-          call xml_AddCharacters(xmlfile, dreal(Data%InvSigCov(iPer,i,j)), fmt="s5")
+          call xml_AddCharacters(xmlfile, dreal(Data%InvSigCov(iPer,i,j)), fmt="s7")
           call xml_AddCharacters(xmlfile, ' ')
-          call xml_AddCharacters(xmlfile, dimag(Data%InvSigCov(iPer,i,j)), fmt="s5")
+          call xml_AddCharacters(xmlfile, dimag(Data%InvSigCov(iPer,i,j)), fmt="s7")
           call xml_EndElement(xmlfile, 'value')
        end do
     end do
@@ -882,9 +890,9 @@ contains
           call xml_NewElement(xmlfile, 'value')
           call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
           call xml_AddAttribute(xmlfile, 'input', trim(Output(j)%ID))
-          call xml_AddCharacters(xmlfile, dreal(Data%ResidCov(iPer,i,j)), fmt="s5")
+          call xml_AddCharacters(xmlfile, dreal(Data%ResidCov(iPer,i,j)), fmt="s7")
           call xml_AddCharacters(xmlfile, ' ')
-          call xml_AddCharacters(xmlfile, dimag(Data%ResidCov(iPer,i,j)), fmt="s5")
+          call xml_AddCharacters(xmlfile, dimag(Data%ResidCov(iPer,i,j)), fmt="s7")
           call xml_EndElement(xmlfile, 'value')
        end do
     end do
@@ -892,172 +900,6 @@ contains
     call xml_EndElement(xmlfile, trim(Data%Type%Name)//'.RESIDCOV')
 
   end subroutine add_ResidCov
-
-
-!  subroutine add_TF(TF, Input, Output)
-!    complex(8), dimension(:,:), intent(in)    :: TF
-!    type(Channel_t), dimension(:), intent(in) :: Input, Output
-!    ! local
-!    character(100)	:: comment
-!    integer :: nch
-!
-!    nch = size(Input) + size(Output)
-!
-!    call xml_NewElement(xmlfile, 'TF')
-!    call xml_NewElement(xmlfile, 'name')
-!    call xml_AddCharacters(xmlfile, 'MT Transfer Functions')
-!    call xml_EndElement(xmlfile, 'name')
-!    comment = ' &
-!    Ex = Zxx Hx + Zxy Hy &
-!    Ey = Zyx Hx + Zyy Hy &
-!    Hz =  Tx Hx +  Ty Hy &
-!    '
-!    call xml_NewElement(xmlfile, 'comment')
-!    !call xml_AddCharacters(xmlfile, comment, ws_significant=.true.)
-!    !http://www.iris.edu/dms/products/emtf
-!    call xml_AddNewLine(xmlfile)
-!    call xml_AddCharacters(xmlfile, 'Ex = Zxx Hx + Zxy Hy')
-!    call xml_AddNewLine(xmlfile)
-!    call xml_AddCharacters(xmlfile, 'Ey = Zyx Hx + Zyy Hy')
-!    call xml_AddNewLine(xmlfile)
-!    call xml_AddCharacters(xmlfile, 'Hz =  Tx Hx +  Ty Hy')
-!    call xml_AddNewLine(xmlfile)
-!    call xml_EndElement(xmlfile, 'comment')
-!    call xml_NewElement(xmlfile, 'size')
-!    call xml_AddCharacters(xmlfile, (nch-2)*2)
-!    call xml_EndElement(xmlfile, 'size')
-!    do i=1,nch-2
-!       do j=1,2
-!          call xml_NewElement(xmlfile, 'value')
-!          !call xml_AddAttribute(xmlfile, 'name', trim(TF_name(DataType,Input(j),Output(i))))
-!          call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
-!          call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
-!          if (Input(j)%Units .ne. Output(i)%Units) then
-!             call xml_AddAttribute(xmlfile, 'units', trim(Output(i)%Units)//'/'//trim(Input(j)%Units))
-!          end if
-!          call xml_AddCharacters(xmlfile, dreal(TF(i,j)), fmt="s5")
-!          call xml_AddCharacters(xmlfile, ' ')
-!          call xml_AddCharacters(xmlfile, dimag(TF(i,j)), fmt="s5")
-!          call xml_EndElement(xmlfile, 'value')
-!       end do
-!    end do
-!    call xml_EndElement(xmlfile, 'TF')
-!
-!  end subroutine add_TF
-!
-!
-!  subroutine add_TFVar(TFVar, Input, Output)
-!    real(8), dimension(:,:), intent(in)       :: TFVar
-!    type(Channel_t), dimension(:), intent(in) :: Input, Output
-!    ! local
-!    integer :: nch
-!    character(400)	:: comment
-!
-!    nch = size(Input)+size(Output)
-!
-!    call xml_NewElement(xmlfile, 'TFVAR')
-!    call xml_NewElement(xmlfile, 'name')
-!    call xml_AddCharacters(xmlfile, 'MT Transfer Functions Variance')
-!    call xml_EndElement(xmlfile, 'name')
-!    comment = 'TFVAR(i,j) = (RESIDCOV(i,i)*INVSIGCOV(j,j))/2 &
-!    for output channel i and input channel j'
-!    call xml_NewElement(xmlfile, 'comment')
-!    call xml_AddCharacters(xmlfile, trim(comment), ws_significant=.true.)
-!    call xml_EndElement(xmlfile, 'comment')
-!    call xml_NewElement(xmlfile, 'size')
-!    call xml_AddCharacters(xmlfile, (nch-2)*2)
-!    call xml_EndElement(xmlfile, 'size')
-!    do i=1,nch-2
-!       do j=1,2
-!          call xml_NewElement(xmlfile, 'value')
-!          !call xml_AddAttribute(xmlfile, 'name', trim(TF_name(DataType,Input(j),Output(i))))
-!          call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
-!          call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
-!          call xml_AddCharacters(xmlfile, TFVar(i,j), fmt="s5")
-!          call xml_EndElement(xmlfile, 'value')
-!       end do
-!    end do
-!    call xml_EndElement(xmlfile, 'TFVAR')
-!
-!  end subroutine add_TFVar
-
-
-!  subroutine add_InvSigCov(InvSigCov, Input)
-!    complex(8), dimension(:,:), intent(in)    :: InvSigCov
-!    type(Channel_t), dimension(:), intent(in) :: Input
-!    ! local
-!    character(400)	:: comment
-!
-!
-!    call xml_NewElement(xmlfile, 'INVSIGCOV')
-!    call xml_NewElement(xmlfile, 'name')
-!    call xml_AddCharacters(xmlfile, 'Inverse Coherent Signal Power Matrix (S)')
-!    call xml_EndElement(xmlfile, 'name')
-!    comment = 'Eisel, M. and Egbert, G. D. (2001), &
-!    On the stability of magnetotelluric transfer function estimates &
-!    and the reliability of their variances. &
-!    Geophysical Journal International, 144: 65-82. &
-!    doi: 10.1046/j.1365-246x.2001.00292.x'
-!    call xml_NewElement(xmlfile, 'comment')
-!    call xml_AddCharacters(xmlfile, trim(comment), ws_significant=.true.)
-!    call xml_EndElement(xmlfile, 'comment')
-!    call xml_NewElement(xmlfile, 'size')
-!    call xml_AddCharacters(xmlfile, 2)
-!    call xml_EndElement(xmlfile, 'size')
-!
-!    call xml_NewElement(xmlfile, 'value')
-!    call xml_AddNewLine(xmlfile)
-!    do i=1,2
-!       do j=1,2
-!          call xml_AddCharacters(xmlfile, '    ')
-!          call xml_AddCharacters(xmlfile, dreal(InvSigCov(i,j)), fmt="s5")
-!          call xml_AddCharacters(xmlfile, ' ')
-!          call xml_AddCharacters(xmlfile, dimag(InvSigCov(i,j)), fmt="s5")
-!       end do
-!       call xml_AddNewLine(xmlfile)
-!    end do
-!    call xml_EndElement(xmlfile, 'value')
-!    call xml_EndElement(xmlfile, 'INVSIGCOV')
-!
-!  end subroutine add_InvSigCov
-!
-!
-!  subroutine add_ResidCov(ResidCov, Output)
-!    complex(8), dimension(:,:), intent(in)    :: ResidCov
-!    type(Channel_t), dimension(:), intent(in) :: Output
-!    ! local
-!    integer nchout
-!    character(100)	:: comment
-!
-!    nchout = size(Output)
-!
-!    call xml_NewElement(xmlfile, 'RESIDCOV')
-!    call xml_NewElement(xmlfile, 'name')
-!    call xml_AddCharacters(xmlfile, 'Residual Covariance (N)')
-!    call xml_EndElement(xmlfile, 'name')
-!    comment = 'This gives the covariance of the residuals for all predicted channels.'
-!    call xml_NewElement(xmlfile, 'comment')
-!    call xml_AddCharacters(xmlfile, trim(comment), ws_significant=.true.)
-!    call xml_EndElement(xmlfile, 'comment')
-!    call xml_NewElement(xmlfile, 'size')
-!    call xml_AddCharacters(xmlfile, nchout)
-!    call xml_EndElement(xmlfile, 'size')
-!
-!	call xml_NewElement(xmlfile, 'value')
-!    call xml_AddNewLine(xmlfile)
-!    do i=1,nchout
-!       do j=1,nchout
-!          call xml_AddCharacters(xmlfile, '    ')
-!          call xml_AddCharacters(xmlfile, dreal(ResidCov(i,j)), fmt="s5")
-!          call xml_AddCharacters(xmlfile, ' ')
-!          call xml_AddCharacters(xmlfile, dimag(ResidCov(i,j)), fmt="s5")
-!       end do
-!       call xml_AddNewLine(xmlfile)
-!    end do
-!    call xml_EndElement(xmlfile, 'value')
-!    call xml_EndElement(xmlfile, 'RESIDCOV')
-!
-!  end subroutine add_ResidCov
 
 
   subroutine end_xml_freq_block_output

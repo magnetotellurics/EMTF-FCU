@@ -228,9 +228,12 @@ module global
   type :: Data_t
     ! this stores the data type, dimensions, data and all allowed
     ! statistical estimates (not all are used simultaneously)
-    type(DataType_t)  :: Type
-    !real(8)           :: Rot  ! rotation angle, ONE FOR ALL FREQUENCIES
-    integer           :: nf, nchin, nchout ! number of input and output channels
+    ! we are also storing the rotation angles, but these won't be used
+    ! except to correct the "channel orientations" - so in fact, I do not
+    ! at this point indent to support varying rotation angles in a file.
+    type(DataType_t)        :: Type
+    integer                 :: nf, nchin, nchout ! number of input and output channels
+    real(8),   dimension(:),     pointer :: Rot  ! rotation angles (FOR ALL FREQUENCIES!)
     complex(8),dimension(:,:,:), pointer :: Matrix ! (nf,nchout,nchin)
     real(8),   dimension(:,:,:), pointer :: Var ! (nf,nchout,nchin)
     complex(8),dimension(:,:,:), pointer :: Cov ! (nf,nchin*nchout,nchin*nchout)
@@ -450,15 +453,19 @@ contains
         type(DataType_t), intent(in)    :: dataType
         integer, intent(in)             :: nf, nchout, nchin
         ! local
+        real(8) ZERO,NaN
         integer istat
 
         call deall_data(Data)
+
+        write(*,*) 'Creating ',trim(dataType%Name),' (input=',dataType%Input,'; output=',dataType%Output,')'
 
         Data%Type = dataType
         Data%nf = nf
         Data%nchin = nchin
         Data%nchout = nchout
 
+        allocate(Data%Rot(nf), stat=istat)
         allocate(Data%Matrix(nf,nchout,nchin), stat=istat)
         allocate(Data%Var(nf,nchout,nchin), stat=istat)
         allocate(Data%Cov(nf,nchin*nchout,nchin*nchout), stat=istat)
@@ -470,6 +477,38 @@ contains
         allocate(Data%SigNoise(nf,nchout), stat=istat)
         Data%allocated = .true.
 
+        ! NaNs are not currently universally supported in Fortran
+        ZERO = 0.0d0
+        NaN = ZERO/ZERO
+        if (.not. isnan(NaN)) then
+            write(0,*) 'Warning: using NaNs for missing data will not work with this compiler'
+        end if
+
+        ! Reading of complex components is done by addition
+        ! so data have to be initialized to zero (non NaNs);
+        ! instead, use NaNs to replace the missing data
+        Data%Rot = 0.0d0
+        Data%Matrix = dcmplx(0.0d0,0.0d0)
+        Data%Var = 0.0d0
+        Data%Cov = dcmplx(0.0d0,0.0d0)
+        Data%InvSigCov = dcmplx(0.0d0,0.0d0)
+        Data%ResidCov = dcmplx(0.0d0,0.0d0)
+        Data%Coh = dcmplx(0.0d0,0.0d0)
+        Data%MultCoh = dcmplx(0.0d0,0.0d0)
+        Data%SigAmp = dcmplx(0.0d0,0.0d0)
+        Data%SigNoise = dcmplx(0.0d0,0.0d0)
+
+!        Data%Rot = NaN
+!        Data%Matrix = dcmplx(NaN,NaN)
+!        Data%Var = NaN
+!        Data%Cov = dcmplx(NaN,NaN)
+!        Data%InvSigCov = dcmplx(NaN,NaN)
+!        Data%ResidCov = dcmplx(NaN,NaN)
+!        Data%Coh = dcmplx(NaN,NaN)
+!        Data%MultCoh = dcmplx(NaN,NaN)
+!        Data%SigAmp = dcmplx(NaN,NaN)
+!        Data%SigNoise = dcmplx(NaN,NaN)
+
     end subroutine init_data
 
 
@@ -479,6 +518,7 @@ contains
         integer istat
 
         if (Data%allocated) then
+            deallocate(Data%Rot, stat=istat)
             deallocate(Data%Matrix, stat=istat)
             deallocate(Data%Var, stat=istat)
             deallocate(Data%Cov, stat=istat)

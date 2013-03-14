@@ -155,7 +155,7 @@ program edi2xml
 
   ! Read EDI data header and create generic Data variables
   call read_edi_data_header(nf)
-  write(*,*) 'Allocating data structure for ',size(DataType),' data types'
+  write(*,*) 'Allocating data structure for ',size(DataType),' data types, ',nf,' frequencies'
   allocate(Data(size(DataType)), stat=istat)
   do i=1,size(DataType)
     select case (DataType(i)%Output)
@@ -215,23 +215,33 @@ program edi2xml
   end do
   call end_block('OutputChannels')
 
-!  ! Read and write frequency blocks: transfer functions, variance, covariance
-!  call initialize_xml_freq_block_output(nf)
-!
-!  do k=1,nf
-!
-!	 call new_data_block('Period',F(k))
-!
-!     call add_TF(TF(k,:,:), InputChannel, OutputChannel)
-!     call add_TFVar(TFVar(k,:,:), InputChannel, OutputChannel)
-!
-!     call end_block('Period')
-!
-!  end do
-!
-!  call end_xml_freq_block_output
+  ! Read and write frequency blocks: transfer functions, variance, covariance
+  call initialize_xml_freq_block_output(nf)
 
-  !call add_PeriodRange(F)
+  do k=1,nf
+
+      call new_data_block('Period',F(k))
+
+      do i=1,size(Data)
+        select case (Data(i)%Type%Output)
+        case ('H')
+            call add_Data(Data(i), InputMagnetic, OutputMagnetic, k)
+            call add_Var(Data(i), InputMagnetic, OutputMagnetic, k)
+        case ('E')
+            call add_Data(Data(i), InputMagnetic, OutputElectric, k)
+            call add_Var(Data(i), InputMagnetic, OutputElectric, k)
+        case default
+            write(0,*) 'Error: unable to write the data variable #',i
+        end select
+      end do
+
+      call end_block('Period')
+
+  end do
+
+  call end_xml_freq_block_output
+
+  call add_PeriodRange(F)
 
   ! Exit nicely
   if (associated(Run)) deallocate(Run)

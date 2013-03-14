@@ -459,6 +459,29 @@ elemental logical function isdigit( ch)
 
 end function isdigit
 
+logical function isnan(value)
+real(8) value
+real a
+a = real(value)
+if (.not.(a<a+1)) then
+isnan = .true.
+else
+isnan = .false.
+end if
+return
+end
+
+logical function isinf(value)
+real(8) value
+real a
+a = real(value)
+if ((a*0).ne.0) then
+isinf = .true.
+else
+isinf = .false.
+end if
+return
+end
 
 ! **********************************************************************
 ! A quick and dirty string parsing routine that divides a string

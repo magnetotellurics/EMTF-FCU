@@ -302,18 +302,13 @@ program z2xml
         end select
       end do
 
-!     call add_TF(TF(k,:,:), InputChannel, OutputChannel)
-!     call add_TFVar(TFVar(k,:,:), InputChannel, OutputChannel)
-!     call add_InvSigCov(InvSigCov(k,:,:), InputChannel)
-!     call add_ResidCov(ResidCov(k,:,:), OutputChannel)
-
       call end_block('Period')
 
   end do
 
   call end_xml_freq_block_output
 
-  !call add_PeriodRange(F)
+  call add_PeriodRange(F)
 
   ! Exit nicely
   deallocate(Run)
