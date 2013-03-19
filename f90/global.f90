@@ -598,6 +598,25 @@ contains
     end function channel_type
 
 
+    function find_channel(Channels,name) result (ind)
+         type(Channel_t), intent(in)    :: Channels(:)
+         character(*), intent(in)       :: name
+         integer                        :: ind
+         ! local
+         integer i
+
+         ind = 0
+
+         do i = 1,size(Channels)
+            if (trim(Channels(i)%ID) .eq. trim(name)) then
+                ind = i
+                return
+            end if
+         end do
+
+    end function find_channel
+
+
     function find_data_type(Data,name) result (ind)
          type(Data_t), intent(in)   	:: Data(:)
          character(*), intent(in)       :: name

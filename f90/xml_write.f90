@@ -190,6 +190,7 @@ contains
     
     call xml_NewElement(xmlfile, 'Copyright')
 
+    call xml_NewElement(xmlfile, 'Citation')
     call xml_NewElement(xmlfile, 'Title')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Title))
     call xml_EndElement(xmlfile, 'Title')
@@ -202,6 +203,7 @@ contains
     call xml_NewElement(xmlfile, 'DOI')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%DOI))
     call xml_EndElement(xmlfile, 'DOI')
+    call xml_EndElement(xmlfile, 'Citation')
     call xml_NewElement(xmlfile, 'ReleaseStatus')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ReleaseStatus))
     call xml_EndElement(xmlfile, 'ReleaseStatus')

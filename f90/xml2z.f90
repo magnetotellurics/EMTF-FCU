@@ -17,13 +17,15 @@ program xml2z
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputElectric
+  type(Data_t), dimension(:), pointer         :: Data
+  type(DataType_t), dimension(:), pointer     :: DataType, Estimate
+  type(FreqInfo_t), dimension(:), pointer    :: F
   type(Run_t), dimension(:), allocatable     :: Run
-  type(FreqInfo_t)                           :: F
   complex(8), dimension(:,:), allocatable    :: TF
   real(8),    dimension(:,:), allocatable    :: TFVar
   complex(8), dimension(:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:), allocatable    :: ResidCov
-  integer           :: i, j, k, narg, l
+  integer           :: i, j, k, narg, l, istat
 
   narg = command_argument_count()
 
@@ -78,17 +80,33 @@ program xml2z
 
   call write_z_channels(zsitename, InputMagnetic, OutputMagnetic, OutputElectric, N)
 
-  do k=1,N%f
-    
-     call read_xml_period(k, F, TF, TFVar, InvSigCov, ResidCov)     
-     
-	 call write_z_period(F, TF, TFVar, InvSigCov, ResidCov, N)
-     
+  call read_xml_data_types(DataType)
+
+  allocate(Data(size(DataType)), stat=istat)
+
+  do i=1,size(DataType)
+    select case (DataType(i)%Output)
+    case ('H')
+        call read_xml_data(DataType(i), Data(i), InputMagnetic, OutputMagnetic)
+    case ('E')
+        call read_xml_data(DataType(i), Data(i), InputMagnetic, OutputElectric)
+    case default
+        write(0,*) 'Error: unknown data type ',trim(DataType(i)%Name),' with output ',trim(DataType(i)%Output)
+    end select
   end do
+
+  call read_xml_periods(F)
+
+  do k=1,size(F)
+
+!	 call write_z_period(F, TF, TFVar, InvSigCov, ResidCov, N)
+
+  end do
+
 
   ! Exit nicely
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(TF, TFVar, InvSigCov, ResidCov)
+  deallocate(F, TF, TFVar, InvSigCov, ResidCov)
 
   call end_xml_input
 

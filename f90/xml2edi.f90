@@ -18,13 +18,15 @@ program xml2edi
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputElectric
-  type(Run_t), dimension(:), allocatable     :: Run
-  type(FreqInfo_t), dimension(:), allocatable:: F
+  type(Data_t), dimension(:), pointer         :: Data
+  type(DataType_t), dimension(:), pointer     :: DataType, Estimate
+  type(FreqInfo_t), dimension(:), pointer     :: F
+  type(Run_t), dimension(:), allocatable      :: Run
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
-  integer           :: i, j, k, narg, l
+  integer           :: i, j, k, narg, l, istat
 
   narg = command_argument_count()
 
@@ -69,16 +71,34 @@ program xml2edi
 
   call read_xml_channels(InputMagnetic, OutputMagnetic, OutputElectric)
 
-  do k=1,N%f
-    
-     call read_xml_period(k, F(k), TF(k,:,:), TFVar(k,:,:))     
-          
+  call read_xml_data_types(DataType)
+
+  allocate(Data(size(DataType)), stat=istat)
+
+  do i=1,size(DataType)
+    select case (DataType(i)%Output)
+    case ('H')
+        call read_xml_data(DataType(i), Data(i), InputMagnetic, OutputMagnetic)
+    case ('E')
+        call read_xml_data(DataType(i), Data(i), InputMagnetic, OutputElectric)
+    case default
+        write(0,*) 'Error: unknown data type ',trim(DataType(i)%Name),' with output ',trim(DataType(i)%Output)
+    end select
   end do
+
+  call read_xml_periods(F)
+
+  do k=1,size(F)
+
+!    call write_z_period(F, TF, TFVar, InvSigCov, ResidCov, N)
+
+  end do
+
 
   edi_date = xml_time(6:7)//'/'//xml_time(9:10)//'/'//xml_time(3:4)
 
-  call write_edi_file(edi_file,edi_date,zsitename,xmlLocalSite, &
-                        InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,UserInfo)
+  !call write_edi_file(edi_file,edi_date,zsitename,xmlLocalSite, &
+  !                      InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,UserInfo)
 
   ! Exit nicely
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
