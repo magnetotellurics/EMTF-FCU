@@ -88,17 +88,18 @@ program xml2edi
 
   call read_xml_periods(F)
 
-  do k=1,size(F)
-
-!    call write_z_period(F, TF, TFVar, InvSigCov, ResidCov, N)
-
-  end do
-
 
   edi_date = xml_time(6:7)//'/'//xml_time(9:10)//'/'//xml_time(3:4)
 
-  !call write_edi_file(edi_file,edi_date,zsitename,xmlLocalSite, &
-  !                      InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,UserInfo)
+  call write_edi_file(edi_file,edi_date,zsitename,xmlLocalSite, &
+                        InputMagnetic,OutputMagnetic,OutputElectric,F,Data,UserInfo)
+
+! Correct workflow to implement:
+! call initialize_edi_output(edi_file)
+! call write_edi_header(edi_date, zsitename, xmlLocalSite, UserInfo)
+! call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, xmlLocalSite)
+! call write_edi_data(F, Data)
+! call end_edi_output()
 
   ! Exit nicely
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)

@@ -427,9 +427,12 @@ contains
 
 	end subroutine init_freq_info
 
-
-	subroutine init_data_type(DataType)
+    ! optional argument tag ('impedance'/'tipper') makes it possible
+    ! to allocate a base data type without referring to XML read
+    ! (convenient for converters such as z2edi which do not use FoX)
+	subroutine init_data_type(DataType, tag)
         type(DataType_t), intent(inout) :: DataType
+        character(*), intent(in), optional :: tag
 
 	    DataType%Intention = ' '
 	    DataType%Description = ' '
@@ -443,6 +446,33 @@ contains
         DataType%SeeAlso = ' '
 	    DataType%isComplex = .false.
 	    DataType%allocated = .false.
+
+	    if (present(tag)) then
+	        select case (trim(tag))
+	        case ('impedance')
+                DataType%Intention = 'primary data type'
+                DataType%Description = 'Magnetotelluric Impedance'
+                DataType%Tag = 'impedance'
+                DataType%Name = 'Z'
+                DataType%Input = 'H'
+                DataType%Output = 'E'
+                DataType%Units = '[mV/km]/[nT]'
+                DataType%isComplex = .true.
+                DataType%allocated = .true.
+	        case ('tipper')
+                DataType%Intention = 'primary data type'
+                DataType%Description = 'Vertical Field Transfer Functions (Tipper)'
+                DataType%Tag = 'tipper'
+                DataType%Name = 'T'
+                DataType%Input = 'H'
+                DataType%Output = 'H'
+                DataType%Units = '[]'
+                DataType%isComplex = .true.
+                DataType%allocated = .true.
+	        case default
+	            write(0,*) 'Data type not initialized: tag ',trim(tag),' not recognised. Use an XML definition instead.'
+            end select
+        end if
 
 	end subroutine init_data_type
 

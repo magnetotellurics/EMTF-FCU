@@ -19,13 +19,16 @@ program z2edi
   type(Channel_t), dimension(:), pointer       :: InputMagnetic
   type(Channel_t), dimension(:), pointer       :: OutputMagnetic
   type(Channel_t), dimension(:), pointer       :: OutputElectric
+  type(Data_t), dimension(:), pointer          :: Data
+  type(DataType_t), dimension(:), pointer      :: DataType
   complex(8), dimension(:,:,:), allocatable    :: TF
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
   character(len=80)     :: edi_date,xml_date
   real              :: Ex_len, Ey_len
-  integer           :: i, j, k, narg, len, nf, nch
+  integer           :: i, j, k, narg, len, istat
+  integer           :: nf, nchin, nchout, nchoutE, nchoutH
 
   narg = command_argument_count()
 
@@ -68,12 +71,17 @@ program z2edi
 
   ! Define local dimensions
   nf = N%f
-  nch = N%ch
 
   ! Read and write channels
-  allocate(F(nf),TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2))
-
   call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, N)
+
+  nchin = size(InputMagnetic)
+  nchoutH = size(OutputMagnetic)
+  nchoutE = size(OutputElectric)
+  nchout = nchoutH + nchoutE
+
+  allocate(F(nf),TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), stat=istat)
+  allocate(InvSigCov(nf,nchout,nchin), ResidCov(nf,nchout,nchin), stat=istat)
 
   do k=1,nf
 
@@ -82,12 +90,40 @@ program z2edi
 
   end do
 
+  ! Save into Data structure
+  allocate(DataType(2), Data(2), stat=istat)
+
+  call init_data_type(DataType(1),'tipper')
+  call init_data(Data(1), DataType(1), nf, nchin, nchoutH)
+  do i = 1,nchoutH
+    do j = 1,nchin
+        Data(1)%Matrix(:,i,j) = TF(:,i,j) !T
+        Data(1)%Var(:,i,j) = TFVar(:,i,j)
+    end do
+  end do
+
+  call init_data_type(DataType(2),'impedance')
+  call init_data(Data(2), DataType(2), nf, nchin, nchoutE)
+  do i = 1,nchoutE
+    do j = 1,nchin
+        Data(2)%Matrix(:,i,j) = TF(:,i+nchoutH,j) !Z
+        Data(2)%Var(:,i,j) = TFVar(:,i+nchoutH,j)
+    end do
+  end do
+
   call date_and_time(date)
 
   edi_date = date(5:6)//'/'//date(7:8)//'/'//date(3:4)
 
   call write_edi_file(edi_file,edi_date,zsitename,zLocalSite, &
-						InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,Info)
+						InputMagnetic,OutputMagnetic,OutputElectric,F,Data,Info)
+
+! Correct workflow to implement:
+! call initialize_edi_output(edi_file)
+! call write_edi_header(edi_date, zsitename, xmlLocalSite, UserInfo)
+! call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, xmlLocalSite)
+! call write_edi_data(F, Data)
+! call end_edi_output()
 
   ! Exit nicely
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)

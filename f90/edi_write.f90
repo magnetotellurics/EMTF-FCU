@@ -30,110 +30,147 @@ module edi_write
 
 contains
 
+!  subroutine initialize_edi_output(fname)
+!     character(len=*), intent(in) :: fname
+!     integer              :: ios
+!     character(20)        :: str
+!
+!     open (unit=edifile,file=fname,status='unknown',iostat=ios)
+!
+!     if(ios/=0) then
+!        write(0,*) 'Error opening file:', fname
+!     endif
+!
+!  end subroutine initialize_edi_output
+
   subroutine write_edi_file(fname,edi_date,sectid,Site, &
-  			InputMagnetic,OutputMagnetic,OutputElectric,F,TF,TFVar,UserInfo)
-  	character(len=*), intent(in)                   :: fname
-	character(len=*), intent(in)                   :: edi_date
-  	character(len=*), intent(in)                   :: sectid
-  	type(Site_t), intent(in)                       :: Site
-  	type(UserInfo_t), intent(in)                   :: UserInfo
-  	type(Channel_t), dimension(:), intent(in)      :: InputMagnetic
+            InputMagnetic,OutputMagnetic,OutputElectric,F,Data,UserInfo)
+    character(len=*), intent(in)                   :: fname
+    character(len=*), intent(in)                   :: edi_date
+    character(len=*), intent(in)                   :: sectid
+    type(Site_t), intent(in)                       :: Site
+    type(UserInfo_t), intent(in)                   :: UserInfo
+    type(Channel_t), dimension(:), intent(in)      :: InputMagnetic
     type(Channel_t), dimension(:), intent(in)      :: OutputMagnetic
-  	type(Channel_t), dimension(:), intent(in)      :: OutputElectric
-  	type(FreqInfo_t), dimension(:), intent(in)     :: F
-  	complex(8), dimension(:,:,:), intent(in)       :: TF
-  	real(8),    dimension(:,:,:), intent(in)       :: TFVar
-  	logical                                        :: tipper_present
-  	real                                           :: azimuth
-	real(8)                                        :: lat, long, elev
-	character(len=80)                              :: dataid, acqby
-	character(len=80)                              :: runlist
-	character(len=80), dimension(11)               :: info_block
-	real(8), dimension(:), allocatable             :: freq
-	complex(8), dimension(:,:), allocatable        :: t
-	complex(8), dimension(:,:), allocatable        :: z
-	real(8), dimension(:,:), allocatable           :: tvar
-	real(8), dimension(:,:), allocatable           :: zvar
-	
-	nf = size(F)
+    type(Channel_t), dimension(:), intent(in)      :: OutputElectric
+    type(Data_t), dimension(:), intent(in)         :: Data
+    type(FreqInfo_t), dimension(:), intent(in)     :: F
+    logical                                        :: tipper_present
+    real                                           :: azimuth
+    real(8)                                        :: lat, long, elev
+    character(len=80)                              :: dataid, acqby
+    character(len=80)                              :: runlist
+    character(len=80), dimension(11)               :: info_block
+    real(8), dimension(:), allocatable             :: freq
+    complex(8), dimension(:,:), allocatable        :: t
+    complex(8), dimension(:,:), allocatable        :: z
+    real(8), dimension(:,:), allocatable           :: tvar
+    real(8), dimension(:,:), allocatable           :: zvar
 
-	allocate(freq(nf),t(nf,2),z(nf,(nch-3)*2),tvar(nf,2),zvar(nf,(nch-3)*2))
-	
-	freq = 0.0d0
-	t = dcmplx(0.0d0,0.0d0)
-	z = dcmplx(0.0d0,0.0d0)
-	tvar = 0.0d0
-	zvar = 0.0d0
+    nf = size(F)
+    nch = size(InputMagnetic) + size(OutputMagnetic) + size(OutputElectric)
 
-	nchin = size(InputMagnetic)
-	nchoutH = size(OutputMagnetic)
-	nchoutE = size(OutputElectric)
+    allocate(freq(nf),t(nf,2),z(nf,(nch-3)*2),tvar(nf,2),zvar(nf,(nch-3)*2))
 
-	if (nchoutE<2) then
-		write(0,*) 'Unable to write the EDI: too few output channels.'
-		return
-	end if
+    freq = 0.0d0
+    t = dcmplx(0.0d0,0.0d0)
+    z = dcmplx(0.0d0,0.0d0)
+    tvar = 0.0d0
+    zvar = 0.0d0
 
-	do i=1,nf
-		if (index(F(i)%info_type,'period')>0) then
-			freq(i) = 1.0d0/F(i)%value
-		else
-			freq(i) = F(i)%value
-		end if
-	end do
-		
-	t(:,1) = TF(:,1,1) !TX
-	tvar(:,1) = TFVar(:,1,1)
+    nchin = size(InputMagnetic)
+    nchoutH = size(OutputMagnetic)
+    nchoutE = size(OutputElectric)
 
-	t(:,2) = TF(:,1,2) !TY
-	tvar(:,2) = TFVar(:,1,2)
-	
-	z(:,1) = TF(:,2,1) !ZXX
-	zvar(:,1) = TFVar(:,2,1)
-	
-	z(:,2) = TF(:,2,2) !ZXY
-	zvar(:,2) = TFVar(:,2,2)
+    if (nchoutE<2) then
+        write(0,*) 'Unable to write the EDI: too few output channels.'
+        return
+    end if
 
-	z(:,3) = TF(:,3,1) !ZYX
-	zvar(:,3) = TFVar(:,3,1)
+    do i=1,nf
+        if (index(F(i)%info_type,'period')>0) then
+            freq(i) = 1.0d0/F(i)%value
+        else
+            freq(i) = F(i)%value
+        end if
+    end do
 
-	z(:,4) = TF(:,3,2) !ZYY
-	zvar(:,4) = TFVar(:,3,2)
-	
-	dataid = Site%ID
-	lat = Site%Location%lat
-	long = Site%Location%lon
-	elev = Site%Location%elev
-	tipper_present = .true. ! assume tipper is always present
-	azimuth = InputMagnetic(1)%orientation ! orientation of Hx
-	acqby = UserInfo%AcquiredBy
+    tipper_present = .false.
+    do k=1,size(Data)
 
-	if (len_trim(Site%RunList) > 70) then
-		runlist = 'UNKNOWN'
-	else
-		runlist = Site%RunList
-	end if
-	
-	! create a block of additional information
-	write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
-	write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
-	write(info_block(3),*) 'YEAR=',trim(UserInfo%YearCollected)
-	write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
-	write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
-	write(info_block(6),*) 'PROCESSINGTAG=',trim(UserInfo%ProcessingTag)
-	write(info_block(7),*) 'SITENAME=',trim(Site%Description)
-	write(info_block(8),*) 'RUNLIST=',trim(runlist)
-	write(info_block(9),*) 'REMOTEREF=',trim(UserInfo%RemoteRefType)
-	write(info_block(10),*) 'REMOTESITE=',trim(UserInfo%RemoteSiteID)
-	write(info_block(11),*) 'SIGNCONVENTION=',trim(UserInfo%SignConvention)
-	
-	call wrt_edi(fname,dataid,sectid,acqby,info_block, &
-			freq,zvar,tvar,z,t,lat,long,elev, &
-			edi_date,tipper_present,azimuth)
-			
-	deallocate(freq,t,z,tvar,zvar)
+        select case (trim(Data(k)%Type%Name))
+        case ('Z')
+            write(*,*) 'Extracting impedance for EDI write...'
+            z(:,1) = Data(k)%Matrix(:,1,1) !ZXX
+            zvar(:,1) = Data(k)%Var(:,1,1)
+
+            z(:,2) = Data(k)%Matrix(:,1,2) !ZXY
+            zvar(:,2) = Data(k)%Var(:,1,2)
+
+            z(:,3) = Data(k)%Matrix(:,2,1) !ZYX
+            zvar(:,3) = Data(k)%Var(:,2,1)
+
+            z(:,4) = Data(k)%Matrix(:,2,2) !ZYY
+            zvar(:,4) = Data(k)%Var(:,2,2)
+
+        case ('T')
+            write(*,*) 'Extracting tipper for EDI write...'
+            tipper_present = .true.
+
+            t(:,1) = Data(k)%Matrix(:,1,1) !TX
+            tvar(:,1) = Data(k)%Var(:,1,1)
+
+            t(:,2) = Data(k)%Matrix(:,1,2) !TY
+            tvar(:,2) = Data(k)%Var(:,1,2)
+
+        case default
+            write(0,*) 'Warning: ignoring data type ',trim(Data(k)%Type%Name),' for EDI output'
+        end select
+
+    end do
+
+    dataid = Site%ID
+    lat = Site%Location%lat
+    long = Site%Location%lon
+    elev = Site%Location%elev
+
+    azimuth = InputMagnetic(1)%orientation ! orientation of Hx
+    acqby = UserInfo%AcquiredBy
+
+    if (len_trim(Site%RunList) > 70) then
+        runlist = 'UNKNOWN'
+    else
+        runlist = Site%RunList
+    end if
+
+    ! create a block of additional information
+    write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
+    write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
+    write(info_block(3),*) 'YEAR=',trim(UserInfo%YearCollected)
+    write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
+    write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
+    write(info_block(6),*) 'PROCESSINGTAG=',trim(UserInfo%ProcessingTag)
+    write(info_block(7),*) 'SITENAME=',trim(Site%Description)
+    write(info_block(8),*) 'RUNLIST=',trim(runlist)
+    write(info_block(9),*) 'REMOTEREF=',trim(UserInfo%RemoteRefType)
+    write(info_block(10),*) 'REMOTESITE=',trim(UserInfo%RemoteSiteID)
+    write(info_block(11),*) 'SIGNCONVENTION=',trim(UserInfo%SignConvention)
+
+    write(*,*) 'Start EDI write...'
+    call wrt_edi(fname,dataid,sectid,acqby,info_block, &
+            freq,zvar,tvar,z,t,lat,long,elev, &
+            edi_date,tipper_present,azimuth)
+
+    deallocate(freq,t,z,tvar,zvar)
 
   end subroutine write_edi_file
+
+
+!  subroutine end_edi_output
+!
+!    close(edifile)
+!  end subroutine end_edi_output
+
 
 !--------------------------------------------------------------------------!
 ! Randie Mackie's code substantially modified and converted into valid F90 !
