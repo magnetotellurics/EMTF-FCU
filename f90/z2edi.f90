@@ -81,7 +81,7 @@ program z2edi
   nchout = nchoutH + nchoutE
 
   allocate(F(nf),TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), stat=istat)
-  allocate(InvSigCov(nf,nchout,nchin), ResidCov(nf,nchout,nchin), stat=istat)
+  allocate(InvSigCov(nf,nchin,nchin), ResidCov(nf,nchout,nchout), stat=istat)
 
   do k=1,nf
 
