@@ -47,15 +47,15 @@ module global
   character(len=200)    :: tags='impedance,tipper'
 
 
-  type :: Dimensions_t
-    integer           :: f ! number of frequencies/periods
-    integer           :: dt ! number of data types (from tags)
-    integer           :: ch ! total number of channels = nchin + nchout
-    integer           :: chin ! number of input channels
-    integer           :: chout ! number of output channels
-    integer           :: choutE ! number of output electric channels
-    integer           :: choutH ! number of output magnetic channels
-  end type Dimensions_t
+!  type :: Dimensions_t
+!    integer           :: f ! number of frequencies/periods
+!    integer           :: dt ! number of data types (from tags)
+!    integer           :: ch ! total number of channels = nchin + nchout
+!    integer           :: chin ! number of input channels
+!    integer           :: chout ! number of output channels
+!    integer           :: choutE ! number of output electric channels
+!    integer           :: choutH ! number of output magnetic channels
+!  end type Dimensions_t
 
   type :: Person_t
     character(len=80) :: Name
@@ -262,20 +262,20 @@ contains
   ! we store all these in a derived data type, which we
   ! initialize and update as needed
 
-  subroutine init_dimensions(N)
-    type(Dimensions_t), intent(out)  ::N
-
-    N%f = 0
-    N%dt = 0
-
-    N%chin = 2
-    N%choutH = 1
-    N%choutE = 2
-
-    N%chout = N%choutE + N%choutH
-    N%ch = N%chin + N%chout
-
-  end subroutine init_dimensions
+!  subroutine init_dimensions(N)
+!    type(Dimensions_t), intent(out)  ::N
+!
+!    N%f = 0
+!    N%dt = 0
+!
+!    N%chin = 2
+!    N%choutH = 1
+!    N%choutE = 2
+!
+!    N%chout = N%choutE + N%choutH
+!    N%ch = N%chin + N%chout
+!
+!  end subroutine init_dimensions
 
 	subroutine init_copyright(Info)
 		type(Copyright_t), intent(out)  :: Info

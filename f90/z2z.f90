@@ -11,7 +11,6 @@ program z2z
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: zsitename, basename, ext, verbose='',coords=''
   character(len=80) :: header1, header2
-  type(Dimensions_t):: N
   type(UserInfo_t)  :: Info
   type(Site_t)      :: zLocalSite
   type(Run_t), dimension(:), pointer     :: Run, RemoteRun
@@ -28,7 +27,7 @@ program z2z
   real(8)           :: azimuth
   logical           :: config_exists, run_list_exists, site_list_exists
   integer           :: i, j, k, l, narg, istat
-  integer           :: nf, nch, nchin, nchout, nchoutE, nchoutH
+  integer           :: nf, nch, nchin, nchout
 
   narg = command_argument_count()
 
@@ -88,7 +87,7 @@ program z2z
 
   call init_user_info(Info)
 
-  call read_z_header(zsitename, zLocalSite, Info, N)
+  call read_z_header(zsitename, zLocalSite, Info, nf, nch)
 
   if (rotate .and. ((azimuth)<0.01)) then
      header1 = 'TRANSFER FUNCTIONS IN GEOGRAPHIC COORDINATES'
@@ -98,36 +97,37 @@ program z2z
      header2 = '********* WITH FULL ERROR COVARIANCE ********'
   end if
 
-  call write_z_header(zsitename, zLocalSite, Info, N, header1, header2)
+  call write_z_header(zsitename, zLocalSite, Info, nf, nch, header1, header2)
 
-  ! Define local dimensions
-  nf = N%f
-  nch = N%ch
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch, zLocalSite%Declination)
 
-  ! Allocate space for channels and transfer functions
-  allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2), stat=istat)
-  allocate(U(2,2), V(nch-2,nch-2), stat=istat)
+  nchin = size(InputMagnetic)
+  nchout = size(OutputMagnetic) + size(OutputElectric)
 
-  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, N, zLocalSite%Declination)
+  ! Allocate space for transfer functions and rotation matrices
+  allocate(F(nf),TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), stat=istat)
+  allocate(InvSigCov(nf,nchin,nchin), ResidCov(nf,nchout,nchout), stat=istat)
+  allocate(U(nchin,nchin), V(nchout,nchout), stat=istat)
 
-  ! Initialize conversion to orthogonal geographic coords
+  ! Initialize conversion to orthogonal geographic coords - note that rotations
+  ! will only work with two input and two output electric channels at present
   if (rotate) then
-     call rotate_z_channels(InputMagnetic, OutputElectric, U, V, N, azimuth)
+     call rotate_z_channels(InputMagnetic, OutputElectric, U, V, azimuth)
   end if
 
-  call write_z_channels(zsitename, InputMagnetic, OutputMagnetic, OutputElectric, N)
+  call write_z_channels(zsitename, InputMagnetic, OutputMagnetic, OutputElectric)
 
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
-     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
+     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
      ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
      if (rotate) then
-     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
+     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
      end if
 
-	 call write_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
+	 call write_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
   end do
 
@@ -142,7 +142,7 @@ program z2z
   ! Exit nicely
   if (associated(Notes)) deallocate(Notes)
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(F, TF, TFVar, InvSigCov, ResidCov)
+  deallocate(F, TF, TFVar, InvSigCov, ResidCov, U, V)
 
 
   if (.not.silent) then

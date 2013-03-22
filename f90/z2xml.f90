@@ -12,7 +12,6 @@ program z2xml
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: zsitename, basename, verbose=''
-  type(Dimensions_t):: N
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -137,9 +136,6 @@ program z2xml
   call init_site_info(xmlLocalSite)
   call init_site_info(xmlRemoteSite)
 
-  ! Initialize dimensions
-  call init_dimensions(N)
-
   ! Initialize input and output
   call initialize_xml_output(xml_file,'EM_TF')
 
@@ -147,37 +143,35 @@ program z2xml
 
   call initialize_z_input(z_file)
 
-  call read_z_header(zsitename, zLocalSite, UserInfo, N)
+  call read_z_header(zsitename, zLocalSite, UserInfo, nf, nch)
 
 
-  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, N, zLocalSite%Declination)
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch, zLocalSite%Declination)
 
   ! Define local dimensions
-  nf = N%f
-  nch = N%ch
-  nchin = N%chin
-  nchout = N%chout
-  nchoutE = N%choutE
-  nchoutH = N%choutH
+  nchin = size(InputMagnetic)
+  nchoutH = size(OutputMagnetic)
+  nchoutE = size(OutputElectric)
+  nchout = nchoutH + nchoutE
 
-  ! Allocate space for transfer functions
-  allocate(F(nf), TF(nf,nch-2,2), TFVar(nf,nch-2,2), TFName(nch-2,2), stat=istat)
-  allocate(InvSigCov(nf,2,2), ResidCov(nf,nch-2,nch-2), stat=istat)
-  allocate(U(2,2), V(nch-2,nch-2), stat=istat)
+  ! Allocate space for transfer functions and rotation matrices
+  allocate(F(nf),TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), stat=istat)
+  allocate(InvSigCov(nf,nchin,nchin), ResidCov(nf,nchout,nchout), stat=istat)
+  allocate(U(nchin,nchin), V(nchout,nchout), stat=istat)
 
   ! Initialize conversion to orthogonal geographic coords
   if (UserInfo%OrthogonalGeographic > 0) then
-     call rotate_z_channels(InputMagnetic, OutputElectric, U, V, N)
+     call rotate_z_channels(InputMagnetic, OutputElectric, U, V)
   end if
 
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
-     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
+     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
      ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
      if (UserInfo%OrthogonalGeographic > 0) then
-     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
+     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
      end if
 
   end do

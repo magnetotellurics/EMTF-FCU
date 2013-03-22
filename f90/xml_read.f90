@@ -14,7 +14,6 @@ module xml_read
     type(NodeList), pointer         :: eochannels
     type(NodeList), pointer         :: datatypes ! data types metadata
     type(NodeList), pointer         :: estimates ! statistical estimates
-    type(Dimensions_t), save        :: N
 	integer                         :: i,j,iH,iE
 
 	public  :: initialize_xml_input, end_xml_input
@@ -34,29 +33,17 @@ contains
 
 	! Get all frequencies / periods and count them
 	periods => getElementsByTagName(doc, "Period")
-	N%f = getLength(periods)
 
 	! Get all channels and count them
     parent => item(getElementsByTagName(doc, "InputChannels"),0)
 	hichannels => getElementsByTagName(parent, "Magnetic")
-    N%chin = getLength(hichannels)
 
     parent => item(getElementsByTagName(doc, "OutputChannels"),0)
     hochannels => getElementsByTagName(parent, "Magnetic")
-    N%choutH = getLength(hochannels)
     eochannels => getElementsByTagName(parent, "Electric")
-    N%choutE = getLength(eochannels)
 
-    N%chout = N%choutH + N%choutE
-    N%ch = N%chin + N%chout
-
-    !channels => getChildNodes(parent)
-    !hchannels => getElementsByTagName(doc, "Magnetic")
-	!N%ch = getLength(echannels) + getLength(hchannels)
-	
     ! Get all data types and count them
     datatypes => getElementsByTagName(doc, "DataType")
-    N%dt = getLength(datatypes)
 
 	if (present(xmlTime)) then
 		xmlTime = getString(doc, "CreateTime")
@@ -69,11 +56,11 @@ contains
   end subroutine initialize_xml_input
 
 
-  subroutine read_xml_header(id, Site, UserInfo, dimensions)
+  subroutine read_xml_header(id, Site, UserInfo, nf, nch, ndt)
     character(len=80), intent(out)  :: id
     type(Site_t), intent(out)       :: Site
     type(UserInfo_t), intent(out)   :: UserInfo
-    type(Dimensions_t), intent(out), optional :: dimensions
+    integer, intent(out)            :: nf, nch, ndt
 	type(Node), pointer             :: infoNode
 	character(len=80)               :: project
 
@@ -81,13 +68,14 @@ contains
 	call init_site_info(Site)
 	call init_user_info(UserInfo)
 
-    if (present(dimensions)) then
-        dimensions = N
-    end if
+    ! Compute dimensions for output
+    nf = getLength(periods)
+    nch = getLength(hichannels) + getLength(hochannels) + getLength(eochannels)
+    ndt = getLength(datatypes)
 
+    ! Read in file and site metadata
 	UserInfo%Project = getString(doc,"Project")
 	UserInfo%Survey = getString(doc,"Survey")
-	UserInfo%YearCollected = getString(doc,"YearCollected")
 	UserInfo%YearCollected = getString(doc,"YearCollected")
 	UserInfo%AcquiredBy = getString(doc,"AcquiredBy")
 	UserInfo%ProcessedBy = getString(doc,"ProcessedBy")

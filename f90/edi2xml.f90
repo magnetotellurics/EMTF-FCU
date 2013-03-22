@@ -11,7 +11,6 @@ program edi2xml
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: edisitename, basename, verbose=''
-  type(Dimensions_t):: N
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: ediLocalSite, ediRemoteSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -145,7 +144,7 @@ program edi2xml
   end if
 
   ! This allocates and fills in the channels and updates the local site coords
-  call read_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite, UserInfo, N)
+  call read_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite, UserInfo)
 
   ! Define channel dimensions
   nchin = size(InputMagnetic)

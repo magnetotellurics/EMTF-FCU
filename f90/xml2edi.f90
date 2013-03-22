@@ -12,7 +12,6 @@ program xml2edi
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favorite station'
   character(len=80) :: zsitename, basename, verbose=''
-  type(Dimensions_t):: N
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: xmlLocalSite, xmlRemoteSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -22,11 +21,8 @@ program xml2edi
   type(DataType_t), dimension(:), pointer     :: DataType, Estimate
   type(FreqInfo_t), dimension(:), pointer     :: F
   type(Run_t), dimension(:), allocatable      :: Run
-  complex(8), dimension(:,:,:), allocatable    :: TF
-  real(8),    dimension(:,:,:), allocatable    :: TFVar
-  complex(8), dimension(:,:,:), allocatable    :: InvSigCov
-  complex(8), dimension(:,:,:), allocatable    :: ResidCov
   integer           :: i, j, k, narg, l, istat
+  integer           :: nf, nch, ndt
 
   narg = command_argument_count()
 
@@ -64,10 +60,7 @@ program xml2edi
   ! Initialize input and output
   call initialize_xml_input(xml_file, xml_time)
 
-  call read_xml_header(zsitename, xmlLocalSite, UserInfo, N)
-
-  ! Read and write channels
-  allocate(F(N%f),TF(N%f,N%ch-2,2), TFVar(N%f,N%ch-2,2), InvSigCov(N%f,2,2), ResidCov(N%f,N%ch-2,N%ch-2))
+  call read_xml_header(zsitename, xmlLocalSite, UserInfo, nf, nch, ndt)
 
   call read_xml_channels(InputMagnetic, OutputMagnetic, OutputElectric)
 
@@ -103,7 +96,6 @@ program xml2edi
 
   ! Exit nicely
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(F, TF, TFVar, InvSigCov, ResidCov)
 
   call end_xml_input
 

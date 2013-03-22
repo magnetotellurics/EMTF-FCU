@@ -478,12 +478,11 @@ contains
   ! Dipole lengths;
   ! Channel orientations unless overwritten by data rotation angles;
   ! Other instrument information.
-  subroutine read_edi_channels(Input, OutputH, OutputE, Site, UserInfo, N)
+  subroutine read_edi_channels(Input, OutputH, OutputE, Site, UserInfo)
     type(Channel_t), dimension(:), pointer, intent(out) :: Input
     type(Channel_t), dimension(:), pointer, intent(out) :: OutputH, OutputE
     type(Site_t), intent(inout)                  :: Site
     type(UserInfo_t), intent(in)                 :: UserInfo
-    type(Dimensions_t), intent(inout)            :: N
     ! local
     type(Channel_t), dimension(:), pointer  :: Channel ! all channels
     character(len=200)               :: line, var, value
@@ -611,14 +610,6 @@ contains
         end if
     end do
     deallocate(Channel, stat=istat)
-
-    ! update the counts for output
-    call init_dimensions(N)
-    N%chin = nchin
-    N%choutH = hch-nchin
-    N%choutE = ech
-    N%chout = N%choutH + N%choutE
-    N%ch = N%chin + N%chout
 
     ! finally, compute and verify the site lat/lon coordinates
     xy(1,1) = Site%Coords%X

@@ -11,7 +11,6 @@ program z2edi
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favourite station'
   character(len=80) :: zsitename, basename, verbose=''
-  type(Dimensions_t):: N
   type(UserInfo_t)  :: Info
   type(Site_t)                                 :: zLocalSite
   type(Run_t), dimension(:), allocatable       :: Run
@@ -28,7 +27,7 @@ program z2edi
   character(len=80)     :: edi_date,xml_date
   real              :: Ex_len, Ey_len
   integer           :: i, j, k, narg, len, istat
-  integer           :: nf, nchin, nchout, nchoutE, nchoutH
+  integer           :: nf, nch, nchin, nchout, nchoutE, nchoutH
 
   narg = command_argument_count()
 
@@ -67,13 +66,10 @@ program z2edi
 
   call init_user_info(Info)
 
-  call read_z_header(zsitename, zLocalSite, Info, N)
-
-  ! Define local dimensions
-  nf = N%f
+  call read_z_header(zsitename, zLocalSite, Info, nf, nch)
 
   ! Read and write channels
-  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, N)
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch)
 
   nchin = size(InputMagnetic)
   nchoutH = size(OutputMagnetic)
@@ -86,7 +82,7 @@ program z2edi
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
-     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:), N)
+     call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
   end do
 
