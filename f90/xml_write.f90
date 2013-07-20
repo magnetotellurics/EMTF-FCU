@@ -39,7 +39,7 @@ contains
 	!schemaLocation = "http://www.earthscope.org/mt http://www.iris.edu/schema/mt/MT_TF_"//version//".xsd"
 
     call xml_OpenFile(fname, xmlfile)
-    
+
     !call xml_DeclareNamespace(xmlfile, 'http://www.w3.org/2001/XMLSchema-instance','xsi')
     !call xml_DeclareNamespace(xmlfile, 'http://www.earthscope.org/mt')
     
@@ -142,6 +142,31 @@ contains
         call xml_EndElement(xmlfile, 'ExternalUrl')
     end if
 
+    if (.not. isempty(UserInfo%Image)) then ! technical info to display a figure in SPUD
+        call xml_NewElement(xmlfile, 'PrimaryData')
+        call xml_NewElement(xmlfile, 'Filename')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessingTag)//'.'//trim(UserInfo%Image))
+        call xml_EndElement(xmlfile, 'Filename')
+        call xml_NewElement(xmlfile, 'GroupKey')
+        call xml_AddCharacters(xmlfile, '0')
+        call xml_EndElement(xmlfile, 'GroupKey')
+        call xml_NewElement(xmlfile, 'OrderKey')
+        call xml_AddCharacters(xmlfile, '0')
+        call xml_EndElement(xmlfile, 'OrderKey')
+        call xml_EndElement(xmlfile, 'PrimaryData')
+    end if
+
+    if (.not. isempty(UserInfo%Original)) then ! technical info to attach the original file in SPUD
+        call xml_NewElement(xmlfile, 'Attachment')
+        call xml_NewElement(xmlfile, 'Filename')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessingTag)//'.'//trim(UserInfo%Original))
+        call xml_EndElement(xmlfile, 'Filename')
+        call xml_NewElement(xmlfile, 'Description')
+        call xml_AddCharacters(xmlfile, 'The original used to produce the XML')
+        call xml_EndElement(xmlfile, 'Description')
+        call xml_EndElement(xmlfile, 'Attachment')
+    end if
+
 	call date_and_time(date, time, zone)
 
     xml_time = date(1:4)//'-'//date(5:6)//'-'//date(7:8)//&
@@ -200,9 +225,11 @@ contains
     call xml_NewElement(xmlfile, 'Year')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Year))
     call xml_EndElement(xmlfile, 'Year')
-    call xml_NewElement(xmlfile, 'DOI')
-    call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%DOI))
-    call xml_EndElement(xmlfile, 'DOI')
+    if (.not. isempty(UserInfo%Copyright%DOI)) then
+        call xml_NewElement(xmlfile, 'DOI')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%DOI))
+        call xml_EndElement(xmlfile, 'DOI')
+    end if
     call xml_EndElement(xmlfile, 'Citation')
     call xml_NewElement(xmlfile, 'ReleaseStatus')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ReleaseStatus))

@@ -113,6 +113,8 @@ contains
     elseif (ediwrite==0) then
         Info%WriteEDIInfo = .FALSE.
     end if
+    Info%Image = getString(doc,'Image')
+    Info%Original = getString(doc,'Original')
 	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")

@@ -105,6 +105,8 @@ module global
     logical           :: ParseEDIInfo ! for EDI input/output
     logical           :: WriteEDIInfo ! for EDI input/output
     integer           :: OrthogonalGeographic
+    character(len=10) :: Image ! extension of the image file, if present
+    character(len=10) :: Original ! extension of the original file to be submitted
     character(len=80) :: RunList
     character(len=80) :: SiteList
     character(len=80) :: ChannelList
@@ -325,6 +327,8 @@ contains
         Info%ParseEDIInfo = .TRUE.
         Info%WriteEDIInfo = .TRUE.
         Info%OrthogonalGeographic = 0
+        Info%Image = ' '
+        Info%Original = ' '
         Info%RunList = 'Runs.xml'
         Info%SiteList = 'Sites.xml'
         Info%ChannelList = 'Channels.xml'

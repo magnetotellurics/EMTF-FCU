@@ -33,7 +33,7 @@ program edi2xml
   narg = command_argument_count()
 
   if (narg<1) then
-     write(0,*) 'Please specify the name of the input Z-file'
+     write(0,*) 'Please specify the name of the input EDI file'
      stop
   else if (narg>=1) then
      call get_command_argument(1,edi_file)
