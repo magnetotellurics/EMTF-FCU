@@ -181,35 +181,51 @@ contains
     call xml_AddCharacters(xmlfile, 'EMTF File Conversion Utilities '//trim(version))
     call xml_EndElement(xmlfile, 'CreatingApplication')
 
+    if (.not. isempty(UserInfo%Creator%Name)) then ! creator optional
     call xml_NewElement(xmlfile, 'Creator')
     call xml_NewElement(xmlfile, 'Name')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Creator%Name))
     call xml_EndElement(xmlfile, 'Name')
+    if (.not. isempty(UserInfo%Creator%Email)) then
     call xml_NewElement(xmlfile, 'Email')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Creator%Email))
     call xml_EndElement(xmlfile, 'Email')
+    end if
+    if (.not. isempty(UserInfo%Creator%Org)) then
     call xml_NewElement(xmlfile, 'Org')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Creator%Org))
     call xml_EndElement(xmlfile, 'Org')
+    end if
+    if (.not. isempty(UserInfo%Creator%OrgUrl)) then
     call xml_NewElement(xmlfile, 'OrgUrl')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Creator%OrgUrl))
     call xml_EndElement(xmlfile, 'OrgUrl')
+    end if
     call xml_EndElement(xmlfile, 'Creator')
+    end if
 
+    if (.not. isempty(UserInfo%Submitter%Name)) then ! submitter optional
     call xml_NewElement(xmlfile, 'Submitter')
     call xml_NewElement(xmlfile, 'Name')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Submitter%Name))
     call xml_EndElement(xmlfile, 'Name')
+    if (.not. isempty(UserInfo%Submitter%Email)) then
     call xml_NewElement(xmlfile, 'Email')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Submitter%Email))
     call xml_EndElement(xmlfile, 'Email')
+    end if
+    if (.not. isempty(UserInfo%Submitter%Org)) then
     call xml_NewElement(xmlfile, 'Org')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Submitter%Org))
     call xml_EndElement(xmlfile, 'Org')
+    end if
+    if (.not. isempty(UserInfo%Submitter%OrgUrl)) then
     call xml_NewElement(xmlfile, 'OrgUrl')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Submitter%OrgUrl))
     call xml_EndElement(xmlfile, 'OrgUrl')
+    end if
     call xml_EndElement(xmlfile, 'Submitter')
+    end if
 
     call xml_EndElement(xmlfile, 'Provenance')
     
@@ -336,10 +352,18 @@ contains
 		call xml_AddCharacters(xmlfile, trim(UserInfo%Survey))
 		call xml_EndElement(xmlfile, 'Survey')
 		
+        if (.not. isempty(UserInfo%YearCollected)) then
 		call xml_NewElement(xmlfile, 'YearCollected')
 		call xml_AddCharacters(xmlfile, trim(UserInfo%YearCollected))
 		call xml_EndElement(xmlfile, 'YearCollected')
+		end if
 		
+        if (.not. isempty(UserInfo%Country)) then
+        call xml_NewElement(xmlfile, 'Country')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Country))
+        call xml_EndElement(xmlfile, 'Country')
+        end if
+
 		call xml_NewElement(xmlfile, 'Id')
 		call xml_AddCharacters(xmlfile, trim(Site%ID))
 		call xml_EndElement(xmlfile, 'Id')

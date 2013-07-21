@@ -1,6 +1,6 @@
-<DataType type="complex" input="H" output="E">
-	<Intention>primary data type</Intention>
+<DataType name="DET" type="complex">
+	<Intention>derived data type</Intention>
 	<Description>Determinant of MT impedance is invariant under rotation</Description>
 	<Tag>impedance_determinant</Tag>
-	<Names>DET</Names>
+	<DerivedFrom>impedance</DerivedFrom>
 </DataType>

@@ -26,7 +26,7 @@ contains
     ! local
     character(len=200) copyright_file, datatype_file
     logical copyright_exists, datatype_exists
-    integer i,ios,istat,fileid,ediparse,ediwrite,tsinfo,ntags
+    integer i,ios,istat,fileid,ediparse,ediwrite,metadataonly,tsinfo,ntags
 
   	call init_user_info(Info)
 
@@ -112,6 +112,13 @@ contains
         Info%WriteEDIInfo = .TRUE.
     elseif (ediwrite==0) then
         Info%WriteEDIInfo = .FALSE.
+    end if
+    metadataonly = -1
+    metadataonly = getInteger(doc,"MetadataOnly")
+    if (metadataonly==1) then
+        Info%MetadataOnly = .TRUE.
+    elseif (metadataonly==0) then
+        Info%MetadataOnly = .FALSE.
     end if
     Info%Image = getString(doc,'Image')
     Info%Original = getString(doc,'Original')

@@ -104,6 +104,7 @@ module global
     character(len=80) :: DummyDataValue ! for EDI input/output
     logical           :: ParseEDIInfo ! for EDI input/output
     logical           :: WriteEDIInfo ! for EDI input/output
+    logical           :: MetadataOnly ! true to produce XML file with no data
     integer           :: OrthogonalGeographic
     character(len=10) :: Image ! extension of the image file, if present
     character(len=10) :: Original ! extension of the original file to be submitted
@@ -326,6 +327,7 @@ contains
         Info%DummyDataValue = ''
         Info%ParseEDIInfo = .TRUE.
         Info%WriteEDIInfo = .TRUE.
+        Info%MetadataOnly = .FALSE.
         Info%OrthogonalGeographic = 0
         Info%Image = ' '
         Info%Original = ' '

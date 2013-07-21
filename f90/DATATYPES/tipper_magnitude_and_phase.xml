@@ -1,9 +1,0 @@
-<DataType type="complex" input="H" output="H">
-	<Intention>primary data type</Intention>
-	<Description>
-		Vertical Field Transfer Functions (Tipper) relate the local vertical magnetic field
-		component to the two local horizontal magnetic field components
-	</Description>
-	<Tag>tipper</Tag>
-	<Names>T</Names>
-</DataType>

@@ -273,6 +273,7 @@ program z2xml
   call end_block('OutputChannels')
 
   ! Read and write frequency blocks: transfer functions, variance, covariance
+  if (.not. UserInfo%MetadataOnly) then
   call initialize_xml_freq_block_output(nf)
 
   do k=1,nf
@@ -301,6 +302,7 @@ program z2xml
   end do
 
   call end_xml_freq_block_output
+  end if
 
   call add_PeriodRange(F)
 

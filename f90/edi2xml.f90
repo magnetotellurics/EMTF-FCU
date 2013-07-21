@@ -112,8 +112,11 @@ program edi2xml
   	write(0,*) '		<LastMod>1987-10-12</LastMod>'
   	write(0,*) '		<Author>Gary Egbert</Author>'
   	write(0,*) '	</ProcessingSoftware>'
+    write(0,*) '    <Image>png</Image>'
+    write(0,*) '    <Original>edi</Original>'
     write(0,*) '    <ParseEDIInfo>1</ParseEDIInfo>'
     write(0,*) '    <WriteEDIInfo>0</WriteEDIInfo>'
+    write(0,*) '    <MetadataOnly>0</MetadataOnly>'
     write(0,*) '    <DateFormat>MM/DD/YY</DateFormat>'
   	write(0,*) '<Configuration>'
   	write(0,*)
@@ -215,6 +218,7 @@ program edi2xml
   call end_block('OutputChannels')
 
   ! Read and write frequency blocks: transfer functions, variance, covariance
+  if (.not. UserInfo%MetadataOnly) then
   call initialize_xml_freq_block_output(nf)
 
   do k=1,nf
@@ -239,6 +243,7 @@ program edi2xml
   end do
 
   call end_xml_freq_block_output
+  end if
 
   call add_PeriodRange(F)
 
