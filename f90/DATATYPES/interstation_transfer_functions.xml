@@ -1,9 +1,5 @@
-<DataType type="complex" input="H" output="H">
+<DataType name="TI" type="complex" input="H" output="H" units="[]">
+	<Description>Interstation Vertical Field Transfer Functions</Description>
 	<Intention>primary data type</Intention>
-	<Description>
-		Vertical Field Transfer Functions (Tipper) relate the local vertical magnetic field
-		component to the two local horizontal magnetic field components
-	</Description>
-	<Tag>tipper</Tag>
-	<Names>T</Names>
+	<Tag>interstation_transfer_functions</Tag>
 </DataType>

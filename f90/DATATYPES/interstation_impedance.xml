@@ -1,6 +1,5 @@
-<DataType type="complex" input="H" output="E">
+<DataType name="ZI" type="complex" output="E" input="H" units="[mV/km]/[nT]">
+	<Description>MT interstation impedance</Description>
 	<Intention>primary data type</Intention>
-	<Description>MT impedance</Description>
-	<Tag>impedance</Tag>
-	<Names>Z</Names>
+	<Tag>interstation_impedance</Tag>
 </DataType>

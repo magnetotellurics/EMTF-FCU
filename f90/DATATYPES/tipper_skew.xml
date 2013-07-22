@@ -1,0 +1,7 @@
+<DataType name="TSKEW" type="real" input="H" output="H" units="[]">
+	<Description>Tipper parameters: skew</Description>
+	<Intention>derived data type</Intention>
+	<Tag>tipper_skew</Tag>
+	<DerivedFrom>tipper</DerivedFrom>
+	<SeeAlso>tipper_strike,tipper_ellipticity</SeeAlso>
+</DataType>

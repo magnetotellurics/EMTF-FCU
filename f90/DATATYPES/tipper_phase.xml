@@ -1,0 +1,6 @@
+<DataType name="TIPPHS" type="real" input="H" output="H" units="[]">
+	<Description>Vertical Field Transfer Functions (Tipper) Phase</Description>
+	<Intention>derived data type</Intention>
+	<Tag>tipper_phase</Tag>
+	<DerivedFrom>tipper</DerivedFrom>
+</DataType>

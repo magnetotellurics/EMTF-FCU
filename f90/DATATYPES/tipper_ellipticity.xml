@@ -1,0 +1,7 @@
+<DataType name="TELLIP" type="real" input="H" output="H" units="[]">
+	<Description>Tipper parameters: ellipticity</Description>
+	<Intention>derived data type</Intention>
+	<Tag>tipper_ellipticity</Tag>
+	<DerivedFrom>tipper</DerivedFrom>
+	<SeeAlso>tipper_skew,tipper_strike</SeeAlso>
+</DataType>

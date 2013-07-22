@@ -1,0 +1,7 @@
+<DataType name="ZSKEW" type="real" input="H" output="E" units="[]">
+	<Description>MT Impedance parameters: skew</Description>
+	<Intention>derived data type</Intention>
+	<Tag>impedance_skew</Tag>
+	<DerivedFrom>impedance</DerivedFrom>
+	<SeeAlso>impedance_strike,impedance_ellipticity</SeeAlso>
+</DataType>

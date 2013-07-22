@@ -1,4 +1,4 @@
-<DataType name="PT" type="complex" input="H" output="E">
+<DataType name="PT" type="real" input="H" output="E" units="[]">
 	<Intention>derived data type</Intention>
 	<Description>MT phase tensor</Description>
 	<Tag>phase_tensor</Tag>

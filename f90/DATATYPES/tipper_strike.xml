@@ -1,0 +1,7 @@
+<DataType name="TSTRIKE" type="real" input="H" output="H" units="[]">
+	<Description>Tipper parameters: strike</Description>
+	<Intention>derived data type</Intention>
+	<Tag>tipper_strike</Tag>
+	<DerivedFrom>tipper</DerivedFrom>
+	<SeeAlso>tipper_skew,tipper_ellipticity</SeeAlso>
+</DataType>
