@@ -266,9 +266,14 @@ contains
     character(len=*), intent(in), optional  :: attrValue
 	character(len=80)               :: str
  	real(8)                         :: value
+ 	real(8)                         :: ZERO,NaN
 
 	! Initialize output
 	value = 0.0d0
+
+    ! NaNs are not currently universally supported in Fortran
+    ZERO = 0.0d0
+    NaN = ZERO/ZERO
 
 	! Make sure the pointer is associated
 	if (.not.(associated(domNode))) then
@@ -284,7 +289,14 @@ contains
 		str = getString(domNode, xmlName)
 	end if
 
-	if (len_trim(str)>0) then
+    ! Unfortunately, NaNs are not universally supported - use zero as a quick fix
+    if (index(str,'NaN')>0) then
+        if (.not. isnan(NaN)) then
+            write(0,*) 'Warning: using NaNs for missing data will not work with this compiler'
+        else
+            value = NaN
+        end if
+    else if (len_trim(str)>0) then
 		if ((index(str,'e')>0).or.(index(str,'E')>0)) then
 			read(str, '(e16.5)') value
 		else
@@ -311,9 +323,15 @@ contains
     character(len=*), intent(in), optional  :: attrValue
  	character(len=80)               :: str
  	integer                         :: value
+    integer                         :: ZERO
+    real(8)                         :: NaN
 
 	! Initialize output
 	value = 0
+
+    ! NaNs are not currently universally supported in Fortran
+    ZERO = 0
+    NaN = ZERO/ZERO
 
 	! Make sure the pointer is associated
 	if (.not.(associated(domNode))) then
@@ -329,7 +347,14 @@ contains
 		str = getString(domNode, xmlName)
 	end if
 
-	if (len_trim(str)>0) then
+    ! Unfortunately, NaNs are not universally supported - use zero as a quick fix
+    if (index(str,'NaN')>0) then
+        if (.not. isnan(NaN)) then
+            write(0,*) 'Warning: using NaNs for missing data will not work with this compiler'
+        else
+            value = NaN
+        end if
+	else if (len_trim(str)>0) then
 		read(str, '(i8)') value
 	else
 		write(0,*) 'XML Error: unable to convert the text node from the element ',trim(xmlName),' to an integer'

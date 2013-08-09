@@ -52,8 +52,9 @@ contains
   ! the following convention:
   ! a) no underscore - assume single station
   ! b) 2-char after the underscore - insert a zero, e.g. A4 -> WAA04
-  ! c) 3-char atter the underscore - assume 2 digits, e.g. A11 -> WAA11
-  ! d) <2-char or >3-char after the underscore - do not attempt to parse
+  ! c) 3-char atter the underscore with 2 digits, e.g. A11 -> WAA11
+  ! d) 4-char atter the underscore with 3 digits, e.g. C016 -> MC016
+  ! e) <2-char or >4-char after the underscore - do not attempt to parse
   ! Most importantly, assumes a 5-digit site name!!!!!!
   ! Please manually correct the station name in your Z-file to satisfy
   ! these criteria before attempting to run this program.
@@ -96,12 +97,30 @@ contains
   		RemoteSiteID = ' '
   	else if (len_trim(abbrev)==2) then
   		RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
-  	else if (len_trim(abbrev)>=3) then
-  		if (isdigit(abbrev(3:3))) then
+  	else if (len_trim(abbrev)==3) then
+  		if (isdigit(abbrev(3:3))) then ! e.g. KSP35b_K33
   			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
   		else ! Account for additional characters at the end e.g. ORG05bc_H6x
    			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
   		end if
+    else if (len_trim(abbrev)==4) then
+        if (isdigit(abbrev(3:3)) .and. isdigit(abbrev(4:4))) then ! e.g. MF011a_M012
+            RemoteSiteID = SiteID(1:1)//toupper(abbrev(1:1))//abbrev(2:4)
+        else if (isdigit(abbrev(3:3))) then ! e.g. KSP35b_K33x
+            RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
+        else ! Account for additional characters at the end e.g. ORG05bc_H6xy
+            RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
+        end if
+    else if (len_trim(abbrev)>=5) then
+        if (isdigit(abbrev(3:3)) .and. isdigit(abbrev(4:4)) .and. isdigit(abbrev(5:5))) then ! e.g. MF011a_MM012
+            RemoteSiteID = toupper(abbrev(1:1))//toupper(abbrev(2:2))//abbrev(3:5)
+        else if (isdigit(abbrev(3:3)) .and. isdigit(abbrev(4:4))) then ! e.g. MF011a_M012xcoh
+            RemoteSiteID = SiteID(1:1)//toupper(abbrev(1:1))//abbrev(2:4)
+        else if (isdigit(abbrev(3:3))) then ! e.g. KSP35b_K33xcoh
+            RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
+        else ! Account for additional characters at the end e.g. ORG05bc_H6xcoh
+            RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
+        end if
 	else
 		write(0,*) 'Unable to extract remote reference site from the string ',trim(sitename)
 		RemoteSiteID = ' '
