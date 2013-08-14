@@ -25,10 +25,11 @@ module z_read
 
 contains
 
-  subroutine initialize_z_input(fname)
+  subroutine initialize_z_input(fname,Info)
      character(len=*), intent(in) :: fname
-     integer			  :: ios
-     character(20)		  :: str
+     type(UserInfo_t), intent(inout), optional :: Info
+     integer			  :: ios,i,l
+     character(80)		  :: str
 
      ! passed an empty string
      if (fname == '') then
@@ -42,6 +43,16 @@ contains
      if(ios/=0) then
         write(0,*) 'Error opening file:', fname
      endif
+
+     if (present(Info)) then
+        i = index(fname,'/',.true.)
+        l = len_trim(fname)
+        if (i>0) then
+            Info%Basename = fname(i+1:l-4)
+        else
+            Info%Basename = fname(1:l-4)
+        end if
+     end if
 
   end subroutine initialize_z_input
 

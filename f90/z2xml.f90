@@ -141,7 +141,7 @@ program z2xml
 
   ! Read the Z-file in full
 
-  call initialize_z_input(z_file)
+  call initialize_z_input(z_file, UserInfo)
 
   call read_z_header(zsitename, zLocalSite, UserInfo, nf, nch)
 

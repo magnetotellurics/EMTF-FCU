@@ -145,7 +145,7 @@ contains
     if (.not. isempty(UserInfo%Image)) then ! technical info to display a figure in SPUD
         call xml_NewElement(xmlfile, 'PrimaryData')
         call xml_NewElement(xmlfile, 'Filename')
-        call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessingTag)//'.'//trim(UserInfo%Image))
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Basename)//'.'//trim(UserInfo%Image))
         call xml_EndElement(xmlfile, 'Filename')
         call xml_NewElement(xmlfile, 'GroupKey')
         call xml_AddCharacters(xmlfile, '0')
@@ -159,7 +159,7 @@ contains
     if (.not. isempty(UserInfo%Original)) then ! technical info to attach the original file in SPUD
         call xml_NewElement(xmlfile, 'Attachment')
         call xml_NewElement(xmlfile, 'Filename')
-        call xml_AddCharacters(xmlfile, trim(UserInfo%ProcessingTag)//'.'//trim(UserInfo%Original))
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Basename)//'.'//trim(UserInfo%Original))
         call xml_EndElement(xmlfile, 'Filename')
         call xml_NewElement(xmlfile, 'Description')
         call xml_AddCharacters(xmlfile, 'The original used to produce the XML')
@@ -261,6 +261,19 @@ contains
             call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ConditionsOfUse(i)))
         end do
         call xml_EndElement(xmlfile, 'ConditionsOfUse')
+    end if
+
+    if (.not. isempty(UserInfo%Copyright%AdditionalInfo(1))) then
+        call xml_NewElement(xmlfile, 'AdditionalInfo')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%AdditionalInfo(1)))
+        do i=2,size(UserInfo%Copyright%AdditionalInfo)
+            if (isempty(UserInfo%Copyright%AdditionalInfo(i))) then
+                exit
+            end if
+            call xml_AddCharacters(xmlfile, achar(ascii_cr))
+            call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%AdditionalInfo(i)))
+        end do
+        call xml_EndElement(xmlfile, 'AdditionalInfo')
     end if
 
     call xml_EndElement(xmlfile, 'Copyright')

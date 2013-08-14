@@ -24,11 +24,18 @@ contains
 	type(Node), pointer             :: copyright,author
 	type(NodeList), pointer         :: authors
     ! local
-    character(len=200) copyright_file, datatype_file
-    logical copyright_exists, datatype_exists
+    character(len=200) copyright_file, datatype_file, readme_file, config_path
+    logical copyright_exists, datatype_exists, readme_exists
     integer i,ios,istat,fileid,ediparse,ediwrite,metadataonly,tsinfo,ntags
 
   	call init_user_info(Info)
+
+    i = index(xmlFile,'/',.true.)
+    if (i>0) then
+        config_path = xmlFile(1:i-1)
+    else
+        config_path = ''
+    end if
 
   	! Load in the document
   	doc => parseFile(xmlFile)
@@ -73,6 +80,30 @@ contains
             read (fileid,'(a100)',iostat=ios) Info%Copyright%ConditionsOfUse(i)
             if (.not. isempty(Info%Copyright%ConditionsOfUse(i))) then
                 write(6,*) len_trim(Info%Copyright%ConditionsOfUse(i)),trim(Info%Copyright%ConditionsOfUse(i))
+            end if
+        end do
+        close (fileid)
+    end if
+
+    if (len_trim(Info%Copyright%README)>0) then
+        readme_file = trim(config_path)//'/'//trim(Info%Copyright%README)
+        inquire (file=readme_file,exist=readme_exists)
+        if (.not. readme_exists) then
+            write(0,*) 'README file ',trim(readme_file),' not found'
+        end if
+    else
+        readme_exists = .false.
+    end if
+
+    if (readme_exists) then
+        fileid=106
+        write(6,*) 'Reading from README file: ',trim(readme_file)
+        write(6,*) 'Additional copyright info: '
+        open (unit=fileid,file=copyright_file,status='old',iostat=ios)
+        do i=1,size(Info%Copyright%AdditionalInfo)
+            read (fileid,'(a100)',iostat=ios) Info%Copyright%AdditionalInfo(i)
+            if (.not. isempty(Info%Copyright%AdditionalInfo(i))) then
+                write(6,*) len_trim(Info%Copyright%AdditionalInfo(i)),trim(Info%Copyright%AdditionalInfo(i))
             end if
         end do
         close (fileid)

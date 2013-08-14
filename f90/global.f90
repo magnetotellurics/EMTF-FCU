@@ -73,6 +73,8 @@ module global
     character(len=800):: RelatedPublication ! optionally replaces data DOI
     character(len=80) :: ReleaseStatus
     character(len=100):: ConditionsOfUse(100)
+    character(len=80) :: README
+    character(len=100):: AdditionalInfo(100)
   end type Copyright_t
 
   type :: UserInfo_t
@@ -106,6 +108,7 @@ module global
     logical           :: WriteEDIInfo ! for EDI input/output
     logical           :: MetadataOnly ! true to produce XML file with no data
     integer           :: OrthogonalGeographic
+    character(len=80) :: Basename ! base name of the original file to be submitted
     character(len=10) :: Image ! extension of the image file, if present
     character(len=10) :: Original ! extension of the original file to be submitted
     character(len=80) :: RunList
@@ -329,6 +332,7 @@ contains
         Info%WriteEDIInfo = .TRUE.
         Info%MetadataOnly = .FALSE.
         Info%OrthogonalGeographic = 0
+        Info%Basename = ' '
         Info%Image = ' '
         Info%Original = ' '
         Info%RunList = 'Runs.xml'
