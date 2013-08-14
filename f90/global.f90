@@ -297,7 +297,11 @@ contains
 		do i=1,size(Info%ConditionsOfUse)
 		    Info%ConditionsOfUse = ''
 		end do
-		
+        Info%README = ''
+        do i=1,size(Info%AdditionalInfo)
+            Info%AdditionalInfo = ''
+        end do
+
 	end subroutine init_copyright
 
     subroutine init_user_info(Info)

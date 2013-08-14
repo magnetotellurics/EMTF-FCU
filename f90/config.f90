@@ -57,6 +57,7 @@ contains
     Info%Copyright%Year = getString(copyright,"Year")
     Info%Copyright%DOI = getString(copyright,"DOI")
 	Info%Copyright%ReleaseStatus = getString(doc,"ReleaseStatus")
+    Info%Copyright%README = getString(doc,"README")
 	
 	if (index(Info%Copyright%ReleaseStatus,'Unrestricted Release')>0) then
 	    copyright_file = 'COPYRIGHT/UnrestrictedRelease.copyright'
@@ -99,7 +100,7 @@ contains
         fileid=106
         write(6,*) 'Reading from README file: ',trim(readme_file)
         write(6,*) 'Additional copyright info: '
-        open (unit=fileid,file=copyright_file,status='old',iostat=ios)
+        open (unit=fileid,file=readme_file,status='old',iostat=ios)
         do i=1,size(Info%Copyright%AdditionalInfo)
             read (fileid,'(a100)',iostat=ios) Info%Copyright%AdditionalInfo(i)
             if (.not. isempty(Info%Copyright%AdditionalInfo(i))) then

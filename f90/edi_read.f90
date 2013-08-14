@@ -34,9 +34,10 @@ module edi_read
 
 contains
 
-  subroutine initialize_edi_input(fname,sitename)
+  subroutine initialize_edi_input(fname,sitename,Info)
      character(len=*), intent(in)   :: fname
      character(len=80), intent(out) :: sitename
+     type(UserInfo_t), intent(inout), optional :: Info
      integer			  :: i,ios
      character(20)		  :: str
 
@@ -55,14 +56,22 @@ contains
 
      ! parse the EDI file name for site name:
      ! the only robust source for a unique ID
-     i = index(trim(fname),'.edi')
-     if (i > 0) then
-        sitename = trim(fname(1:i-1))
+     i = index(trim(fname),'/',.true.)
+     if (i<=0) then
+        i = 0
+     end if
+     j = index(trim(fname),'.edi')
+     if (j > 0) then
+        sitename = trim(fname(i+1:j-1))
         if (.not.silent) then
             write(6,*) 'Initialized reading site ',trim(sitename),' from EDI file'
         end if
      else
         write(0,*) 'Error: ',trim(fname),' is not an EDI file'
+     end if
+
+     if (present(Info)) then
+        Info%Basename = trim(sitename)
      end if
 
   end subroutine initialize_edi_input
