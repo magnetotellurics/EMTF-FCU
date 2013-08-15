@@ -12,7 +12,7 @@ module global
   ! respectively, run ID has no more than 6 chars
   ! This restriction does not hold to data not archived
   ! with IRIS, so make this a parameter
-  integer, parameter    :: nid=5
+  integer, parameter    :: nid=6
   !*********************************************************
   ! WGS84 - common standard global datum
   ! NAD83 - used in North America
@@ -104,6 +104,7 @@ module global
     character(len=80) :: Estimate(8) ! statistical estimate types
     character(len=80) :: DateFormat ! for EDI input/output
     character(len=80) :: DummyDataValue ! for EDI input/output
+    logical           :: ComputeSiteCoords ! for EDI input/output
     logical           :: ParseEDIInfo ! for EDI input/output
     logical           :: WriteEDIInfo ! for EDI input/output
     logical           :: MetadataOnly ! true to produce XML file with no data
@@ -141,6 +142,7 @@ module global
 
   type :: Site_t
   	character(len=nid) :: ID
+    character(len=5)   :: IRIS_ID
 	character(len=80)  :: Description
 	type(XYZ_t)        :: Coords
   	type(Location_t)   :: Location
@@ -332,6 +334,7 @@ contains
         Info%ProcessingTag = ' '
         Info%DateFormat = 'MM/DD/YY'
         Info%DummyDataValue = ''
+        Info%ComputeSiteCoords = .FALSE.
         Info%ParseEDIInfo = .TRUE.
         Info%WriteEDIInfo = .TRUE.
         Info%MetadataOnly = .FALSE.
@@ -381,6 +384,7 @@ contains
 		type(Site_t), intent(out)  :: Site
 
 		Site%ID = ' '
+        Site%IRIS_ID = ' '
 		Site%Description = ' '
 		Site%Coords%Type = ' '
 		Site%Coords%Units = ' '
@@ -524,9 +528,9 @@ contains
         ! NaNs are not currently universally supported in Fortran
         ZERO = 0.0d0
         NaN = ZERO/ZERO
-        if (.not. isnan(NaN)) then
-            write(0,*) 'Warning: using NaNs for missing data will not work with this compiler'
-        end if
+!        if (.not. isnan(NaN)) then
+!            write(0,*) 'Warning: using NaNs for missing data will not work with this compiler'
+!        end if
 
         ! Reading of complex components is done by addition
         ! so data have to be initialized to zero (non NaNs);

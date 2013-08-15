@@ -73,6 +73,7 @@ contains
    		! if this is the correct ID, then pull out all the information from the site tag.
   		if (IDstring(3:5)==id(3:5)) then
   			Site%ID = IDstring
+            Site%IRIS_ID = IDstring
   			Site%Description = getString(thisSite,"Description")
     		Site%Location%lat = getReal(thisSite,"Latitude")
     		Site%Location%lon = getReal(thisSite,"Longitude")

@@ -109,6 +109,7 @@ contains
     type(UserInfo_t), intent(in) :: UserInfo
     character(len=*), dimension(:), pointer, optional :: Notes
     integer, optional            :: NotesLength
+    character(len=6)             :: iris_siteid
 
     call xml_NewElement(xmlfile, 'Description')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Description))
@@ -137,7 +138,7 @@ contains
         call xml_AddCharacters(xmlfile, 'IRIS DMC MetaData')
         call xml_EndElement(xmlfile, 'Description')
         call xml_NewElement(xmlfile, 'Url')
-        call xml_AddCharacters(xmlfile, 'http://www.iris.edu/mda/'//UserInfo%Network//'/'//Site%ID)
+        call xml_AddCharacters(xmlfile, 'http://www.iris.edu/mda/'//UserInfo%Network//'/'//Site%IRIS_ID)
         call xml_EndElement(xmlfile, 'Url')
         call xml_EndElement(xmlfile, 'ExternalUrl')
     end if
@@ -255,7 +256,7 @@ contains
         call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ConditionsOfUse(1)))
         do i=2,size(UserInfo%Copyright%ConditionsOfUse)
             if (isempty(UserInfo%Copyright%ConditionsOfUse(i))) then
-                exit
+                cycle
             end if
             call xml_AddCharacters(xmlfile, achar(ascii_cr))
             call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ConditionsOfUse(i)))
@@ -268,7 +269,7 @@ contains
         call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%AdditionalInfo(1)))
         do i=2,size(UserInfo%Copyright%AdditionalInfo)
             if (isempty(UserInfo%Copyright%AdditionalInfo(i))) then
-                exit
+                cycle
             end if
             call xml_AddCharacters(xmlfile, achar(ascii_cr))
             call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%AdditionalInfo(i)))
@@ -300,11 +301,11 @@ contains
     call xml_AddCharacters(xmlfile, trim(Site%RunList))
     call xml_EndElement(xmlfile, 'RunList')
 
+    call xml_NewElement(xmlfile, 'DataQualityNotes')
+    call xml_NewElement(xmlfile, 'Rating')
+    call xml_AddCharacters(xmlfile, Site%QualityRating)
+    call xml_EndElement(xmlfile, 'Rating')
     if (Site%QualityRating > 0) then
-        call xml_NewElement(xmlfile, 'DataQualityNotes')
-        call xml_NewElement(xmlfile, 'Rating')
-        call xml_AddCharacters(xmlfile, Site%QualityRating)
-        call xml_EndElement(xmlfile, 'Rating')
         call xml_NewElement(xmlfile, 'GoodFromPeriod')
         call xml_AddCharacters(xmlfile, Site%GoodFromPeriod, fmt="r3")
         call xml_EndElement(xmlfile, 'GoodFromPeriod')
@@ -315,8 +316,12 @@ contains
         call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%Creator%Name))
         call xml_AddCharacters(xmlfile, trim(Site%QualityComments))
         call xml_EndElement(xmlfile, 'Comments')
-        call xml_EndElement(xmlfile, 'DataQualityNotes')
+    else
+        call xml_NewElement(xmlfile, 'Comments')
+        call xml_AddCharacters(xmlfile, 'Unrated')
+        call xml_EndElement(xmlfile, 'Comments')
     end if
+    call xml_EndElement(xmlfile, 'DataQualityNotes')
 
     if (Site%WarningFlag >= 0) then
         call xml_NewElement(xmlfile, 'DataQualityWarnings')

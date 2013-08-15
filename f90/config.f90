@@ -26,7 +26,7 @@ contains
     ! local
     character(len=200) copyright_file, datatype_file, readme_file, config_path
     logical copyright_exists, datatype_exists, readme_exists
-    integer i,ios,istat,fileid,ediparse,ediwrite,metadataonly,tsinfo,ntags
+    integer i,ios,istat,fileid,ediparse,ediwrite,computesitecoords,metadataonly,tsinfo,ntags
 
   	call init_user_info(Info)
 
@@ -131,6 +131,13 @@ contains
 	Info%ProcessingSoftwareAuthor = getString(software,"Author")
 
     Info%DateFormat = getString(doc,"DateFormat")
+    computesitecoords = -1
+    computesitecoords = getInteger(doc,"ComputeSiteCoords")
+    if (computesitecoords==1) then
+        Info%ComputeSiteCoords = .TRUE.
+    elseif (computesitecoords==0) then
+        Info%ComputeSiteCoords = .FALSE.
+    end if
     ediparse = -1
     ediparse = getInteger(doc,"ParseEDIInfo")
     if (ediparse==1) then
@@ -200,9 +207,15 @@ contains
     end do
 
   	if (present(listDir)) then
-  	  Info%RunList = trim(listDir)//'/'//trim(Info%RunList)
-  	  Info%SiteList = trim(listDir)//'/'//trim(Info%SiteList)
-  	  Info%ChannelList = trim(listDir)//'/'//trim(Info%ChannelList)
+  	  if (len_trim(Info%RunList)>0) then
+  	    Info%RunList = trim(listDir)//'/'//trim(Info%RunList)
+  	  end if
+      if (len_trim(Info%SiteList)>0) then
+  	    Info%SiteList = trim(listDir)//'/'//trim(Info%SiteList)
+  	  end if
+      if (len_trim(Info%ChannelList)>0) then
+  	    Info%ChannelList = trim(listDir)//'/'//trim(Info%ChannelList)
+  	  end if
     end if
 
     ! Project name is used to create the ID tags

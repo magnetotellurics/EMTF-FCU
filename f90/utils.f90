@@ -263,14 +263,15 @@ end function datestr
 
 
 ! **********************************************************************
-! isempty(): checks for an empty string; outputs true or false
+! isempty(): checks for an empty string; outputs true or false; helps avoid
+! segmentation fault and not use adjustl on empty strings of zero size
 ! (C) Anna Kelbert, 2013
 
 logical function isempty(str)
 
   character(len=*), intent(in) :: str
 
-  if (len_trim(adjustl(str))==0) then
+  if (len_trim(str)==0) then
     isempty = .true.
   else
     isempty = .false.

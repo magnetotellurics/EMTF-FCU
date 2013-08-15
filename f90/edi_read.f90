@@ -126,7 +126,7 @@ contains
             ! find the second double quote and read what's in between
             i = index(trim(value(2:N)),char(ascii_qtm))
             value = trim(value(2:i))
-         else
+        else
             ! read the first word in line as the value
             read (temp(i+1:N),*) value
         end if
@@ -248,8 +248,19 @@ contains
         end select
     end do
 
-    ! use sitename to for siteID
+    ! use sitename for siteID
     Site%ID = trim(sitename)
+
+    ! IRIS site ID is a 5-digit, uppercase abbreviation
+    if (len_trim(Site%ID)==3) then
+        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//toupper(Site%ID(3:3))
+    else if (len_trim(Site%ID)==4) then
+        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//toupper(Site%ID(3:3))//Site%ID(4:4)
+    else if (len_trim(Site%ID)==5) then
+        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//toupper(Site%ID(3:3))//Site%ID(4:5)
+    else if (len_trim(Site%ID)>=6) then
+        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(4:6)
+    end if
 
     ! typical case: ENDDATE not present in the EDI file; use ACQDATE
     if(isempty(Site%End)) then
@@ -259,7 +270,7 @@ contains
 
     ! typical case: LOC not present; use COUNTRY etc for site description
     if(isempty(Site%Description)) then
-        Site%Description = trim(country)//', '//trim(state)//', '//trim(county)
+        Site%Description = trim(county)//', '//trim(state)//', '//trim(country)
     end if
 
     ! convert elevation to meters
@@ -272,11 +283,16 @@ contains
 		Site%Location%lon = Site%Location%lon - 360.0d0
 	end if
 
+	! success message
+    if (.not. silent) then
+        write(*,*) 'Done reading the EDI header. Next block: ',trim(this_block)
+    end if
+
   end subroutine read_edi_header
 
 
   subroutine read_edi_info(Site,Info,Notes,n)
-    type(Site_t),  intent(out)            :: Site
+    type(Site_t),  intent(inout)          :: Site
     type(UserInfo_t), intent(inout)       :: Info
     character(200), dimension(:), pointer :: Notes
     integer, intent(out)                  :: n
@@ -293,8 +309,10 @@ contains
     if (.not. (trim(var) == 'MAXINFO')) then
         write(0,*) 'Error reading the first line of EDI INFO block:'
         write(0,*) line
+        n = 1000
+    else
+        read (value,'(i8)',iostat=ios) n
     end if
-    read (value,'(i8)',iostat=ios) n
 
     if (associated(Notes)) deallocate(Notes)
 
@@ -319,49 +337,52 @@ contains
             exit
         end if
 
-        ! to parse the INFO block, first find an occurence of the site ID
-        ! then allow parsing of only one value of each type after site ID
-        if (trim(var) .eq. 'INFO') then
-            if (index(to_upper(value),trim(to_upper(Site%ID)))>0) then
-                readinfo = .true.
-                readlat = .false.
-                readlon = .false.
-                readelev = .false.
+        if (Info%ParseEDIinfo) then
+
+            ! to parse the INFO block, first find an occurence of the site ID
+            ! then allow parsing of only one value of each type after site ID
+            if (trim(var) .eq. 'INFO') then
+                if (index(to_upper(value),trim(to_upper(Site%ID)))>0) then
+                    readinfo = .true.
+                    readlat = .false.
+                    readlon = .false.
+                    readelev = .false.
+                end if
             end if
-        end if
 
-        if (readinfo) then
-        select case (trim(var))
-        case ('AZIMUTH')
-            !read(value,*) Site%Declination
-        case ('LATITUDE') ! assume it's decimal if found in INFO block
-            read(value,*) Site%Location%lat
-            readlat = .true.
-        case ('LONGITUDE') ! assume it's decimal if found in INFO block
-            read(value,*) Site%Location%lon
-            readlon = .true.
-        case ('ELEVATION')
-            read(value,*) Site%Location%elev
-            readelev = .true.
-        case ('INFO','DUMMY','COMMENT')
-            ! these are already saved in the Notes if needed
-        case default
-            ! but there might be something else that requires parsing
-            write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
-        end select
-        end if
+            if (readinfo) then
+            select case (trim(var))
+            case ('AZIMUTH')
+                !read(value,*) Site%Declination
+            case ('LATITUDE') ! assume it's decimal if found in INFO block
+                read(value,*) Site%Location%lat
+                readlat = .true.
+            case ('LONGITUDE') ! assume it's decimal if found in INFO block
+                read(value,*) Site%Location%lon
+                readlon = .true.
+            case ('ELEVATION') ! read elevation and convert to meters if needed
+                read(value,*) Site%Location%elev
+                if(trim(elevunits) .eq. 'FT') then
+                    Site%Location%elev = 0.3048 * Site%Location%elev
+                end if
+                readelev = .true.
+            case ('INFO','DUMMY','COMMENT')
+                ! these are already saved in the Notes if needed
+            case default
+                ! but there might be something else that requires parsing
+                write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
+            end select
+            end if
 
-        ! exit the reading loop when everything has been read
-        if (readlat .and. readlon .and. readelev) then
-            readinfo = .false.
+            ! exit the reading loop when everything has been read
+            if (readlat .and. readlon .and. readelev) then
+                readinfo = .false.
+            end if
+
         end if
 
     end do
 
-    ! convert elevation to meters
-    if(trim(elevunits) .eq. 'FT') then
-        Site%Location%elev = 0.3048 * Site%Location%elev
-    end if
 
   end subroutine read_edi_info
 
@@ -498,7 +519,7 @@ contains
     integer                          :: num,i,j,istat,nchin,nch,hch,ech
     real(8)                          :: xy(2,1),ll(2,1)
 
-    nch = 5 ! default total number of channels
+    nch = 5 ! default total number of channels that are really used
     allocate(Channel(nch), stat=istat)
 
     hch = 0 ! start counting magnetic channels
@@ -522,18 +543,26 @@ contains
         case ('MAXCHAN')
             ! NOTE: if present, this always comes before
             ! the channel block lines so safe to reallocate
-            read(value,*) nch
-            deallocate(Channel, stat=istat)
-            allocate(Channel(nch), stat=istat)
+            ! However, this causes segmentation fault with gcc compiler.
+            ! For now, issue a warning but stick to 5 channels, hardcoded here.
+            !read(value,*,iostat=ios) nch
+            !deallocate(Channel, stat=istat)
+            !allocate(Channel(nch), stat=istat)
+            write(0,*) 'Warning: we are only using the first ',nch,' channels. This is because the EDI files'
+            write(0,*) 'tend to include remote channels for which there are no data. Change this in edi_read.f90'
         case ('BLOCK')
             num = num+1
-            call parse_edi_channel(value,Channel(num))
-            if (trim(Channel(num)%Type) .eq. 'H') then
-                hch = hch+1
-            elseif (trim(Channel(num)%Type) .eq. 'E') then
-                ech = ech+1
+            if (num > nch) then
+                write(0,*) 'Warning: skipping channel number ',num
             else
-                write(0,*) 'Warning: Unknown channel type ',Channel(num)%Type,' found for channel #',num
+                call parse_edi_channel(value,Channel(num))
+                if (trim(Channel(num)%Type) .eq. 'H') then
+                    hch = hch+1
+                elseif (trim(Channel(num)%Type) .eq. 'E') then
+                    ech = ech+1
+                else
+                    write(0,*) 'Warning: Unknown channel type ',Channel(num)%Type,' found for channel #',num
+                end if
             end if
         case ('REFLOC')
             Site%Coords%Origin%ID = trim(value)
@@ -631,7 +660,13 @@ contains
         write(*,*) 'Computed site longitude: ',ll(2,1)
         write(*,*) 'Recorded site latitude : ',Site%Location%lat
         write(*,*) 'Recorded site longitude: ',Site%Location%lon
-        write(*,*) 'By default, using recorded location'
+        if (UserInfo%ComputeSiteCoords) then
+            write(*,*) 'Using computed coordinates for site location'
+            Site%Location%lat = ll(1,1)
+            Site%Location%lon = ll(2,1)
+        else
+            write(*,*) 'By default, using recorded location. Change in XML configuration file'
+        end if
     end if
 
   end subroutine read_edi_channels
@@ -641,7 +676,6 @@ contains
     integer, intent(out) :: nf
    ! local
     character(len=200)               :: line, var, value
-    character(len=3)                 :: temp
     integer                          :: num,nch
     character(len=80)                :: chname
 
@@ -664,7 +698,7 @@ contains
             case ('SECTID')
                 !Site%Description = value
             case ('NFREQ')
-                read(value,*) nf
+               read(value,*) nf
             case ('MAXBLKS')
                 read(value,*) maxblks
             case ('HX','HY','HZ','EX','EY','RX','RY')

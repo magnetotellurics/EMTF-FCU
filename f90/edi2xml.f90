@@ -4,6 +4,7 @@ program edi2xml
   use config
   use edi_read
   use xml_write
+  use read_lists
   implicit none
 
   character(len=80) :: input_dir='./'
@@ -12,7 +13,7 @@ program edi2xml
   character(len=80) :: config_file = 'config.xml'
   character(len=80) :: edisitename, basename, verbose=''
   type(UserInfo_t)  :: UserInfo
-  type(Site_t)      :: ediLocalSite, ediRemoteSite
+  type(Site_t)      :: ediLocalSite, ediRemoteSite, xmlLocalSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputElectric
@@ -142,9 +143,8 @@ program edi2xml
   ! On input, UserInfo comes from the XML configuration; fill it in from the EDI
   call read_edi_header(edisitename, ediLocalSite, UserInfo)
 
-  if (UserInfo%ParseEDIInfo) then
-    call read_edi_info(ediLocalSite, UserInfo, Notes, NotesLength)
-  end if
+  ! Read EDI info always, but do not necessarily parse
+  call read_edi_info(ediLocalSite, UserInfo, Notes, NotesLength)
 
   ! This allocates and fills in the channels and updates the local site coords
   call read_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite, UserInfo)
@@ -174,11 +174,26 @@ program edi2xml
   allocate(F(nf), stat=istat)
   call read_edi_data(nf,F,Data)
 
+  ! Read information for this site from a list. If successfully read,
+  ! trust this information rather than that from the edi-file
+  call read_site_list(UserInfo%SiteList, ediLocalSite%IRIS_ID, xmlLocalSite, site_list_exists)
+
   ! Write XML header
-  if (UserInfo%WriteEDIInfo) then
-    call add_xml_header(ediLocalSite, UserInfo, Notes, NotesLength)
+  if (len_trim(xmlLocalSite%ID)>0) then
+    write(*,*) 'Using site name and location from a site list, but using the original site IDs.'
+    xmlLocalSite%ID = ediLocalSite%ID
+    if (UserInfo%WriteEDIInfo) then
+        call add_xml_header(xmlLocalSite, UserInfo, Notes, NotesLength)
+    else
+        call add_xml_header(xmlLocalSite, UserInfo)
+    end if
   else
-    call add_xml_header(ediLocalSite, UserInfo)
+    write(*,*) 'Not using a site list. To change this, edit the XML configuration file.'
+    if (UserInfo%WriteEDIInfo) then
+        call add_xml_header(ediLocalSite, UserInfo, Notes, NotesLength)
+    else
+        call add_xml_header(ediLocalSite, UserInfo)
+    end if
   end if
 
   ! Processing notes follow

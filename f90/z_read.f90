@@ -163,6 +163,8 @@ contains
 
 	call parse_z_site_name(sitename, Site%ID, Info%RemoteSiteID, Site%RunList)
 
+	Site%IRIS_ID = trim(Site%ID) ! this will be 5-digit - at least until they change the rules
+
     if (.not.silent) then
        write(*,*) trim(sitename),': local ',Site%ID,' remote ',Info%RemoteSiteID
     end if
