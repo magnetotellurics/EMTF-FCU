@@ -171,6 +171,7 @@ contains
 
     ! Read the tags and initialize data types from files
     call parse_str(Info%Tags,',',strarray,ntags)
+    write (*,*) 'Found ',ntags,' data types.'
     if (associated(DataType)) then
        deallocate(DataType, stat=istat)
     end if
@@ -252,9 +253,13 @@ contains
     end if
     if (hasAttribute(dt,"input")) then
         DataType%Input = getAttribute(dt,"input")
+    else
+        DataType%isScalar = .true.
     end if
     if (hasAttribute(dt,"output")) then
         DataType%Output = getAttribute(dt,"output")
+    else
+        DataType%isScalar = .true.
     end if
     str = getAttribute(dt,"type")
     if (index(str,'complex')>0) then
@@ -262,6 +267,11 @@ contains
     else
         DataType%isComplex = .false.
     end if
+    if (index(DataType%Intention,'derived')>0) then
+        DataType%derivedType = .true.
+        DataType%DerivedFrom = getString(doc,"DerivedFrom")
+    end if
+    DataType%SeeAlso = getString(doc,"SeeAlso")
     DataType%allocated = .true.
 
     ! Clear up all allocated memory

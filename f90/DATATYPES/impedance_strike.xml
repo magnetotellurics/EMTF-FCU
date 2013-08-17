@@ -1,4 +1,4 @@
-<DataType name="ZSTRIKE" type="real" input="H" output="E" units="[]">
+<DataType name="ZSTRIKE" type="real" units="degrees">
 	<Description>MT Impedance parameters: strike</Description>
 	<Intention>derived data type</Intention>
 	<Tag>impedance_strike</Tag>

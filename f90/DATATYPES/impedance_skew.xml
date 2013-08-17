@@ -1,4 +1,4 @@
-<DataType name="ZSKEW" type="real" input="H" output="E" units="[]">
+<DataType name="ZSKEW" type="real" units="[]">
 	<Description>MT Impedance parameters: skew</Description>
 	<Intention>derived data type</Intention>
 	<Tag>impedance_skew</Tag>

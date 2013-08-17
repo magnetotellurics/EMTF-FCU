@@ -166,7 +166,8 @@ program edi2xml
     case ('E')
         call init_data(Data(i),DataType(i),nf,nchin,nchoutE)
     case default
-        write(0,*) 'Error: unable to initialize the data variable #',i,' for data type ',DataType(i)%Tag
+        !write(0,*) 'Error: unable to initialize the data variable #',i,' for data type ',DataType(i)%Tag
+        call init_data(Data(i),DataType(i),nf,1,1) ! allocate for scalar data
     end select
   end do
 
@@ -243,13 +244,15 @@ program edi2xml
       do i=1,size(Data)
         select case (Data(i)%Type%Output)
         case ('H')
-            call add_Data(Data(i), InputMagnetic, OutputMagnetic, k)
-            call add_Var(Data(i), InputMagnetic, OutputMagnetic, k)
+            call add_Data(Data(i), k, InputMagnetic, OutputMagnetic)
+            call add_Var(Data(i), k, InputMagnetic, OutputMagnetic)
         case ('E')
-            call add_Data(Data(i), InputMagnetic, OutputElectric, k)
-            call add_Var(Data(i), InputMagnetic, OutputElectric, k)
+            call add_Data(Data(i), k, InputMagnetic, OutputElectric)
+            call add_Var(Data(i), k, InputMagnetic, OutputElectric)
         case default
-            write(0,*) 'Error: unable to write the data variable #',i
+            ! use only for scalar data
+            call add_Data(Data(i), k)
+            call add_Var(Data(i), k)
         end select
       end do
 

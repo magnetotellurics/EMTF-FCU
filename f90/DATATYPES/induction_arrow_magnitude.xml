@@ -1,4 +1,4 @@
-<DataType name="INDMAG" type="real" input="H" output="H" units="[]">
+<DataType name="INDMAG" type="complex" units="[]">
 	<Description>Induction Arrow Magnitude</Description>
 	<Intention>derived data type</Intention>
 	<Tag>induction_arrow_magnitude</Tag>

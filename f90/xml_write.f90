@@ -116,7 +116,7 @@ contains
     call xml_EndElement(xmlfile, 'Description')
     
     call xml_NewElement(xmlfile, 'ProductId')
-    call xml_AddCharacters(xmlfile, trim(UserInfo%Project)//'.'//Site%ID)
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Project)//'.'//Site%IRIS_ID)
     if (len_trim(UserInfo%YearCollected)>0) call xml_AddCharacters(xmlfile, '.'//trim(UserInfo%YearCollected))
     call xml_EndElement(xmlfile, 'ProductId')
 
@@ -693,8 +693,10 @@ contains
     else
         call xml_AddAttribute(xmlfile, 'type', 'real')
     end if
-    call xml_AddAttribute(xmlfile, 'output', trim(D%Output))
-    call xml_AddAttribute(xmlfile, 'input', trim(D%Input))
+    if (.not. D%isScalar) then
+        call xml_AddAttribute(xmlfile, 'output', trim(D%Output))
+        call xml_AddAttribute(xmlfile, 'input', trim(D%Input))
+    end if
     call xml_AddAttribute(xmlfile, 'units', trim(D%Units))
 
     call xml_NewElement(xmlfile, 'Description')
@@ -713,12 +715,13 @@ contains
     call xml_AddCharacters(xmlfile, trim(D%Tag))
     call xml_EndElement(xmlfile, 'Tag')
 
-    if (index(D%Intention,'derived')>0) then
+    if (D%derivedType) then
         call xml_NewElement(xmlfile, 'DerivedFrom')
         call xml_AddCharacters(xmlfile, trim(D%DerivedFrom))
         call xml_EndElement(xmlfile, 'DerivedFrom')
     end if
 
+    ! if you choose to use the hyperlink here, deal with comma-separated lists correctly
     if (len_trim(D%SeeAlso) > 0) then
         call xml_NewElement(xmlfile, 'SeeAlso')
         call xml_AddCharacters(xmlfile, trim(D%SeeAlso))
@@ -840,12 +843,20 @@ contains
   end subroutine add_PeriodRange
   
 
-  subroutine add_Data(Data, Input, Output, iPer)
+  subroutine add_Data(Data, iPer, Input, Output)
     type(Data_t), intent(in)                  :: Data
-    type(Channel_t), dimension(:), intent(in) :: Input, Output
+    type(Channel_t), dimension(:), intent(in), optional :: Input, Output
     integer, intent(in)                       :: iPer
     ! local
     character(20)                             :: str
+
+    if (.not. Data%Type%isScalar) then
+     if (.not. (present(Input) .and. present(Output))) then
+        write(0,*) 'Warning: unable to write non-scalar data ',trim(Data%Type%Name),' for period ',iPer,' to XML file.'
+        write(0,*) 'Check your XML tags and make sure that data type input and output are specified correctly.'
+        return
+     end if
+    end if
 
     call xml_NewElement(xmlfile, trim(Data%Type%Name))
     if (Data%Type%isComplex) then
@@ -853,8 +864,13 @@ contains
     else
         call xml_AddAttribute(xmlfile, 'type', 'real')
     end if
-    write(str,'(i3 i3)') Data%nchout, Data%nchin
-    call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
+    if (Data%Type%isScalar) then
+        write(str,'(i3 i3)') 1, 1
+        call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
+    else
+        write(str,'(i3 i3)') Data%nchout, Data%nchin
+        call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
+    end if
     if (len_trim(Data%Type%Units) > 0) then
         call xml_AddAttribute(xmlfile, 'units', trim(Data%Type%Units))
     end if
@@ -862,13 +878,21 @@ contains
     do i=1,Data%nchout
        do j=1,Data%nchin
           if (isnan(dreal(Data%Matrix(iPer,i,j))) .or. isnan(dimag(Data%Matrix(iPer,i,j)))) then
-            write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' period ',iPer
+            if (Data%Type%isScalar) then
+                write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type)),' period ',iPer
+            else
+                write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' period ',iPer
+            end if
             cycle
           end if
           call xml_NewElement(xmlfile, 'value')
-          call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type,Input(j),Output(i))))
-          call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
-          call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
+          if (Data%Type%isScalar) then
+            call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type)))
+          else
+            call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type,Input(j),Output(i))))
+            call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
+            call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
+          end if
           call xml_AddCharacters(xmlfile, dreal(Data%Matrix(iPer,i,j)), fmt="s7")
           if (Data%Type%isComplex) then
             call xml_AddCharacters(xmlfile, ' ')
@@ -883,28 +907,49 @@ contains
   end subroutine add_Data
 
 
-  subroutine add_Var(Data, Input, Output, iPer)
+  subroutine add_Var(Data, iPer, Input, Output)
     type(Data_t), intent(in)                  :: Data
-    type(Channel_t), dimension(:), intent(in) :: Input, Output
+    type(Channel_t), dimension(:), intent(in), optional :: Input, Output
     integer, intent(in)                       :: iPer
     ! local
     character(20)                             :: str
 
+    if (.not. Data%Type%isScalar) then
+     if (.not. (present(Input) .and. present(Output))) then
+        write(0,*) 'Warning: unable to write VAR for non-scalar data ',trim(Data%Type%Name),' for period ',iPer,' to XML file.'
+        write(0,*) 'Check your XML tags and make sure that data type input and output are specified correctly.'
+        return
+     end if
+    end if
+
     call xml_NewElement(xmlfile, trim(Data%Type%Name)//'.VAR')
     call xml_AddAttribute(xmlfile, 'type', 'real')
-    write(str,'(i3 i3)') Data%nchout, Data%nchin
-    call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
+    if (Data%Type%isScalar) then
+        write(str,'(i3 i3)') 1, 1
+        call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
+    else
+        write(str,'(i3 i3)') Data%nchout, Data%nchin
+        call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
+    end if
 
     do i=1,Data%nchout
        do j=1,Data%nchin
           if (isnan(Data%Var(iPer,i,j))) then
-            write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' VAR period ',iPer
+            if (Data%Type%isScalar) then
+                write(0,*) 'Warning: skipping NaN output for ',trim(Data%Type%Name),' VAR period ',iPer
+            else
+                write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' VAR period ',iPer
+            end if
             cycle
           end if
           call xml_NewElement(xmlfile, 'value')
-          call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type,Input(j),Output(i))))
-          call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
-          call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
+          if (Data%Type%isScalar) then
+              call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type)))
+          else
+              call xml_AddAttribute(xmlfile, 'name', trim(TF_name(Data%Type,Input(j),Output(i))))
+              call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
+              call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
+          end if
           call xml_AddCharacters(xmlfile, Data%Var(iPer,i,j), fmt="s7")
           call xml_EndElement(xmlfile, 'value')
        end do
@@ -915,12 +960,17 @@ contains
   end subroutine add_Var
 
 
-  subroutine add_InvSigCov(Data, Input, iPer)
+  subroutine add_InvSigCov(Data, iPer, Input)
     type(Data_t), intent(in)                  :: Data
     type(Channel_t), dimension(:), intent(in) :: Input
     integer, intent(in)                       :: iPer
     ! local
     character(20)                             :: str
+
+    if (Data%Type%isScalar) then
+        write(0,*) 'Warning: skipping INVSIGCOV output for scalar data type ',trim(Data%Type%Name),' period ',iPer
+        return
+    end if
 
     call xml_NewElement(xmlfile, trim(Data%Type%Name)//'.INVSIGCOV')
     call xml_AddAttribute(xmlfile, 'type', 'complex')
@@ -944,12 +994,17 @@ contains
   end subroutine add_InvSigCov
 
 
-  subroutine add_ResidCov(Data, Output, iPer)
+  subroutine add_ResidCov(Data, iPer, Output)
     type(Data_t), intent(in)                  :: Data
     type(Channel_t), dimension(:), intent(in) :: Output
     integer, intent(in)                       :: iPer
     ! local
     character(20)                             :: str
+
+    if (Data%Type%isScalar) then
+        write(0,*) 'Warning: skipping RESIDCOV output for scalar data type ',trim(Data%Type%Name),' period ',iPer
+        return
+    end if
 
     call xml_NewElement(xmlfile, trim(Data%Type%Name)//'.RESIDCOV')
     call xml_AddAttribute(xmlfile, 'type', 'complex')

@@ -1,4 +1,4 @@
-<DataType name="TSTRIKE" type="real" input="H" output="H" units="[]">
+<DataType name="TSTRIKE" type="real" units="degrees">
 	<Description>Tipper parameters: strike</Description>
 	<Intention>derived data type</Intention>
 	<Tag>tipper_strike</Tag>

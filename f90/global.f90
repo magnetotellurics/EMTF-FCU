@@ -11,8 +11,9 @@ module global
   ! IRIS requires site ID to have no more than 5 chars
   ! respectively, run ID has no more than 6 chars
   ! This restriction does not hold to data not archived
-  ! with IRIS, so make this a parameter
-  integer, parameter    :: nid=6
+  ! with IRIS, so make this a parameter... just be careful
+  ! that the computed 5-digit IRIS ID is always unique
+  integer, parameter    :: nid=16
   !*********************************************************
   ! WGS84 - common standard global datum
   ! NAD83 - used in North America
@@ -82,7 +83,7 @@ module global
     character(len=2)  :: Network
     character(len=80) :: SubType
     character(len=80) :: Description
-    character(len=80) :: Tags
+    character(len=400):: Tags
     type(Copyright_t) :: Copyright
     character(len=80) :: Project
     character(len=80) :: Survey
@@ -228,6 +229,8 @@ module global
      character(len=80) :: SeeAlso ! interpret with (tag list)
      !character(len=80), pointer :: Component(:) ! conceptual components stored in "Names"
      !integer           :: nComp ! number of conceptual components
+     logical           :: derivedType = .false.
+     logical           :: isScalar = .false.
      logical           :: isComplex = .false.
      logical           :: allocated = .false.
   end type DataType_t
@@ -238,7 +241,8 @@ module global
     ! statistical estimates (not all are used simultaneously)
     ! we are also storing the rotation angles, but these won't be used
     ! except to correct the "channel orientations" - so in fact, I do not
-    ! at this point indent to support varying rotation angles in a file.
+    ! at this point intend to support varying rotation angles in a file.
+    ! note that scalar data types are supported by setting nchin & nchout to 1.
     type(DataType_t)        :: Type
     integer                 :: nf, nchin, nchout ! number of input and output channels
     real(8),   dimension(:),     pointer :: Rot  ! rotation angles (FOR ALL FREQUENCIES!)
@@ -462,6 +466,8 @@ contains
         DataType%Units = ' '
         DataType%DerivedFrom = ' '
         DataType%SeeAlso = ' '
+        DataType%derivedType = .false.
+        DataType%isScalar = .false.
 	    DataType%isComplex = .false.
 	    DataType%allocated = .false.
 
@@ -686,15 +692,19 @@ contains
 
     function TF_name(DataType,InputChannel,OutputChannel) result (tfname)
           type(DataType_t), intent(in)   :: DataType
-		  type(Channel_t), intent(in)    :: InputChannel, OutputChannel
+		  type(Channel_t), intent(in), optional    :: InputChannel, OutputChannel
 		  character(10)					 :: tfname
 
-          select case (DataType%Name)
-          case ('T')
-            tfname = trim(DataType%Name)//trim(InputChannel%ID(2:10))
-          case default
-		    tfname = trim(DataType%Name)//trim(OutputChannel%ID(2:10))//trim(InputChannel%ID(2:10))
-          end select
+          if (present(InputChannel)) then
+              select case (DataType%Name)
+              case ('T')
+                tfname = trim(DataType%Name)//trim(InputChannel%ID(2:10))
+              case default
+                tfname = trim(DataType%Name)//trim(OutputChannel%ID(2:10))//trim(InputChannel%ID(2:10))
+              end select
+          else
+              tfname = trim(DataType%Name)
+          end if
 
 	end function TF_name
 

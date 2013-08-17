@@ -1,4 +1,4 @@
-<DataType name="TSKEW" type="real" input="H" output="H" units="[]">
+<DataType name="TSKEW" type="real" units="[]">
 	<Description>Tipper parameters: skew</Description>
 	<Intention>derived data type</Intention>
 	<Tag>tipper_skew</Tag>

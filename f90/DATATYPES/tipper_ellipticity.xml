@@ -1,4 +1,4 @@
-<DataType name="TELLIP" type="real" input="H" output="H" units="[]">
+<DataType name="TELLIP" type="real" units="[]">
 	<Description>Tipper parameters: ellipticity</Description>
 	<Intention>derived data type</Intention>
 	<Tag>tipper_ellipticity</Tag>

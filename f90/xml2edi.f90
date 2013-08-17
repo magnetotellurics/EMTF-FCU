@@ -75,7 +75,8 @@ program xml2edi
     case ('E')
         call read_xml_data(DataType(i), Data(i), InputMagnetic, OutputElectric)
     case default
-        write(0,*) 'Error: unknown data type ',trim(DataType(i)%Name),' with output ',trim(DataType(i)%Output)
+        write(0,*) 'Skipping unknown data type ',trim(DataType(i)%Name),' with output ',trim(DataType(i)%Output)
+        !call read_xml_data(DataType(i), Data(i)) ! read scalar valued data currently causes segmentation fault
     end select
   end do
 

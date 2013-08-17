@@ -1,4 +1,4 @@
-<DataType name="ZELLIP" type="real" input="H" output="E" units="[]">
+<DataType name="ZELLIP" type="real" units="[]">
 	<Description>MT Impedance parameters: ellipticity</Description>
 	<Intention>derived data type</Intention>
 	<Tag>impedance_ellipticity</Tag>

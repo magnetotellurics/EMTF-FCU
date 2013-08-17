@@ -485,10 +485,46 @@ return
 end
 
 ! **********************************************************************
+! fix_spaces(): replace all new line, carriage return and tab characters
+! with spaces - typically to be postprocessed with trim(adjustl(str2))
+! (C) Anna Kelbert, 2013
+
+character(len=len(str1)) function fix_spaces(str1) result (str2)
+
+     character(len=*), intent(in) :: str1
+     ! local
+     integer i
+
+     str2 = str1
+     do i=1,len(str2)
+        select case (ichar(str2(i:i)))
+            case (ascii_lf)
+                ! new line
+                str2(i:i) = achar(ascii_sp)
+            case (ascii_cr)
+                ! carriage return
+                str2(i:i) = achar(ascii_sp)
+            case (ascii_ht)
+                ! horizontal tab
+                str2(i:i) = achar(ascii_sp)
+            case (ascii_vt)
+                ! vertical tab
+                str2(i:i) = achar(ascii_sp)
+            case (ascii_sp)
+                ! space
+            case default
+                ! otherwise, do nothing
+        end select
+     end do
+
+end function fix_spaces
+
+! **********************************************************************
 ! A quick and dirty string parsing routine that divides a string
 ! up into segments using a one-char delimiter.
 ! For efficiency, uses a hardcoded max number of strings = 100.
 ! Written by: Anna Kelbert, 11 March 2013
+! Last edited on 16 Aug 2013 to remove trailing tabs & new lines.
 ! This subroutine is distributed under the terms of
 ! the GNU Lesser General Public License.
 
@@ -503,17 +539,18 @@ subroutine parse_str(str,delim,strarray,num)
 
      L = len(str)
      strtail = str
-     i1 = 1
+     i1 = 0
      N = 1
      j(N) = i1 ! start index for delim-separated string
      do ! marking and counting
-        i2 = index(strtail,delim)
+        i2 = i1 + index(strtail,delim)
+        !write(*,*) 'DEBUG: ',i1,delim,i2,strtail
         if (i2>i1) then
-            temp = strtail(i1:i2)
+            temp = str(i1+1:i2)
             strtail = trim(str(i2+1:L))
-            i1 = i2 + 1
+            i1 = i2
             N = N + 1
-            j(N) = i1
+            j(N) = i1 + 1
         else ! final text portion
             temp = trim(strtail)
             exit
@@ -525,9 +562,9 @@ subroutine parse_str(str,delim,strarray,num)
      end if
      allocate(strarray(N), stat=istat)
      do i = 1,N-1
-        strarray(i) = trim(str(j(i):j(i+1)-2))
+        strarray(i) = trim(adjustl(fix_spaces(str(j(i):j(i+1)-2))))
      end do
-     strarray(N) = trim(str(j(N):L))
+     strarray(N) = trim(adjustl(fix_spaces(str(j(N):L))))
 
      if (present(num)) then
         num = N

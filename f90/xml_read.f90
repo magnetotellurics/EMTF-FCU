@@ -179,11 +179,22 @@ contains
             DataType(i)%Units = getAttribute(this,"units")
         end if
         str = getAttribute(this,"type")
+        if (len_trim(DataType(i)%Output)==0) then
+            DataType(i)%isScalar = .true.
+        else
+            DataType(i)%isScalar = .false.
+        end if
         if (index(str,'complex')>0) then
             DataType(i)%isComplex = .true.
         else
             DataType(i)%isComplex = .false.
         end if
+        if (index(DataType(i)%Intention,'derived')>0) then
+            DataType(i)%derivedType = .true.
+            DataType(i)%DerivedFrom = getString(doc,"DerivedFrom")
+        end if
+        DataType%SeeAlso = getString(doc,"SeeAlso")
+        DataType%allocated = .true.
     end do
 
   end subroutine read_xml_data_types
@@ -192,7 +203,7 @@ contains
   subroutine read_xml_data(DataType, Data, Input, Output)
     type(DataType_t), intent(in)              :: DataType
     type(Data_t), intent(inout)               :: Data
-    type(Channel_t), dimension(:), intent(in) :: Input, Output
+    type(Channel_t), dimension(:), intent(in), optional :: Input, Output
     ! local
     type(Node), pointer                       :: thisFreq
     type(Node), pointer                       :: thisNode
@@ -205,7 +216,16 @@ contains
 
     nf = getLength(periods)
 
-    call init_data(Data, DataType, nf, size(Input), size(Output))
+    if (present(Input) .and. present(Output)) then
+        call init_data(Data, DataType, nf, size(Input), size(Output))
+    else
+        if (DataType%isScalar) then ! assuming scalar data
+            call init_data(Data, DataType, nf, 1, 1)
+        else
+            write(0,*) 'Error reading data ',trim(DataType%Name),': not a scalar! Please provide input and output channels.'
+            return
+        end if
+    end if
 
     do iPer=1,nf
         thisFreq => item(periods, iPer-1)
@@ -218,20 +238,28 @@ contains
         thisNode => item(getElementsByTagName(thisFreq, trim(DataType%Name)),0)
         list => getElementsByTagName(thisNode,"value")
         do i=0,getLength(list)-1
+            vreal = 0.0d0
+            vimag = 0.0d0
             comp => item(list,i)
             str = getString(comp,"value")
-            read(str,*) vreal,vimag
-            chname = getAttribute(comp,"input")
-            chin = find_channel(Input,chname)
-            if (chin == 0) then
-                write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
-                stop
+            if (DataType%isComplex) then
+                read(str,*) vreal,vimag
+            else
+                read(str,*) vreal
             end if
-            chname = getAttribute(comp,"output")
-            chout = find_channel(Output,chname)
-            if (chout == 0) then
-                write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
-                stop
+            if (.not. DataType%isScalar) then
+                chname = getAttribute(comp,"input")
+                chin = find_channel(Input,chname)
+                if (chin == 0) then
+                    write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
+                    stop
+                end if
+                chname = getAttribute(comp,"output")
+                chout = find_channel(Output,chname)
+                if (chout == 0) then
+                    write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
+                    stop
+                end if
             end if
             Data%Matrix(iPer,chout,chin) = dcmplx(vreal,vimag)
         end do
@@ -240,20 +268,23 @@ contains
         thisNode => item(getElementsByTagName(thisFreq, trim(DataType%Name)//'.VAR'),0)
         list => getElementsByTagName(thisNode,"value")
         do i=0,getLength(list)-1
+            vreal = 0.0d0
             comp => item(list,i)
             str = getString(comp,"value")
             read(str,*) vreal
-            chname = getAttribute(comp,"input")
-            chin = find_channel(Input,chname)
-            if (chin == 0) then
-                write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
-                stop
-            end if
-            chname = getAttribute(comp,"output")
-            chout = find_channel(Output,chname)
-            if (chout == 0) then
-                write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
-                stop
+            if (.not. DataType%isScalar) then
+                chname = getAttribute(comp,"input")
+                chin = find_channel(Input,chname)
+                if (chin == 0) then
+                    write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
+                    stop
+                end if
+                chname = getAttribute(comp,"output")
+                chout = find_channel(Output,chname)
+                if (chout == 0) then
+                    write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
+                    stop
+                end if
             end if
             Data%Var(iPer,chout,chin) = vreal
         end do
@@ -263,20 +294,24 @@ contains
         if (getLength(datalist)>0) then
             list => getElementsByTagName(item(datalist,0),"value")
             do i=0,getLength(list)-1
+                vreal = 0.0d0
+                vimag = 0.0d0
                 comp => item(list,i)
                 str = getString(comp,"value")
                 read(str,*) vreal,vimag
-                chname = getAttribute(comp,"input")
-                chin = find_channel(Input,chname)
-                if (chin == 0) then
-                    write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
-                    stop
-                end if
-                chname = getAttribute(comp,"output")
-                chout = find_channel(Input,chname)
-                if (chout == 0) then
-                    write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
-                    stop
+                if (.not. DataType%isScalar) then
+                    chname = getAttribute(comp,"input")
+                    chin = find_channel(Input,chname)
+                    if (chin == 0) then
+                        write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
+                        stop
+                    end if
+                    chname = getAttribute(comp,"output")
+                    chout = find_channel(Input,chname)
+                    if (chout == 0) then
+                        write(0,*) 'Error reading the XML: unknown input channel ',trim(chname),'. Exiting...'
+                        stop
+                    end if
                 end if
                 Data%InvSigCov(iPer,chout,chin) = dcmplx(vreal,vimag)
             end do
@@ -287,20 +322,24 @@ contains
         if (getLength(datalist)>0) then
             list => getElementsByTagName(item(datalist,0),"value")
             do i=0,getLength(list)-1
+                vreal = 0.0d0
+                vimag = 0.0d0
                 comp => item(list,i)
                 str = getString(comp,"value")
                 read(str,*) vreal,vimag
-                chname = getAttribute(comp,"input")
-                chin = find_channel(Output,chname)
-                if (chin == 0) then
-                    write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
-                    stop
-                end if
-                chname = getAttribute(comp,"output")
-                chout = find_channel(Output,chname)
-                if (chout == 0) then
-                    write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
-                    stop
+                if (.not. DataType%isScalar) then
+                    chname = getAttribute(comp,"input")
+                    chin = find_channel(Output,chname)
+                    if (chin == 0) then
+                        write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
+                        stop
+                    end if
+                    chname = getAttribute(comp,"output")
+                    chout = find_channel(Output,chname)
+                    if (chout == 0) then
+                        write(0,*) 'Error reading the XML: unknown output channel ',trim(chname),'. Exiting...'
+                        stop
+                    end if
                 end if
                 Data%ResidCov(iPer,chout,chin) = dcmplx(vreal,vimag)
             end do

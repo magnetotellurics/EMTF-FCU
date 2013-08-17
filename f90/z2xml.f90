@@ -283,15 +283,15 @@ program z2xml
       do i=1,size(Data)
         select case (Data(i)%Type%Output)
         case ('H')
-            call add_Data(Data(i), InputMagnetic, OutputMagnetic, k)
-            call add_Var(Data(i), InputMagnetic, OutputMagnetic, k)
-            call add_InvSigCov(Data(i), InputMagnetic, k)
-            call add_ResidCov(Data(i), OutputMagnetic, k)
+            call add_Data(Data(i), k, InputMagnetic, OutputMagnetic)
+            call add_Var(Data(i), k, InputMagnetic, OutputMagnetic)
+            call add_InvSigCov(Data(i), k, InputMagnetic)
+            call add_ResidCov(Data(i), k, OutputMagnetic)
         case ('E')
-            call add_Data(Data(i), InputMagnetic, OutputElectric, k)
-            call add_Var(Data(i), InputMagnetic, OutputElectric, k)
-            call add_InvSigCov(Data(i), InputMagnetic, k)
-            call add_ResidCov(Data(i), OutputElectric, k)
+            call add_Data(Data(i), k, InputMagnetic, OutputElectric)
+            call add_Var(Data(i), k, InputMagnetic, OutputElectric)
+            call add_InvSigCov(Data(i), k, InputMagnetic)
+            call add_ResidCov(Data(i), k, OutputElectric)
         case default
             write(0,*) 'Error: unable to write the data variable #',i
         end select

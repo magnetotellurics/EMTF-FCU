@@ -185,7 +185,9 @@ contains
         case ('DATAID')
             ! do nothing: info extracted from file name more reliable
         case ('ACQBY')
-            Info%AcquiredBy = value
+            if (isempty(Info%AcquiredBy)) then ! prefer the XML config info
+                Info%AcquiredBy = value
+            end if
         case ('FILEBY') ! only use this if the information is missing from config
             if (len_trim(Info%ProcessedBy) == 0) then
                 Info%ProcessedBy = value
@@ -209,7 +211,9 @@ contains
         case ('COUNTY')
             county = value
         case ('PROSPECT')
-            Info%Survey = value
+            if (isempty(Info%Survey)) then ! prefer the XML config info
+                Info%Survey = value
+            end if
         case ('LOC')
             Site%Description = value
         case ('LAT')
@@ -223,7 +227,7 @@ contains
                 write(*,*) 'Longitude conversion: ',trim(value),' to ',Site%Location%lon
             end if
         case ('ELEV')
-            Site%Location%elev=dms2deg(value)
+            read(value,*) Site%Location%elev
         case ('UNITS') ! units for elevation
             elevunits = value
         case ('STDVERS,MAXSECT')
@@ -259,14 +263,17 @@ contains
     else if (len_trim(Site%ID)==5) then
         Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//toupper(Site%ID(3:3))//Site%ID(4:5)
     else if (len_trim(Site%ID)>=6) then
-        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(4:6)
+        !Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(4:6)
+        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(3:5)
     end if
 
     ! typical case: ENDDATE not present in the EDI file; use ACQDATE
     if(isempty(Site%End)) then
         Site%End = Site%Start
     end if
-    Info%YearCollected = datestr(Site%End,'XML','YYYY')
+    if (isempty(Info%YearCollected)) then ! again, prefer the XML config info to the EDI header
+        Info%YearCollected = datestr(Site%End,'XML','YYYY')
+    end if
 
     ! typical case: LOC not present; use COUNTRY etc for site description
     if(isempty(Site%Description)) then
@@ -871,7 +878,11 @@ contains
             select case (trim(stat))
             case ('EXP','')
                 ! initialize data to zero (not NaN!) to make this work
-                Data(ind)%Matrix(:,row,col) = Data(ind)%Matrix(:,row,col) + cvalue
+                if (Data(ind)%Type%isScalar) then
+                    Data(ind)%Matrix(:,1,1) = Data(ind)%Matrix(:,1,1) + cvalue
+                else
+                    Data(ind)%Matrix(:,row,col) = Data(ind)%Matrix(:,row,col) + cvalue
+                end if
             case ('ROT')
                 Data(ind)%Rot(:) = dreal(cvalue) ! SAVING BUT WON'T USE THIS!!!
             case ('VAR')
@@ -1000,7 +1011,7 @@ contains
         col = 2
         TFname = str1(1:len1-1)
     else
-        TFname = trim(str1)
+        TFname = trim(str1(1:len1))
     end if
 
     if (.not.silent) then
@@ -1032,7 +1043,7 @@ contains
     case ('PHSXX.ERR','PHSYY.ERR','PHSXY.ERR','PHSYX.ERR')
     case ('ZSTRIKE','ZSKEW','ZELLIP')
     case ('TSTRIKE','TSKEW','TELLIP')
-    case ('INDMAGR.EXP','INDMAGI.EXP','INDANGR.EXP')
+    case ('INDMAGR.EXP','INDMAGI.EXP','INDANGR.EXP','INDANGI.EXP')
     case ('COH','EPREDCOH','HPREDCOH','SIGAMP','SIGNOISE')
     case ('RES1D','DEP1D')
     case ('SPECTRA')

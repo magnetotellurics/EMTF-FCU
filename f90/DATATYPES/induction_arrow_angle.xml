@@ -1,4 +1,4 @@
-<DataType name="INDANG" type="real" input="H" output="H" units="[]">
+<DataType name="INDANG" type="complex" units="degrees">
 	<Description>Induction Arrow Angle (Parkinson convention)</Description>
 	<Intention>derived data type</Intention>
 	<Tag>induction_arrow_angle</Tag>
