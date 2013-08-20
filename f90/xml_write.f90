@@ -132,6 +132,17 @@ contains
     call xml_AddCharacters(xmlfile, trim(UserInfo%Tags))
     call xml_EndElement(xmlfile, 'Tags')
 
+    if (.not. isempty(UserInfo%ExternalUrl)) then
+        call xml_NewElement(xmlfile, 'ExternalUrl')
+        call xml_NewElement(xmlfile, 'Description')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%ExternalUrlInfo))
+        call xml_EndElement(xmlfile, 'Description')
+        call xml_NewElement(xmlfile, 'Url')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%ExternalUrl))
+        call xml_EndElement(xmlfile, 'Url')
+        call xml_EndElement(xmlfile, 'ExternalUrl')
+    end if
+
     if (UserInfo%TimeSeriesArchived) then
         call xml_NewElement(xmlfile, 'ExternalUrl')
         call xml_NewElement(xmlfile, 'Description')

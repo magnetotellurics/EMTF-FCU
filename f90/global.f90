@@ -84,6 +84,8 @@ module global
     character(len=80) :: SubType
     character(len=80) :: Description
     character(len=400):: Tags
+    character(len=400):: ExternalUrl
+    character(len=400):: ExternalUrlInfo
     type(Copyright_t) :: Copyright
     character(len=80) :: Project
     character(len=80) :: Survey
@@ -318,6 +320,8 @@ contains
         Info%SubType = subType
         Info%Description = subTypeInfo
         Info%Tags = tags
+        Info%ExternalUrl = ''
+        Info%ExternalUrlInfo = ''
         call init_copyright(Info%Copyright)
         Info%Project = '' ! 'USArray'
         Info%Survey = '' ! 'TA'

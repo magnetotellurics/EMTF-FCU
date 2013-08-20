@@ -45,6 +45,8 @@ contains
         Info%TimeSeriesArchived = .TRUE.
     end if
     Info%Network = getString(doc,"Network")
+    Info%ExternalUrl = getString(doc,"ExternalUrl")
+    Info%ExternalUrlInfo = getString(doc,"ExternalUrlInfo")
 	Info%Project = getString(doc,"Project")
 	Info%Survey = getString(doc,"Survey")
 	Info%YearCollected = getString(doc,"YearCollected")

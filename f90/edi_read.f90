@@ -215,7 +215,9 @@ contains
                 Info%Survey = value
             end if
         case ('LOC')
-            Site%Description = value
+            if (.not. (trim(adjustl(value)) .eq. 'Area Name')) then
+                Site%Description = value
+            end if
         case ('LAT')
             Site%Location%lat=dms2deg(value)
             if (.not. silent) then
@@ -263,8 +265,8 @@ contains
     else if (len_trim(Site%ID)==5) then
         Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//toupper(Site%ID(3:3))//Site%ID(4:5)
     else if (len_trim(Site%ID)>=6) then
-        !Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(4:6)
-        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(3:5)
+        Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(4:6)
+        !Site%IRIS_ID = toupper(Site%ID(1:1))//toupper(Site%ID(2:2))//Site%ID(3:5)
     end if
 
     ! typical case: ENDDATE not present in the EDI file; use ACQDATE
@@ -276,8 +278,10 @@ contains
     end if
 
     ! typical case: LOC not present; use COUNTRY etc for site description
-    if(isempty(Site%Description)) then
+    if(isempty(Site%Description) .and. .not. isempty(country) .and. .not. isempty(state)) then
         Site%Description = trim(county)//', '//trim(state)//', '//trim(country)
+    else if (isempty(Site%Description)) then
+        Site%Description = 'UNKNOWN SITE NAME'
     end if
 
     ! convert elevation to meters
@@ -324,6 +328,12 @@ contains
     if (associated(Notes)) deallocate(Notes)
 
     allocate(Notes(n))
+
+    if (.not.silent) then
+        write(*,*) 'Before entering the INFO block, latitude  = ',Site%Location%lat
+        write(*,*) 'Before entering the INFO block, longitude = ',Site%Location%lon
+        write(*,*) 'Before entering the INFO block, elevation = ',Site%Location%elev
+    end if
 
     do i=1,n
         read (edifile,'(a200)',iostat=ios) line
@@ -667,13 +677,19 @@ contains
         write(*,*) 'Computed site longitude: ',ll(2,1)
         write(*,*) 'Recorded site latitude : ',Site%Location%lat
         write(*,*) 'Recorded site longitude: ',Site%Location%lon
-        if (UserInfo%ComputeSiteCoords) then
-            write(*,*) 'Using computed coordinates for site location'
-            Site%Location%lat = ll(1,1)
-            Site%Location%lon = ll(2,1)
-        else
-            write(*,*) 'By default, using recorded location. Change in XML configuration file'
+    end if
+    if (UserInfo%ComputeSiteCoords) then
+        write(*,*) 'Using computed coordinates for site location'
+        Site%Location%lat = ll(1,1)
+        Site%Location%lon = ll(2,1)
+        Site%Location%elev = Site%Coords%Origin%elev
+        if (.not.silent) then
+            write(*,*) 'Based on our computation, site latitude  = ',Site%Location%lat
+            write(*,*) 'Based on our computation, site longitude = ',Site%Location%lon
+            write(*,*) 'Based on our computation, site elevation = ',Site%Location%elev
         end if
+    else
+        write(*,*) 'By default, using recorded location. Change in XML configuration file'
     end if
 
   end subroutine read_edi_channels
