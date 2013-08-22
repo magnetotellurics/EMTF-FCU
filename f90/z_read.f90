@@ -156,6 +156,9 @@ contains
 
 	call init_site_info(Site)
 
+	Site%QualityRating = Info%DefaultDataQuality
+    Site%QualityComments = Info%DataQualityComment
+
     read (zfile,*) temp
     read (zfile,*) temp
     read (zfile,'(a80)') Info%RemoteRefType
@@ -177,6 +180,7 @@ contains
 
 	Info%ProcessingSoftware = 'EMTF'
 	Info%ProcessingTag = sitename
+	Info%SignConvention = sign_convention
 
     read (zfile,'(a120)',iostat=ios) temp
     i = index(temp,'coordinate')

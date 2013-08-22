@@ -27,6 +27,8 @@ module global
   character(len=3)      :: version='3.0'
   !*********************************************************
   ! The sign convention is always going to be +1
+  ! except when not! - e.g., if Larsen's code was used,
+  ! in which case this should be set in configuration file
   character(len=16)     :: sign_convention='exp(+ i\omega t)'
   !*********************************************************
   ! The units are always going to be non-SI
@@ -107,6 +109,9 @@ module global
     character(len=80) :: Estimate(8) ! statistical estimate types
     character(len=80) :: DateFormat ! for EDI input/output
     character(len=80) :: DummyDataValue ! for EDI input/output
+    character(len=80) :: DefaultSiteName ! for EDI input/output
+    integer           :: DefaultDataQuality ! a priori data quality from 1 to 5 (0 = unrated)
+    character(len=80) :: DataQualityComment ! information about survey data quality
     logical           :: ComputeSiteCoords ! for EDI input/output
     logical           :: ParseEDIInfo ! for EDI input/output
     logical           :: WriteEDIInfo ! for EDI input/output
@@ -115,6 +120,8 @@ module global
     character(len=80) :: Basename ! base name of the original file to be submitted
     character(len=10) :: Image ! extension of the image file, if present
     character(len=10) :: Original ! extension of the original file to be submitted
+    character(len=80) :: Attachment ! full name for optional survey attachment file
+    character(len=400):: AttachmentInfo ! description of the survey attachment file
     character(len=80) :: RunList
     character(len=80) :: SiteList
     character(len=80) :: ChannelList
@@ -330,7 +337,7 @@ contains
         Info%AcquiredBy = ' '
         call init_person(Info%Creator)
         call init_person(Info%Submitter)
-        Info%SignConvention = sign_convention
+        Info%SignConvention = ''
         Info%RemoteRef = .FALSE.
         Info%RemoteRefType = ' '
         Info%RemoteSiteID = ' '
@@ -342,6 +349,9 @@ contains
         Info%ProcessingTag = ' '
         Info%DateFormat = 'MM/DD/YY'
         Info%DummyDataValue = ''
+        Info%DefaultSiteName = 'UNKNOWN SITE NAME'
+        Info%DefaultDataQuality = 0
+        Info%DataQualityComment = ''
         Info%ComputeSiteCoords = .FALSE.
         Info%ParseEDIInfo = .TRUE.
         Info%WriteEDIInfo = .TRUE.
@@ -350,6 +360,8 @@ contains
         Info%Basename = ' '
         Info%Image = ' '
         Info%Original = ' '
+        Info%Attachment = ' '
+        Info%AttachmentInfo = ' '
         Info%RunList = 'Runs.xml'
         Info%SiteList = 'Sites.xml'
         Info%ChannelList = 'Channels.xml'

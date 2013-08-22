@@ -132,6 +132,13 @@ contains
 	Info%ProcessingSoftwareLastMod = getString(software,"LastMod")
 	Info%ProcessingSoftwareAuthor = getString(software,"Author")
 
+    Info%SignConvention = getString(doc,"SignConvention")
+    if (len_trim(Info%SignConvention)==0) then
+        Info%SignConvention = sign_convention
+    end if
+    Info%DefaultSiteName = getString(doc,"DefaultSiteName")
+    Info%DefaultDataQuality = getInteger(doc,"DefaultDataQuality")
+    Info%DataQualityComment = getString(doc,"DataQualityComment")
     Info%DateFormat = getString(doc,"DateFormat")
     computesitecoords = -1
     computesitecoords = getInteger(doc,"ComputeSiteCoords")
@@ -161,6 +168,8 @@ contains
     elseif (metadataonly==0) then
         Info%MetadataOnly = .FALSE.
     end if
+    Info%Attachment = getString(doc,'Attachment')
+    Info%AttachmentInfo = getString(doc,'AttachmentInfo')
     Info%Image = getString(doc,'Image')
     Info%Original = getString(doc,'Original')
 	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")

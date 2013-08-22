@@ -116,7 +116,8 @@ contains
     call xml_EndElement(xmlfile, 'Description')
     
     call xml_NewElement(xmlfile, 'ProductId')
-    call xml_AddCharacters(xmlfile, trim(UserInfo%Project)//'.'//Site%IRIS_ID)
+    ! finally decided to use the full ID to ensure uniqueness
+    call xml_AddCharacters(xmlfile, trim(UserInfo%Project)//'.'//trim(Site%ID))
     if (len_trim(UserInfo%YearCollected)>0) call xml_AddCharacters(xmlfile, '.'//trim(UserInfo%YearCollected))
     call xml_EndElement(xmlfile, 'ProductId')
 
@@ -175,6 +176,17 @@ contains
         call xml_EndElement(xmlfile, 'Filename')
         call xml_NewElement(xmlfile, 'Description')
         call xml_AddCharacters(xmlfile, 'The original used to produce the XML')
+        call xml_EndElement(xmlfile, 'Description')
+        call xml_EndElement(xmlfile, 'Attachment')
+    end if
+
+    if (.not. isempty(UserInfo%Attachment)) then ! submit the survey attachment to SPUD
+        call xml_NewElement(xmlfile, 'Attachment')
+        call xml_NewElement(xmlfile, 'Filename')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Attachment))
+        call xml_EndElement(xmlfile, 'Filename')
+        call xml_NewElement(xmlfile, 'Description')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%AttachmentInfo))
         call xml_EndElement(xmlfile, 'Description')
         call xml_EndElement(xmlfile, 'Attachment')
     end if

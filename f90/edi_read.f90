@@ -34,10 +34,9 @@ module edi_read
 
 contains
 
-  subroutine initialize_edi_input(fname,sitename,Info)
+  subroutine initialize_edi_input(fname,sitename)
      character(len=*), intent(in)   :: fname
      character(len=80), intent(out) :: sitename
-     type(UserInfo_t), intent(inout), optional :: Info
      integer			  :: i,ios
      character(20)		  :: str
 
@@ -68,10 +67,6 @@ contains
         end if
      else
         write(0,*) 'Error: ',trim(fname),' is not an EDI file'
-     end if
-
-     if (present(Info)) then
-        Info%Basename = trim(sitename)
      end if
 
   end subroutine initialize_edi_input
@@ -160,6 +155,7 @@ contains
 	state = ''
 	county = ''
 	elevunits = 'M'
+	Info%Basename = trim(sitename)
 
     read (edifile,'(a200)',iostat=ios) line !read the first line in file
     call parse_edi_line(line,var,value)
@@ -219,19 +215,35 @@ contains
                 Site%Description = value
             end if
         case ('LAT')
-            Site%Location%lat=dms2deg(value)
-            if (.not. silent) then
-                write(*,*) 'Latitude conversion: ',trim(value),' to ',Site%Location%lat
+            if (index(value,':')>0) then
+                Site%Location%lat=dms2deg(value)
+                if (.not. silent) then
+                    write(*,*) 'Latitude conversion: ',trim(value),' to ',Site%Location%lat
+                end if
+            else ! assume decimal
+                read(value,*) Site%Location%lat
+                if (.not. silent) then
+                    write(*,*) 'Decimal latitude value of ',trim(value),' found in EDI header'
+                end if
             end if
         case ('LONG')
-            Site%Location%lon=dms2deg(value)
-            if (.not. silent) then
-                write(*,*) 'Longitude conversion: ',trim(value),' to ',Site%Location%lon
+            if (index(value,':')>0) then
+                Site%Location%lon=dms2deg(value)
+                if (.not. silent) then
+                    write(*,*) 'Longitude conversion: ',trim(value),' to ',Site%Location%lon
+                end if
+            else ! assume decimal
+                read(value,*) Site%Location%lon
+                if (.not. silent) then
+                    write(*,*) 'Decimal longitude value of ',trim(value),' found in EDI header'
+                end if
             end if
         case ('ELEV')
             read(value,*) Site%Location%elev
         case ('UNITS') ! units for elevation
             elevunits = value
+        case ('DECL')
+            read(value,*) Site%Declination
         case ('STDVERS,MAXSECT')
             ! EDI file information; ignore - needed only for reading
         case ('PROGVERS')
@@ -281,8 +293,12 @@ contains
     if(isempty(Site%Description) .and. .not. isempty(country) .and. .not. isempty(state)) then
         Site%Description = trim(county)//', '//trim(state)//', '//trim(country)
     else if (isempty(Site%Description)) then
-        Site%Description = 'UNKNOWN SITE NAME'
+        Site%Description = Info%DefaultSiteName
     end if
+
+    ! default data quality from configuration file
+    Site%QualityRating = Info%DefaultDataQuality
+    Site%QualityComments = Info%DataQualityComment
 
     ! convert elevation to meters
     if(trim(elevunits) .eq. 'FT') then
@@ -584,14 +600,28 @@ contains
         case ('REFLOC')
             Site%Coords%Origin%ID = trim(value)
         case ('REFLAT')
-            Site%Coords%Origin%lat=dms2deg(value)
-            if (.not. silent) then
-                write(*,*) 'Latitude conversion for the origin: ',trim(value),' to ',Site%Coords%Origin%lat
+            if (index(value,':')>0) then
+                Site%Coords%Origin%lat=dms2deg(value)
+                if (.not. silent) then
+                    write(*,*) 'Latitude conversion for the origin: ',trim(value),' to ',Site%Coords%Origin%lat
+                end if
+            else ! assume decimal
+                read(value,*) Site%Coords%Origin%lat
+                if (.not. silent) then
+                    write(*,*) 'Decimal latitude value of ',trim(value),' found for the origin'
+                end if
             end if
         case ('REFLONG')
-            Site%Coords%Origin%lon=dms2deg(value)
-            if (.not. silent) then
-                write(*,*) 'Longitude conversion for the origin: ',trim(value),' to ',Site%Coords%Origin%lon
+            if (index(value,':')>0) then
+                Site%Coords%Origin%lon=dms2deg(value)
+                if (.not. silent) then
+                    write(*,*) 'Longitude conversion for the origin: ',trim(value),' to ',Site%Coords%Origin%lon
+                end if
+            else ! assume decimal
+                read(value,*) Site%Coords%Origin%lon
+                if (.not. silent) then
+                    write(*,*) 'Decimal longitude value of ',trim(value),' found for the origin'
+                end if
             end if
         case ('REFELEV')
             read(value,*) Site%Coords%Origin%elev
