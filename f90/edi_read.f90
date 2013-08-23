@@ -426,22 +426,28 @@ contains
     ! local
     character(len=200)               :: line, var
     character(len=1)                 :: edichar1, edichar2
-    integer                          :: i, j(10), N=200
+    integer                          :: i, i1, i2, j(10), N=200
 
     ! Use the first non-space character to determine channel type
     call init_channel_info(Channel)
     temp = adjustl(value)
     N = len_trim(value)
+    i1 = 0
+    i2 = 0
     i = 0
     j(:) = 0
     edichar1 = temp(1:1)
     Channel%Type = edichar1
 
+    ! Note - the use of spaces in channel lines is not permitted by
+    ! the EDI standard but still sometimes encountered in practice
     select case (edichar1)
     case ('E')
         ! electric field channel
-        i = index(trim(temp),'CHTYPE=')
-        if (i > 0) then
+        i1 = index(trim(temp),'CHTYPE=')
+        i2 = index(trim(temp),'CHTYPE =')
+        i = max(i1,i2+1)
+        if (i > 1) then
             var = trim(temp(i+7:i+8))
             edichar2 = var(2:2) !temp(i+8:i+8)
         else
@@ -451,23 +457,37 @@ contains
         Channel%ID = trim(var)
         call init_channel_units(Channel)
         ! read in the numeric ID
-        i = index(trim(temp),'ID=')
+        i1 = index(trim(temp),'ID=')
+        i2 = index(trim(temp),'ID =')
+        i = max(i1,i2+1)
         read(temp(i+3:N),*) Channel%NumericID
         ! read in the XYZ coordinates
-        i = index(trim(temp),'X=')
+        i1 = index(trim(temp),'X=')
+        i2 = index(trim(temp),'X =')
+        i = max(i1,i2+1)
         read(temp(i+2:N),*) Channel%X
-        i = index(trim(temp),'Y=')
+        i1 = index(trim(temp),'Y=')
+        i2 = index(trim(temp),'Y =')
+        i = max(i1,i2+1)
         read(temp(i+2:N),*) Channel%Y
-        i = index(trim(temp),'Z=')
-        if (i > 0) then
+        i1 = index(trim(temp),'Z=')
+        i2 = index(trim(temp),'Z =')
+        i = max(i1,i2+1)
+        if (i > 1) then
             read(temp(i+2:N),*) Channel%Z
         end if
-        i = index(trim(temp),'X2=')
+        i1 = index(trim(temp),'X2=')
+        i2 = index(trim(temp),'X2 =')
+        i = max(i1,i2+1)
         read(temp(i+3:N),*) Channel%X2
-        i = index(trim(temp),'Y2=')
+        i1 = index(trim(temp),'Y2=')
+        i2 = index(trim(temp),'Y2 =')
+        i = max(i1,i2+1)
         read(temp(i+3:N),*) Channel%Y2
-        i = index(trim(temp),'Z2=')
-        if (i > 0) then
+        i1 = index(trim(temp),'Z2=')
+        i2 = index(trim(temp),'Z2 =')
+        i = max(i1,i2+1)
+        if (i > 1) then
             read(temp(i+3:N),*) Channel%Z2
         end if
         ! compute the dipole length
@@ -489,8 +509,10 @@ contains
 
     case ('H')
         ! magnetic field channel
-        i = index(trim(temp),'CHTYPE=')
-        if (i > 0) then
+        i1 = index(trim(temp),'CHTYPE=')
+        i2 = index(trim(temp),'CHTYPE =')
+        i = max(i1,i2+1)
+        if (i > 1) then
             var = trim(temp(i+7:i+9))
         else
             write(*,*) 'Error: unknown EDI channel type'
@@ -499,21 +521,33 @@ contains
         Channel%ID = trim(var)
         call init_channel_units(Channel)
         ! read in the numeric ID
-        i = index(trim(temp),'ID=')
+        i1 = index(trim(temp),'ID=')
+        i2 = index(trim(temp),'ID =')
+        i = max(i1,i2+1)
         read(temp(i+3:N),*) Channel%NumericID
         ! read in the XYZ coordinates
-        i = index(trim(temp),'AZM=')
+        i1 = index(trim(temp),'AZM=')
+        i2 = index(trim(temp),'AZM =')
+        i = max(i1,i2+1)
         read(temp(i+4:N),*) Channel%Orientation
-        i = index(trim(temp),'X=')
+        i1 = index(trim(temp),'X=')
+        i2 = index(trim(temp),'X =')
+        i = max(i1,i2+1)
         read(temp(i+2:N),*) Channel%X
-        i = index(trim(temp),'Y=')
+        i1 = index(trim(temp),'Y=')
+        i2 = index(trim(temp),'Y =')
+        i = max(i1,i2+1)
         read(temp(i+2:N),*) Channel%Y
-        i = index(trim(temp),'Z=')
-        if (i > 0) then
+        i1 = index(trim(temp),'Z=')
+        i2 = index(trim(temp),'Z =')
+        i = max(i1,i2+1)
+        if (i > 1) then
             read(temp(i+2:N),*) Channel%Z
         end if
-        i = index(trim(temp),'DIP=')
-        if (i > 0) then
+        i1 = index(trim(temp),'DIP=')
+        i2 = index(trim(temp),'DIP =')
+        i = max(i1,i2+1)
+        if (i > 1) then
             read(temp(i+4:N),*) Channel%Tilt
         end if
         ! for now, the optional metadata will be ignored: have never

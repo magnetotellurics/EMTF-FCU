@@ -205,8 +205,8 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
     end if
   case ('YYYY') ! Year only
     year = time1(1:4)
-    month = '00'
-    day = '00'
+    month = '01'
+    day = '01'
     hour = '00'
     minute = '00'
     second = '00'
