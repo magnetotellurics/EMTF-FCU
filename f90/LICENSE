@@ -2,10 +2,9 @@
 ! EMTF File Conversion Utilities (FCU) is a set of routines written in Fortran 90 !
 ! that is intended to allow conversion between the commonly used electromagnetic  !
 ! transfer function file formats: Gary Egbert's Z-files, Society of Exploration   !
-! Geophysicists MT/EMAP Data Interchange Standard (EDI) and XML files, as defined !
-! by the latest version of the EM_TF.xsd XML schema.                              !
+! Geophysicists MT/EMAP Data Interchange Standard (EDI) and SPUD XML.             !
 !                                                                                 !
-! EMTF FCU are intended to complement Gary Egbert's EMTF electromagnetic data      !
+! EMTF FCU are intended to complement Gary Egbert's EMTF electromagnetic data     !
 ! processing and plotting software.                                               !
 !                                                                                 !
 ! EMTF FCU is free software; you can redistribute it and/or modify it under the   !
@@ -16,7 +15,7 @@
 ! ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   ! 
 ! FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.  !
 !                                                                                 !
-! Copyright (C) Anna Kelbert, 2007-2011                                           !
+! Copyright (C) Anna Kelbert, 2007-2013                                           !
 !               College of Oceanic and Atmospheric Sciences                       !
 !               Oregon State University                                           !
 !               104 COAS Administration Building                                  !
@@ -24,9 +23,9 @@
 !                                                                                 !
 ! Please contact the author with questions, comments or corrections               !
 !                              at the e-mail address:  anya@coas.oregonstate.edu  !
-!                                        or by phone: +1-541-737-4113             !
+!                                        or by phone: +1-541-737-3964             !
 !                                                                                 !
-! EMTF FCU uses Fortran XML library (FoX),(C) 2005-2007 Toby White                !
+! EMTF FCU uses Fortran XML library (FoX),(C) 2005-2013 Toby White, Andrew Walker !
 ! This library is freely available under a 3-clause BSD license; which is         !
 ! to say that it may be used freely by any and all users; redistributed in        !
 ! source or binary form; provided that the copyright notices are maintained.      !

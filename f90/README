@@ -1,8 +1,12 @@
-1. Install a g95 or similar Fortran 95 compiler
++--------------------+
+|    Compilation     |
++--------------------+
+
+1. Install a g95 or similar Fortran 95 compiler.
 
 2. Download the newest version of FoX library,
    http://uszla.me.uk/space/software/FoX/
-   and unpack it to a directory $FOX_DIR
+   and unpack it to a directory (call it $FOX_DIR).
 
 3. Compile FoX package
 
@@ -16,31 +20,72 @@ NB: if you move FoX in the file system, reconfigure
    $FOX_DIR variable in the Makefile to your FoX path.
    Compile EMTF FCU by typing 'make'.
    
-5. This comment only applies if you would like to 
-   use the software to create XML files for archiving.
++--------------------+
+|  Program usage     |
++--------------------+
+
+The following standalone programs are available:
+
+   edi2xml
+   z2xml
+   xml2z
+   xml2edi (limited functionality)
+   z2edi
+
+For the above conversion codes, Perl script counterparts
+are available to perform batch processing.
+
+   edi2xml & z2xml:
+
+	depend on the FoX library and require additional
+        metadata files for full functionality (see below)
+
+   xml2z & xml2edi:
+
+	depend on the FoX library but do not require any
+        additional files; have limited functionality in
+        the sense that they will only work correctly
+        with those XML files that contain the right data
+        types and statistical estimates for this type
+        of storage; moreover, xml2edi is further restricted
+        by it's output routine (needs to be updated)
+
+    z2edi:
+
+        standalone code that requires no additional inputs
+
+NB: z2xml has an additional capability to rotate transfer
+    functions to geographic coordinates for input (this
+    choice can be made in config.xml).
+
++-----------------------+
+|  Creating XML files   |
++-----------------------+
+
+   This comment only applies if you would like to 
+   use the software to create XML files for archiving
+   or self-describing data storage, using z2xml or edi2xml.
+
    In this case, you need to create an XML configuration
-   file which looks like
-   
-<Configuration>
-<Source>OSU</Source>
-<Project>USArray</Project>
-<Experiment>USArray Cascadia</Experiment>
-<YearCollected>2007</YearCollected>
-<OrthogonalGeographic>1</OrthogonalGeographic>    
-<ProcessedBy>Gary Egbert and Prasanta Patro</ProcessedBy>
-<ProcessingSoftware>EMTF</ProcessingSoftware>
-<ProcessingTag></ProcessingTag>
-<RunList>Runs.xml</RunList>
-<SiteList>Sites.xml</SiteList>
-</Configuration>
+   file called config.xml and place it in the same
+   directory as your input data. Example file pasted below.
    
    This is where any user-defined information about
-   the experiment is stored. The lists, if specified,
-   should contain information about runs and the sites
-   in the experiment, as described in module read_lists.f90
+   the experiment is stored. You could also use the 
+   configuration file to specify one or all XML lists 
+   with additional metadata: Sites.xml, Runs.xml, Channels.xml. 
+   The lists, if specified, should contain experiment metadata
+   information about runs and the sites, as described in 
+   module read_lists.f90. Examples below.
+
+NB: For the XML lists, the attributes are optional;
+    they are automatically inserted for easier reading
+    with Matlab. All elements are also optional.
    
-   The program looks for the configuration file in the
-   same directory where the input file is located.
+   The program looks for the configuration file and the
+   optional XML lists in the same directory where the 
+   input file is located. If the lists are not found,
+   the programs run without the additional information.
    
 NB: If you have the lists, use them by first running
     z2xml, then xml2edi. Note that the program z2edi
@@ -52,9 +97,146 @@ NB: If you have the lists, use them by first running
  Anna Kelbert
  11 Nov 2007  
  
+-------------------------------------------------------------------
+Example config.xml as of 9 Sep 2013:
 
-PS FoX example:
+<Configuration>
+    <TimeSeriesArchived>1</TimeSeriesArchived>
+    <Network>EM</Network>
+    <Project>USArray</Project>
+    <Survey>Transportable Array</Survey>
+    <YearCollected>2007</YearCollected>
+    <Country>USA</Country>
+    <Tags>impedance,tipper</Tags> 
+    <Citation>
+      <Title>USArray TA Magnetotelluric Transfer Functions</Title>
+      <Authors>Adam Schultz, Gary D. Egbert, Anna Kelbert</Authors>
+      <Year>2007</Year>
+      <DOI></DOI>
+    </Citation>
+    <ReleaseStatus>Unrestricted Release</ReleaseStatus>
+	<AcquiredBy>GSY-USA, Inc.</AcquiredBy>
+	<Creator>
+		<Name>Gary Egbert and Prasanta Patro</Name>
+		<Email>egbert@coas.oregonstate.edu</Email>
+		<Org>Oregon State University</Org>
+		<OrgUrl>http://oregonstate.edu</OrgUrl>
+	</Creator>
+	<Submitter>
+		<Name>Anna Kelbert</Name>
+		<Email>anya@coas.oregonstate.edu</Email>
+		<Org>Oregon State University</Org>
+		<OrgUrl>http://oregonstate.edu</OrgUrl>		
+	</Submitter>
+	<ProcessedBy>Gary Egbert and Prasanta Patro</ProcessedBy>
+	<ProcessingSoftware>
+		<Name>EMTF</Name>
+		<LastMod>1998-03-24</LastMod>
+		<Author>Gary Egbert</Author>
+	</ProcessingSoftware>
+	<OrthogonalGeographic>1</OrthogonalGeographic>
+	<Image>png</Image>
+	<Original>zrr</Original>
+	<RunList>Runs.xml</RunList>
+	<SiteList>Sites.xml</SiteList>
+	<ChannelList>Channels.xml</ChannelList>
+</Configuration>
 
+-------------------------------------------------------------------
+Example site list element as of 9 Sep 2013:
+
+  <Site idx="1" type="struct" size="1 1">
+    <ID idx="1" type="char" size="1 5">CAM01</ID>
+    <Description idx="1" type="char" size="1 18">Earl Lake, CA, USA</Description>
+    <Location idx="1" type="struct" size="1 1">
+      <Latitude idx="1" type="double" size="1 1">41.87624</Latitude>
+      <Longitude idx="1" type="double" size="1 1">-124.19000791667</Longitude>
+      <Elevation idx="1" type="double" size="1 1">0.975</Elevation>
+    </Location>
+    <Declination idx="1" type="double" size="1 1">16.6</Declination>
+    <TimePeriod idx="1" type="struct" size="1 1">
+      <Start idx="1" type="char" size="1 19">2007-08-31T21:51:38</Start>
+      <End idx="1" type="char" size="1 19">2007-09-20T18:42:08</End>
+    </TimePeriod>
+    <QualityRating idx="1" type="double" size="1 1">5</QualityRating>
+    <GoodFromPeriod idx="1" type="double" size="1 1">10</GoodFromPeriod>
+    <GoodToPeriod idx="1" type="double" size="1 1">20000</GoodToPeriod>
+    <QualityComments idx="1" type="char" size="1 42">great TF from 10 to 10000 secs (or longer)</QualityComments>
+    <BestTF idx="1" type="char" size="1 15">CAM01bc_K1x.zrr</BestTF>
+    <RunList idx="1" type="char" size="1 20">CAM01a CAM01b CAM01c</RunList>
+    <NoGPS idx="1" type="logical" size="1 1">0</NoGPS>
+    <Comments idx="1" type="char" size="1 65">Data Problem Report available at http://www.iris.edu/data/dpr.htm</Comments>
+  </Site>
+
+-------------------------------------------------------------------
+Example run list element as of 9 Sep 2013:
+
+  <Run idx="1" type="struct" size="1 1">
+    <ID idx="1" type="char" size="1 6">CAM01a</ID>
+    <siteID idx="1" type="char" size="1 5">CAM01</siteID>
+    <Manufacturer idx="1" type="char" size="1 11">Barry Narod</Manufacturer>
+    <Instrument idx="1" type="char" size="1 12">NIMS 2612-04</Instrument>
+    <Location idx="1" type="struct" size="1 1">
+      <Latitude idx="1" type="double" size="1 1">41.87636</Latitude>
+      <Longitude idx="1" type="double" size="1 1">-124.19003166667</Longitude>
+      <Elevation idx="1" type="double" size="1 1">2.8</Elevation>
+    </Location>
+    <Declination idx="1" type="double" size="1 1">16.6</Declination>
+    <TimePeriod idx="1" type="struct" size="1 1">
+      <Start idx="1" type="char" size="1 19">2007-08-31T21:51:38</Start>
+      <End idx="1" type="char" size="1 19">2007-08-31T22:52:15</End>
+    </TimePeriod>
+    <Ex_wire_length idx="1" type="double" size="1 1">100</Ex_wire_length>
+    <Ey_wire_length idx="1" type="double" size="1 1">100</Ey_wire_length>
+    <SamplingInterval idx="1" type="double" size="1 1">1</SamplingInterval>
+    <ClockOffset idx="1" type="double" size="1 1">0</ClockOffset>
+    <NewEpoch idx="1" type="double" size="1 1">1</NewEpoch>
+    <Count idx="1" type="double" size="1 1">1</Count>
+    <NChannels idx="1" type="double" size="1 1">5</NChannels>
+    <SiteInstalledBy idx="1" type="char" size="0 0"/> 
+    <FieldComments idx="1" type="char" size="0 0"/> 
+    <MetaDataCheckedBy idx="1" type="char" size="0 0"/> 
+    <Comments idx="1" type="char" size="0 0"/> 
+    <Errors idx="1" type="char" size="0 0"/> 
+  </Run>
+
+-------------------------------------------------------------------
+Example channel list element as of 9 Sep 2013:
+
+  <Channel idx="1" type="struct" size="1 1">
+    <ID idx="1" type="char" size="1 3">LFN</ID>
+    <Name idx="1" type="char" size="1 2">Hx</Name>
+    <siteID idx="1" type="char" size="1 5">CAM01</siteID>
+    <runID idx="1" type="char" size="1 6">CAM01a</runID>
+    <Instrument idx="1" type="char" size="1 12">Magnetometer</Instrument>
+    <InstrumentType idx="1" type="char" size="1 8">fluxgate</InstrumentType>
+    <Manufacturer idx="1" type="char" size="1 11">Barry Narod</Manufacturer>
+    <InstrumentName idx="1" type="char" size="1 4">NIMS</InstrumentName>
+    <InstrumentID idx="1" type="char" size="1 7">2612-04</InstrumentID>
+    <InstrumentConfig idx="1" type="char" size="0 0"/> 
+    <TimePeriod idx="1" type="struct" size="1 1">
+      <Start idx="1" type="char" size="1 19">2007-08-31T21:51:38</Start>
+      <End idx="1" type="char" size="1 19">2007-08-31T22:52:15</End>
+    </TimePeriod>
+    <SamplingRate idx="1" type="struct" size="1 1">
+      <Value idx="1" type="double" size="1 1">1</Value>
+      <Units idx="1" type="char" size="1 2">Hz</Units>
+    </SamplingRate>
+    <DipoleLength idx="1" type="double" size="1 1">0</DipoleLength>
+    <Orientation idx="1" type="double" size="1 1">16.6</Orientation>
+    <LowPassCutoff idx="1" type="double" size="1 1">0.5</LowPassCutoff>
+    <HighPassCutoff idx="1" type="double" size="1 1">0</HighPassCutoff>
+    <TimeOffset idx="1" type="double" size="1 1">-0.192</TimeOffset>
+    <Correction idx="1" type="struct" size="1 1">
+      <Value idx="1" type="double" size="1 1">0</Value>
+      <Type idx="1" type="char" size="1 10">base shift</Type>
+    </Correction>
+    <Conversion idx="1" type="double" size="1 1">0.01</Conversion>
+    <Comments idx="1" type="char" size="1 36">x 0.01 to get nT, Hx base shift 0 nT</Comments>
+  </Channel>
+
+-------------------------------------------------------------------
+FoX usage example:
 
 doc => parseFile("input.xml")
 
