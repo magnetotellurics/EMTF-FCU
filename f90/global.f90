@@ -84,16 +84,16 @@ module global
     logical           :: TimeSeriesArchived
     character(len=2)  :: Network
     character(len=80) :: SubType
-    character(len=80) :: Description
+    character(len=400):: Description
     character(len=400):: Tags
     character(len=400):: ExternalUrl
     character(len=400):: ExternalUrlInfo
     type(Copyright_t) :: Copyright
     character(len=80) :: Project
-    character(len=80) :: Survey
+    character(len=400):: Survey
     character(len=80) :: Country
     character(len=80) :: YearCollected    
-    character(len=80) :: AcquiredBy
+    character(len=400):: AcquiredBy
     type(Person_t)	  :: Creator
     type(Person_t)	  :: Submitter
     character(len=80) :: SignConvention
@@ -111,7 +111,7 @@ module global
     character(len=80) :: DummyDataValue ! for EDI input/output
     character(len=80) :: DefaultSiteName ! for EDI input/output
     integer           :: DefaultDataQuality ! a priori data quality from 1 to 5 (0 = unrated)
-    character(len=80) :: DataQualityComment ! information about survey data quality
+    character(len=400):: DataQualityComment ! information about survey data quality
     logical           :: ComputeSiteCoords ! for EDI input/output
     logical           :: ParseEDIInfo ! for EDI input/output
     logical           :: WriteEDIInfo ! for EDI input/output
