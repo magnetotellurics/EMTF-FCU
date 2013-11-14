@@ -2,4 +2,5 @@
 	<Description>Signal Noise</Description>
 	<Intention>error estimate</Intention>
 	<Tag>signal_noise</Tag>
+        <SeeAlso>signal_amplitude</SeeAlso>                         
 </Estimate>

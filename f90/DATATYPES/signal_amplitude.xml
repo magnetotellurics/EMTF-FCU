@@ -2,4 +2,5 @@
 	<Description>Signal Amplitude</Description>
 	<Intention>signal power estimate</Intention>
 	<Tag>signal_amplitude</Tag>
+        <SeeAlso>signal_noise</SeeAlso>                         
 </Estimate>

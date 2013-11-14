@@ -3,4 +3,5 @@
 	<Description>MT phase tensor</Description>
 	<Tag>phase_tensor</Tag>
 	<DerivedFrom>impedance</DerivedFrom>
+        <SeeAlso/>                         
 </DataType>

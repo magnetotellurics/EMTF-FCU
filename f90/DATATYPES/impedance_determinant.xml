@@ -1,6 +1,7 @@
-<DataType name="DET" type="complex">
+<DataType name="DET" type="complex" units="([mV/km]/[nT])^2">
 	<Intention>derived data type</Intention>
 	<Description>Determinant of MT impedance is invariant under rotation</Description>
 	<Tag>impedance_determinant</Tag>
 	<DerivedFrom>impedance</DerivedFrom>
+	<SeeAlso>effective_impedance</SeeAlso>
 </DataType>

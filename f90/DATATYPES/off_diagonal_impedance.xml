@@ -2,4 +2,5 @@
 	<Description>MT impedance - off diagonal components only</Description>
 	<Intention>primary data type</Intention>
 	<Tag>off_diagonal_impedance</Tag>
+        <SeeAlso>impedance</SeeAlso>                         
 </DataType>

@@ -2,4 +2,5 @@
 	<Description>Residual Covariance (N)</Description>
 	<Intention>error estimate</Intention>
 	<Tag>residual_covariance</Tag>
+        <SeeAlso>inverse_signal_covariance</SeeAlso>                         
 </Estimate>

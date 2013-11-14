@@ -360,6 +360,7 @@ contains
 
     if (present(Notes)) then
     	if (associated(Notes)) then
+    	        write(*,*) 'Writing Notes to XML file: ',Notes
                 if (present(NotesLength)) then
                     N = NotesLength
                 else
@@ -372,7 +373,7 @@ contains
     				call xml_AddCharacters(xmlfile, achar(ascii_cr))
     				call xml_AddCharacters(xmlfile, trim(Notes(i)))
     			end do
-    			call xml_EndElement(xmlfile, 'Comments')	
+    			call xml_EndElement(xmlfile, 'Comments')
     	end if
     end if
     

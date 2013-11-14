@@ -2,4 +2,5 @@
 	<Description>MT interstation impedance</Description>
 	<Intention>primary data type</Intention>
 	<Tag>interstation_impedance</Tag>
+	<SeeAlso/>
 </DataType>

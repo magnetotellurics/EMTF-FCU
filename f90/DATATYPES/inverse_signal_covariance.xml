@@ -2,4 +2,5 @@
 	<Description>Inverse Coherent Signal Power Matrix (S)</Description>
 	<Intention>signal power estimate</Intention>
 	<Tag>inverse_signal_covariance</Tag>
+        <SeeAlso>residual_covariance</SeeAlso>                         
 </Estimate>

@@ -1,6 +1,6 @@
-<DataType type="complex" input="H" output="E">
+<DataType name="EFF" type="complex" units="[mV/km]/[nT]">
 	<Intention>derived data type</Intention>
 	<Description>Effective impedance is the square root of the impedance determinant</Description>
 	<Tag>effective_impedance</Tag>
-	<Names>EFF</Names>
+	<SeeAlso>impedance_determinant</SeeAlso>
 </DataType>

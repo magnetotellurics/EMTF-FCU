@@ -71,7 +71,7 @@ contains
   		thisSite => item(sites, i)
   		IDstring = getString(thisSite,"ID")
    		! if this is the correct ID, then pull out all the information from the site tag.
-  		if (IDstring(3:5)==id(3:5)) then
+  		if (trim(IDstring)==trim(id)) then
   			Site%ID = IDstring
             Site%IRIS_ID = IDstring
   			Site%Description = getString(thisSite,"Description")
@@ -175,7 +175,7 @@ contains
 	do i = 0, getLength(runs)-1
   		thisRun => item(runs, i)
   		IDstring = getString(thisRun,"ID")
-  		! write(*,*) 'Reading run: ',trim(IDstring)
+  		!write(*,*) 'Reading run: ',trim(IDstring)
    		! if this is one of the runs in the list, pull out all the information.
   		if (index(runlist,trim(IDstring))>0) then
  			Run(k)%ID = IDstring
