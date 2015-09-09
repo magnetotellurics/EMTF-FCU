@@ -186,7 +186,7 @@ contains
     if (associated(DataType)) then
        deallocate(DataType, stat=istat)
     end if
-    allocate(DataType(ntags), stat=istat)
+    allocate(DataType(1:ntags), stat=istat)
     do i = 1,ntags
         datatype_file = 'DATATYPES/'//trim(strarray(i))//'.xml'
         inquire (file=datatype_file,exist=datatype_exists)
@@ -252,8 +252,9 @@ contains
 
     ! Load in the document
     doc => parseFile(xmlFile)
-
+write(*,*) 'DEBUG: ', 'xml reading initialized'
     call init_data_type(DataType)
+write(*,*) 'DEBUG: 1'
     DataType%Intention = getString(doc,"Intention")
     DataType%Description = getString(doc,"Description")
     DataType%Tag = getString(doc,"Tag")
@@ -262,6 +263,7 @@ contains
     if (hasAttribute(dt,"units")) then
         DataType%Units = getAttribute(dt,"units")
     end if
+write(*,*) 'DEBUG: 2'
     if (hasAttribute(dt,"input")) then
         DataType%Input = getAttribute(dt,"input")
     else
@@ -272,12 +274,14 @@ contains
     else
         DataType%isScalar = .true.
     end if
+write(*,*) 'DEBUG: 3'
     str = getAttribute(dt,"type")
     if (index(str,'complex')>0) then
         DataType%isComplex = .true.
     else
         DataType%isComplex = .false.
     end if
+write(*,*) 'DEBUG: 4'
     if (index(DataType%Intention,'derived')>0) then
         DataType%derivedType = .true.
         DataType%DerivedFrom = getString(doc,"DerivedFrom")
@@ -287,6 +291,7 @@ contains
 
     ! Clear up all allocated memory
     call destroy(doc)
+write(*,*) 'DEBUG: ', 'xml reading completed'
 
     ! Parse the "Names" and save into Components
 !    call parse_str(DataType%Names,',',strarray,DataType%nComp)

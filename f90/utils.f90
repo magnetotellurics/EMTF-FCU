@@ -539,18 +539,18 @@ subroutine parse_str(str,delim,strarray,num)
 
      L = len(str)
      strtail = str
-     i1 = 0
+     i1 = 1
      N = 1
      j(N) = i1 ! start index for delim-separated string
      do ! marking and counting
-        i2 = i1 + index(strtail,delim)
+        i2 = i1 + index(strtail,delim) - 1
         !write(*,*) 'DEBUG: ',i1,delim,i2,strtail
         if (i2>i1) then
-            temp = str(i1+1:i2)
+            temp = str(i1:i2-1)
             strtail = trim(str(i2+1:L))
-            i1 = i2
+            i1 = i2 + 1
             N = N + 1
-            j(N) = i1 + 1
+            j(N) = i1
         else ! final text portion
             temp = trim(strtail)
             exit
@@ -563,6 +563,7 @@ subroutine parse_str(str,delim,strarray,num)
      allocate(strarray(N), stat=istat)
      do i = 1,N-1
         strarray(i) = trim(adjustl(fix_spaces(str(j(i):j(i+1)-2))))
+        !write(*,*) 'DEBUG: ',j(i),j(i+1),L,strarray(i)
      end do
      strarray(N) = trim(adjustl(fix_spaces(str(j(N):L))))
 
