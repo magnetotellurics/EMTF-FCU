@@ -247,23 +247,20 @@ contains
   subroutine read_xml_data_type(xmlFile, DataType)
     character(len=*), intent(in)    :: xmlFile
     type(DataType_t), intent(inout) :: DataType
-    type(Node), pointer             :: dt
+    type(Node), pointer             :: doc,dt
     character(80)                   :: str
 
     ! Load in the document
     doc => parseFile(xmlFile)
-write(*,*) 'DEBUG: ', 'xml reading initialized'
     call init_data_type(DataType)
-write(*,*) 'DEBUG: 1'
     DataType%Intention = getString(doc,"Intention")
     DataType%Description = getString(doc,"Description")
     DataType%Tag = getString(doc,"Tag")
-    dt = getFirstChild(doc)
+    dt => getDocumentElement(doc)
     DataType%Name = getAttribute(dt,"name")
     if (hasAttribute(dt,"units")) then
         DataType%Units = getAttribute(dt,"units")
     end if
-write(*,*) 'DEBUG: 2'
     if (hasAttribute(dt,"input")) then
         DataType%Input = getAttribute(dt,"input")
     else
@@ -274,14 +271,12 @@ write(*,*) 'DEBUG: 2'
     else
         DataType%isScalar = .true.
     end if
-write(*,*) 'DEBUG: 3'
     str = getAttribute(dt,"type")
     if (index(str,'complex')>0) then
         DataType%isComplex = .true.
     else
         DataType%isComplex = .false.
     end if
-write(*,*) 'DEBUG: 4'
     if (index(DataType%Intention,'derived')>0) then
         DataType%derivedType = .true.
         DataType%DerivedFrom = getString(doc,"DerivedFrom")
@@ -291,7 +286,6 @@ write(*,*) 'DEBUG: 4'
 
     ! Clear up all allocated memory
     call destroy(doc)
-write(*,*) 'DEBUG: ', 'xml reading completed'
 
     ! Parse the "Names" and save into Components
 !    call parse_str(DataType%Names,',',strarray,DataType%nComp)

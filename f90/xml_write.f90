@@ -360,7 +360,9 @@ contains
 
     if (present(Notes)) then
     	if (associated(Notes)) then
-    	        write(*,*) 'Writing Notes to XML file: ',Notes
+    	        if (.not. silent) then
+    	            write(*,*) 'Writing Notes to XML file: '
+    	        end if
                 if (present(NotesLength)) then
                     N = NotesLength
                 else
@@ -369,9 +371,15 @@ contains
     		    call xml_NewElement(xmlfile, 'Comments')
 				call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%ProcessedBy))
     		    call xml_AddCharacters(xmlfile, trim(Notes(1)))
+    		    if (.not. silent) then
+    		        write(*,*) trim(Notes(1))
+    		    end if
     		    do i=2,N
     				call xml_AddCharacters(xmlfile, achar(ascii_cr))
     				call xml_AddCharacters(xmlfile, trim(Notes(i)))
+    				if (.not. silent) then
+    				    write(*,*) trim(Notes(i))
+    				end if
     			end do
     			call xml_EndElement(xmlfile, 'Comments')
     	end if
@@ -889,10 +897,10 @@ contains
         call xml_AddAttribute(xmlfile, 'type', 'real')
     end if
     if (Data%Type%isScalar) then
-        write(str,'(i3 i3)') 1, 1
+        write(str,'(i3,B1,i3)') 1, 1
         call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
     else
-        write(str,'(i3 i3)') Data%nchout, Data%nchin
+        write(str,'(i3,B1,i3)') Data%nchout, Data%nchin
         call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
     end if
     if (len_trim(Data%Type%Units) > 0) then
@@ -949,10 +957,10 @@ contains
     call xml_NewElement(xmlfile, trim(Data%Type%Name)//'.VAR')
     call xml_AddAttribute(xmlfile, 'type', 'real')
     if (Data%Type%isScalar) then
-        write(str,'(i3 i3)') 1, 1
+        write(str,'(i3,B1,i3)') 1, 1
         call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
     else
-        write(str,'(i3 i3)') Data%nchout, Data%nchin
+        write(str,'(i3,B1,i3)') Data%nchout, Data%nchin
         call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
     end if
 
@@ -998,7 +1006,7 @@ contains
 
     call xml_NewElement(xmlfile, trim(Data%Type%Name)//'.INVSIGCOV')
     call xml_AddAttribute(xmlfile, 'type', 'complex')
-    write(str,'(i3 i3)') Data%nchout, Data%nchin
+    write(str,'(i3,B1,i3)') Data%nchout, Data%nchin
     call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
 
     do i=1,Data%nchin
@@ -1032,7 +1040,7 @@ contains
 
     call xml_NewElement(xmlfile, trim(Data%Type%Name)//'.RESIDCOV')
     call xml_AddAttribute(xmlfile, 'type', 'complex')
-    write(str,'(i3 i3)') Data%nchout, Data%nchin
+    write(str,'(i3,B1,i3)') Data%nchout, Data%nchin
     call xml_AddAttribute(xmlfile, 'size', trim(adjustl(str)))
 
     do i=1,Data%nchout

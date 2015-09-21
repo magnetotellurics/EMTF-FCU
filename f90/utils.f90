@@ -470,7 +470,7 @@ else
 isnan = .false.
 end if
 return
-end
+end function
 
 logical function isinf(value)
 real(8) value
@@ -482,14 +482,18 @@ else
 isinf = .false.
 end if
 return
-end
+end function
 
 ! **********************************************************************
 ! fix_spaces(): replace all new line, carriage return and tab characters
 ! with spaces - typically to be postprocessed with trim(adjustl(str2))
 ! (C) Anna Kelbert, 2013
+!
+! Note that the declaration
+! character(len=len(str1)) function fix_spaces(str1) result (str2)
+! causes Intel compiler to choke; thus replaced with len=800 [AK, 2015]
 
-character(len=len(str1)) function fix_spaces(str1) result (str2)
+character(len=800) function fix_spaces(str1) result (str2)
 
      character(len=*), intent(in) :: str1
      ! local

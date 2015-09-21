@@ -174,7 +174,7 @@ contains
 ! of domNode with tag xmlName. Store the result in a string.
 
   function getString(domNode, xmlName, attrName, attrValue) result (str)
-	type(Node), pointer             :: domNode
+	type(Node), pointer             :: domNode,childNode
     character(len=*), intent(in)    :: xmlName
     character(len=*), intent(in), optional  :: attrName
     character(len=*), intent(in), optional  :: attrValue
@@ -247,7 +247,8 @@ contains
 
   	! and we know that the data we are interested in is in the text node which is the first child of that node.
   	if (hasChildNodes(textNode)) then
-		str = getData(getFirstChild(textNode))
+  	    childNode => getFirstChild(textNode)
+		str = getData(childNode)
 	else
 		!write(0,*) 'XML Warning: empty element ',trim(xmlName)
 		return
@@ -323,14 +324,14 @@ contains
     character(len=*), intent(in), optional  :: attrValue
  	character(len=80)               :: str
  	integer                         :: value
-    integer                         :: ZERO
-    real(8)                         :: NaN
+    real(8)                         :: ZERO,NaN
 
 	! Initialize output
 	value = 0
 
     ! NaNs are not currently universally supported in Fortran
-    ZERO = 0
+    ! ... and division by integer ZERO is even worse!
+    ZERO = 0.0d0
     NaN = ZERO/ZERO
 
 	! Make sure the pointer is associated
@@ -352,7 +353,7 @@ contains
         if (.not. isnan(NaN)) then
             write(0,*) 'Warning: using NaNs for missing data will not work with this compiler'
         else
-            value = NaN
+            value = nint(NaN)
         end if
 	else if (len_trim(str)>0) then
 		read(str, '(i8)') value
