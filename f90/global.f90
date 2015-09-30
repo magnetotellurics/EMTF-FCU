@@ -102,6 +102,7 @@ module global
     character(len=nid):: RemoteSiteID
     character(len=80) :: ProcessedBy
     character(len=80) :: ProcessDate
+    logical           :: IgnoreProcessDateInFile ! for EDI input to use when FILEDATA is meaningless
     character(len=80) :: ProcessingSoftware
     character(len=80) :: ProcessingSoftwareLastMod
     character(len=80) :: ProcessingSoftwareAuthor
@@ -110,6 +111,7 @@ module global
     character(len=80) :: DateFormat ! for EDI input/output
     character(len=80) :: DummyDataValue ! for EDI input/output
     character(len=80) :: DefaultSiteName ! for EDI input/output
+    logical           :: IgnoreSiteNameInFile ! for EDI input to use when site name is meaningless
     integer           :: DefaultDataQuality ! a priori data quality from 1 to 5 (0 = unrated)
     character(len=400):: DataQualityComment ! information about survey data quality
     logical           :: ComputeSiteCoords ! for EDI input/output
@@ -343,6 +345,7 @@ contains
         Info%RemoteSiteID = ' '
         Info%ProcessedBy = ' '
         Info%ProcessDate = ' '
+        Info%IgnoreProcessDateInFile = .FALSE.
         Info%ProcessingSoftware = ' '
         Info%ProcessingSoftwareLastMod = ' '
         Info%ProcessingSoftwareAuthor = ' '
@@ -350,6 +353,7 @@ contains
         Info%DateFormat = 'MM/DD/YY'
         Info%DummyDataValue = ''
         Info%DefaultSiteName = 'UNKNOWN SITE NAME'
+        Info%IgnoreSiteNameInFile = .FALSE.
         Info%DefaultDataQuality = 0
         Info%DataQualityComment = ''
         Info%ComputeSiteCoords = .FALSE.

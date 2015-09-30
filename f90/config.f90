@@ -26,7 +26,7 @@ contains
     ! local
     character(len=200) copyright_file, datatype_file, readme_file, config_path
     logical copyright_exists, datatype_exists, readme_exists
-    integer i,ios,istat,fileid,ediparse,ediwrite,computesitecoords,metadataonly,tsinfo,ntags
+    integer i,ios,istat,fileid,ediparse,ediwrite,computesitecoords,metadataonly,tsinfo,ntags,ignoresitename
 
   	call init_user_info(Info)
 
@@ -137,6 +137,13 @@ contains
         Info%SignConvention = sign_convention
     end if
     Info%DefaultSiteName = getString(doc,"DefaultSiteName")
+    ignoresitename = -1
+    ignoresitename = getInteger(doc,"IgnoreSiteNameInFile")
+    if (ignoresitename==1) then
+        Info%IgnoreSiteNameInFile = .TRUE.
+    elseif (ignoresitename==0) then
+        Info%IgnoreSiteNameInFile = .FALSE.
+    end if
     Info%DefaultDataQuality = getInteger(doc,"DefaultDataQuality")
     Info%DataQualityComment = getString(doc,"DataQualityComment")
     Info%DateFormat = getString(doc,"DateFormat")

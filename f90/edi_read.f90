@@ -196,9 +196,11 @@ contains
         case ('ENDDATE')
             Site%End = datestr(value,Info%DateFormat,'XML')
         case ('FILEDATE')
-            Info%ProcessDate = datestr(value,Info%DateFormat,'YYYY-MM-DD')
-            if (.not. silent) then
-                write(*,*) 'Process date in XML format: ',trim(Info%ProcessDate)
+            if (.not. Info%IgnoreProcessDateInFile) then
+                Info%ProcessDate = datestr(value,Info%DateFormat,'YYYY-MM-DD')
+                if (.not. silent) then
+                    write(*,*) 'Process date in XML format: ',trim(Info%ProcessDate)
+                end if
             end if
         case ('COUNTRY')
             country = value
@@ -290,9 +292,16 @@ contains
     end if
 
     ! typical case: LOC not present; use COUNTRY etc for site description
-    if(isempty(Site%Description) .and. .not. isempty(country) .and. .not. isempty(state)) then
+    if(isempty(Site%Description) .and. .not. isempty(county) .and. .not. isempty(country) .and. .not. isempty(state)) then
         Site%Description = trim(county)//', '//trim(state)//', '//trim(country)
+    else if(isempty(Site%Description) .and. .not. isempty(country) .and. .not. isempty(state)) then
+        Site%Description = 'Unknown, '//trim(state)//', '//trim(country)
     else if (isempty(Site%Description)) then
+        Site%Description = Info%DefaultSiteName
+    end if
+
+    ! but if this setting is on, just ignore it all in favor of the default name in the config file
+    if(Info%IgnoreSiteNameInFile) then
         Site%Description = Info%DefaultSiteName
     end if
 
