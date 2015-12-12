@@ -61,20 +61,22 @@ contains
 	Info%Copyright%ReleaseStatus = getString(doc,"ReleaseStatus")
     Info%Copyright%README = getString(doc,"README")
 	
+	call init_homedir
+
 	if (index(Info%Copyright%ReleaseStatus,'Unrestricted Release')>0) then
-	    copyright_file = 'COPYRIGHT/UnrestrictedRelease.copyright'
+	    copyright_file = trim(homedir)//'COPYRIGHT/UnrestrictedRelease.copyright'
         inquire (file=copyright_file,exist=copyright_exists)
 	elseif (index(Info%Copyright%ReleaseStatus,'Academic Use Only')>0) then
-        copyright_file = 'COPYRIGHT/AcademicUseOnly.copyright'
+        copyright_file = trim(homedir)//'COPYRIGHT/AcademicUseOnly.copyright'
         inquire (file=copyright_file,exist=copyright_exists)
     elseif (index(Info%Copyright%ReleaseStatus,'Conditions Apply')>0) then
-        copyright_file = 'COPYRIGHT/ConditionsApply.copyright'
+        copyright_file = trim(homedir)//'COPYRIGHT/ConditionsApply.copyright'
         inquire (file=copyright_file,exist=copyright_exists)
     else
         copyright_exists = .false.
     end if
 
-	if (copyright_exists) then
+	if (copyright_exists .and. .not. silent) then
         fileid=105
         write(6,*) 'Reading from copyright file: ',trim(copyright_file)
         write(6,*) 'Conditions of use: '
@@ -98,7 +100,7 @@ contains
         readme_exists = .false.
     end if
 
-    if (readme_exists) then
+    if (readme_exists .and. .not. dry) then
         fileid=106
         write(6,*) 'Reading from README file: ',trim(readme_file)
         write(6,*) 'Additional copyright info: '
@@ -189,13 +191,15 @@ contains
 
     ! Read the tags and initialize data types from files
     call parse_str(Info%Tags,',',strarray,ntags)
-    write (*,*) 'Found ',ntags,' data types.'
+    if (.not. silent) then
+        write (*,*) 'Found ',ntags,' data types.'
+    end if
     if (associated(DataType)) then
        deallocate(DataType, stat=istat)
     end if
     allocate(DataType(1:ntags), stat=istat)
     do i = 1,ntags
-        datatype_file = 'DATATYPES/'//trim(strarray(i))//'.xml'
+        datatype_file = trim(homedir)//'DATATYPES/'//trim(strarray(i))//'.xml'
         inquire (file=datatype_file,exist=datatype_exists)
         if (datatype_exists) then
             write(0,*) 'Reading from the data type definition file ',trim(datatype_file)
@@ -214,7 +218,7 @@ contains
     end if
     allocate(Estimate(size(Info%Estimate)), stat=istat)
     do i = 1,size(Info%Estimate)
-        datatype_file = 'DATATYPES/'//trim(Info%Estimate(i))//'.xml'
+        datatype_file = trim(homedir)//'DATATYPES/'//trim(Info%Estimate(i))//'.xml'
         inquire (file=datatype_file,exist=datatype_exists)
         if (datatype_exists) then
             write(0,*) 'Reading statistical estimate definition from file ',trim(datatype_file)

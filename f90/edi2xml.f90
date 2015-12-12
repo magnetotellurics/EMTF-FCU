@@ -11,7 +11,7 @@ program edi2xml
   character(len=80) :: edi_file=''
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
-  character(len=80) :: edisitename, basename, verbose=''
+  character(len=80) :: edisitename, basename, verbose='', action=''
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: ediLocalSite, ediRemoteSite, xmlLocalSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -55,6 +55,14 @@ program edi2xml
      end if
   end if
 
+  ! A dry run only outputs file location and basic info
+  if (narg>3) then
+     call get_command_argument(4,action)
+     if (index(action,'dry')>0) then
+        dry = .true.
+     end if
+  end if
+
   ! Update output file name
   if (index(xml_file,'.')==0) then
  	xml_file = trim(xml_file)//'.xml'
@@ -74,7 +82,7 @@ program edi2xml
   inquire (file=config_file,exist=config_exists)
   if (config_exists) then
   	call read_xml_config(config_file,UserInfo,DataType,Estimate,input_dir)
-  else
+  elseif (.not. dry) then
   	write(0,*) 'Please provide an XML configuration file [config.xml].'
   	write(0,*) 'This file should reside together with the input data.'
   	write(0,*) 'An example configuration is provided below:'
@@ -134,10 +142,7 @@ program edi2xml
   call init_site_info(ediLocalSite)
   call init_site_info(ediRemoteSite)
 
-  ! Initialize input and output
-  call initialize_xml_output(xml_file,'EM_TF')
-
-  ! Obtain siteID from the file name (most reliable)
+  ! Initialize input; obtain siteID from the file name (most reliable)
   call initialize_edi_input(edi_file, edisitename)
 
   ! On input, UserInfo comes from the XML configuration; fill it in from the EDI
@@ -148,6 +153,14 @@ program edi2xml
 
   ! This allocates and fills in the channels and updates the local site coords
   call read_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite, UserInfo)
+
+  ! If this is a dry run, output site location and exit nicely
+  if (dry) then
+    write(*,*) ediLocalSite%ID, ediLocalSite%Location%lat, ediLocalSite%Location%lon
+    call end_edi_input
+    deallocate(InputMagnetic, OutputMagnetic, OutputElectric, stat=istat)
+    stop
+  end if
 
   ! Define channel dimensions
   nchin = size(InputMagnetic)
@@ -178,6 +191,9 @@ program edi2xml
   ! Read information for this site from a list. If successfully read,
   ! trust this information rather than that from the edi-file
   call read_site_list(UserInfo%SiteList, ediLocalSite%IRIS_ID, xmlLocalSite, site_list_exists)
+
+  ! Initialize output
+  call initialize_xml_output(xml_file,'EM_TF')
 
   ! Write XML header
   if (len_trim(xmlLocalSite%ID)>0) then
@@ -266,15 +282,15 @@ program edi2xml
   call add_PeriodRange(F)
 
   ! Exit nicely
-  if (associated(Run)) deallocate(Run)
-  if (associated(RemoteRun)) deallocate(RemoteRun)
-  if (associated(Notes)) deallocate(Notes)
-  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(F)
+  if (associated(Run)) deallocate(Run, stat=istat)
+  if (associated(RemoteRun)) deallocate(RemoteRun, stat=istat)
+  if (associated(Notes)) deallocate(Notes, stat=istat)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric, stat=istat)
+  deallocate(F, stat=istat)
   do i = 1,size(DataType)
     call deall_data(Data(i))
   end do
-  deallocate(Data)
+  deallocate(Data, stat=istat)
 
   call end_edi_input
 

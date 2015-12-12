@@ -4,6 +4,7 @@ use strict;
 my @take_files=();
 my $input_dir;
 my $output_dir;
+my $dry_run = 0;
 
 if (@ARGV>0){
   $input_dir = $ARGV[0];
@@ -17,13 +18,17 @@ if (@ARGV>1){
   $output_dir = $input_dir;
 }
 
+if (@ARGV>2){
+    $dry_run = 1;
+}
+
 system("mkdir $output_dir\n") unless -d $output_dir;
 
 my $input_fname;
 opendir(LS, "$input_dir/") || die "Unable to open the requested directory";
 print "Reading directory $input_dir/\n";
 while($input_fname = readdir(LS)){
-	if($input_fname =~ /^(\w+)\.edi$/){
+	if($input_fname =~ /^(\S+)\.edi$/){
 		push @take_files, $input_fname;
 	}
 }
@@ -37,8 +42,12 @@ if (@take_files==0) {
 my $output_fname;
 foreach $input_fname(@take_files){
 	$_ = $input_fname;
-	s/^(\w+)\.(\w+)$/$1\.xml/;
+	s/^(\S+)\.(\w+)$/$1\.xml/;
 	$output_fname = $_;
-	print "edi2xml $input_dir/$input_fname $output_dir/$output_fname\n";
-	system("edi2xml $input_dir/$input_fname $output_dir/$output_fname silent\n");
+    if ($dry_run){
+        system("edi2xml $input_dir/$input_fname $output_dir/$output_fname silent dry\n");
+    } else {
+        print "edi2xml $input_dir/$input_fname $output_dir/$output_fname\n";
+        system("edi2xml $input_dir/$input_fname $output_dir/$output_fname silent\n");
+    }
 }

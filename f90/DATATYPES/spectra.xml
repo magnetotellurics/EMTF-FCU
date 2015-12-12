@@ -1,0 +1,6 @@
+<DataType name="SPECTRA" type="real">
+	<Description>MT spectra</Description>
+	<Intention>primary data type</Intention>
+	<Tag>spectra</Tag>
+	<SeeAlso/>
+</DataType>

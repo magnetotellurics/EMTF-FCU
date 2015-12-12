@@ -4,9 +4,17 @@ module global
   public
 
   !integer, save         :: nf, ndt
+  logical, save         :: dry=.false.
   logical, save         :: silent=.false.
   logical, save         :: rotate=.false.
   character(len=10)     :: date, time, zone
+  !*********************************************************
+  ! General data types and statistical estimate information
+  ! is read from a folder called DATATYPES. The location of
+  ! this folder can be hardcoded here. If the code is run
+  ! from a directory that contains DATATYPES and COPYRIGHT
+  ! folders, homedir is overwritten with the current directory
+  character(len=80)     :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
   !*********************************************************
   ! IRIS requires site ID to have no more than 5 chars
   ! respectively, run ID has no more than 6 chars
@@ -299,6 +307,23 @@ contains
 !    N%ch = N%chin + N%chout
 !
 !  end subroutine init_dimensions
+
+    subroutine init_homedir()
+
+        ! local
+        logical copyright_dir_exists, datatype_dir_exists
+
+        ! check that the COPYRIGHT and DATATYPES folders exist in current directory;
+        ! using a workaround to avoid compiler dependence
+        inquire (file='COPYRIGHT/UnrestrictedRelease.copyright',exist=copyright_dir_exists)
+        inquire (file='DATATYPES/impedance.xml',exist=datatype_dir_exists)
+
+        ! if they exist, use the current directory to get them; otherwise use homedir above
+        if (copyright_dir_exists .and. datatype_dir_exists) then
+            homedir = './'
+        end if
+
+    end subroutine init_homedir
 
 	subroutine init_copyright(Info)
 		type(Copyright_t), intent(out)  :: Info

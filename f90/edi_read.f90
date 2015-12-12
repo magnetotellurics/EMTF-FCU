@@ -117,6 +117,8 @@ contains
         edichar1 = value(1:1)
         if (isdigit(edichar1)) then
             ! just save the full line; could be date or anything
+        elseif (len_trim(value) == 0) then
+            ! this is an empty string; meaningless, do nothing
         elseif (edichar1 == char(ascii_qtm)) then
             ! find the second double quote and read what's in between
             i = index(trim(value(2:N)),char(ascii_qtm))
@@ -331,7 +333,7 @@ contains
     type(Site_t),  intent(inout)          :: Site
     type(UserInfo_t), intent(inout)       :: Info
     character(200), dimension(:), pointer :: Notes
-    integer, intent(out)                  :: n
+    integer, intent(inout)                :: n
     ! local
     character(len=200)                    :: line, var, value
     character(len=2)                      :: elevunits
@@ -429,13 +431,14 @@ contains
   end subroutine read_edi_info
 
 
-  subroutine parse_edi_channel(value, Channel)
+  subroutine parse_edi_channel(value, Channel, need_second_line)
     character(len=*), intent(in)     :: value
-    type(Channel_t), intent(out)     :: Channel
+    type(Channel_t), intent(inout)   :: Channel
+    logical, intent(inout), optional :: need_second_line
     ! local
     character(len=200)               :: line, var
     character(len=1)                 :: edichar1, edichar2
-    integer                          :: i, i1, i2, j(10), N=200
+    integer                          :: i, i1, i2, j(10), N=200, istat
 
     ! Use the first non-space character to determine channel type
     call init_channel_info(Channel)
@@ -447,6 +450,10 @@ contains
     j(:) = 0
     edichar1 = temp(1:1)
     Channel%Type = edichar1
+
+    if (.not. silent) then
+        write(*,*) 'Parsing EDI channel: ',trim(Channel%Type)
+    end if
 
     ! Note - the use of spaces in channel lines is not permitted by
     ! the EDI standard but still sometimes encountered in practice
@@ -469,16 +476,16 @@ contains
         i1 = index(trim(temp),'ID=')
         i2 = index(trim(temp),'ID =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*) Channel%NumericID
+        read(temp(i+3:N),*,iostat=istat) Channel%NumericID
         ! read in the XYZ coordinates
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*) Channel%X
+        read(temp(i+2:N),*,iostat=istat) Channel%X
         i1 = index(trim(temp),'Y=')
         i2 = index(trim(temp),'Y =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*) Channel%Y
+        read(temp(i+2:N),*,iostat=istat) Channel%Y
         i1 = index(trim(temp),'Z=')
         i2 = index(trim(temp),'Z =')
         i = max(i1,i2+1)
@@ -488,11 +495,11 @@ contains
         i1 = index(trim(temp),'X2=')
         i2 = index(trim(temp),'X2 =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*) Channel%X2
+        read(temp(i+3:N),*,iostat=istat) Channel%X2
         i1 = index(trim(temp),'Y2=')
         i2 = index(trim(temp),'Y2 =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*) Channel%Y2
+        read(temp(i+3:N),*,iostat=istat) Channel%Y2
         i1 = index(trim(temp),'Z2=')
         i2 = index(trim(temp),'Z2 =')
         i = max(i1,i2+1)
@@ -513,7 +520,7 @@ contains
         j(3) = index(trim(temp),'GAIN=')
         j(4) = index(trim(temp),'MEASDATE=')
         if (sum(j) > 0) then
-            write(*,*) 'Warning: optional metadata ignored for channel ',trim(Channel%ID)
+            write(0,*) 'Warning: optional metadata ignored for channel ',trim(Channel%ID)
         end if
 
     case ('H')
@@ -524,7 +531,7 @@ contains
         if (i > 1) then
             var = trim(temp(i+7:i+9))
         else
-            write(*,*) 'Error: unknown EDI channel type'
+            write(0,*) 'Error: unknown EDI channel type'
             return
         end if
         Channel%ID = trim(var)
@@ -533,20 +540,20 @@ contains
         i1 = index(trim(temp),'ID=')
         i2 = index(trim(temp),'ID =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*) Channel%NumericID
+        read(temp(i+3:N),*,iostat=istat) Channel%NumericID
         ! read in the XYZ coordinates
         i1 = index(trim(temp),'AZM=')
         i2 = index(trim(temp),'AZM =')
         i = max(i1,i2+1)
-        read(temp(i+4:N),*) Channel%Orientation
+        read(temp(i+4:N),*,iostat=istat) Channel%Orientation
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*) Channel%X
+        read(temp(i+2:N),*,iostat=istat) Channel%X
         i1 = index(trim(temp),'Y=')
         i2 = index(trim(temp),'Y =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*) Channel%Y
+        read(temp(i+2:N),*,iostat=istat) Channel%Y
         i1 = index(trim(temp),'Z=')
         i2 = index(trim(temp),'Z =')
         i = max(i1,i2+1)
@@ -567,13 +574,20 @@ contains
         j(4) = index(trim(temp),'GAIN=')
         j(5) = index(trim(temp),'MEASDATE=')
         if (sum(j) > 0) then
-            write(*,*) 'Warning: optional metadata ignored for channel ',trim(Channel%ID)
+            write(0,*) 'Warning: optional metadata ignored for channel ',trim(Channel%ID)
         end if
 
     case default
-        write(*,*) 'Warning: not a known EDI channel line: ',trim(value)
+        write(0,*) 'Warning: not a known EDI channel line: ',trim(value)
         return
     end select
+
+    if (present(need_second_line)) then
+        need_second_line = .false.
+        if (istat .ne. 0) then
+            need_second_line = .true.
+        end if
+    end if
 
   end subroutine parse_edi_channel
 
@@ -585,12 +599,13 @@ contains
   ! Channel orientations unless overwritten by data rotation angles;
   ! Other instrument information.
   subroutine read_edi_channels(Input, OutputH, OutputE, Site, UserInfo)
-    type(Channel_t), dimension(:), pointer, intent(out) :: Input
-    type(Channel_t), dimension(:), pointer, intent(out) :: OutputH, OutputE
+    type(Channel_t), dimension(:), pointer, intent(inout) :: Input
+    type(Channel_t), dimension(:), pointer, intent(inout) :: OutputH, OutputE
     type(Site_t), intent(inout)                  :: Site
     type(UserInfo_t), intent(in)                 :: UserInfo
     ! local
     type(Channel_t), dimension(:), pointer  :: Channel ! all channels
+    logical                          :: electric_channels_first,channel_on_two_lines
     character(len=200)               :: line, var, value
     integer                          :: num,i,j,istat,nchin,nch,hch,ech
     real(8)                          :: xy(2,1),ll(2,1)
@@ -631,7 +646,12 @@ contains
             if (num > nch) then
                 write(0,*) 'Warning: skipping channel number ',num
             else
-                call parse_edi_channel(value,Channel(num))
+                call parse_edi_channel(value,Channel(num),channel_on_two_lines)
+                if (channel_on_two_lines) then
+                    read (edifile,'(a200)',iostat=ios) line
+                    value = trim(value)//trim(line)
+                    call parse_edi_channel(value,Channel(num))
+                end if
                 if (trim(Channel(num)%Type) .eq. 'H') then
                     hch = hch+1
                 elseif (trim(Channel(num)%Type) .eq. 'E') then
@@ -715,6 +735,14 @@ contains
         Channel(i)%Units = Site%Coords%Units
     end do
 
+    ! Usually, input channels come first; output channels follow.
+    ! However some old EDI files have electric channels first, and magnetic channels to follow.
+    ! Since the electric channels are never used as input in MT transfer functions,
+    ! I added additional logic to deal with channels that are written in the wrong order.
+    electric_channels_first = .false.
+    if (Channel(1)%Type == 'E') then
+        electric_channels_first = .true.
+    end if
 
     ! now, allocate and initialize input and output channels
     nchin = 2
@@ -724,18 +752,41 @@ contains
     end if
     do num=1,nchin
         i = num
-        Input(i) = Channel(num)
+        if (electric_channels_first) then
+            Input(i) = Channel(num+2)
+        else
+            Input(i) = Channel(num)
+        end if
+        if (.not. silent) then
+            write(*,*) 'Input channel #',i,' is ',Input(i)%ID
+        end if
     end do
     i = 0
     j = 0
-    do num=nchin+1,nch
+    do num=1,nch
+        if (electric_channels_first) then
+            if (num == 3 .or. num == 4) then
+                cycle
+            end if
+        else
+            if (num < 3) then
+                cycle
+            end if
+        end if
         if (trim(Channel(num)%Type) .eq. 'H') then
             i = i+1
             OutputH(i) = Channel(num)
+            if (.not. silent) then
+                write(*,*) 'Output magnetic channel #',i,' is ',OutputH(i)%ID
+            end if
         else
             j = j+1
             OutputE(j) = Channel(num)
+            if (.not. silent) then
+                write(*,*) 'Output electric channel #',j,' is ',OutputE(j)%ID
+            end if
         end if
+
     end do
     deallocate(Channel, stat=istat)
 
@@ -752,7 +803,9 @@ contains
         write(*,*) 'Recorded site longitude: ',Site%Location%lon
     end if
     if (UserInfo%ComputeSiteCoords) then
-        write(*,*) 'Using computed coordinates for site location'
+        if (.not.silent) then
+            write(*,*) 'Using computed coordinates for site location'
+        end if
         Site%Location%lat = ll(1,1)
         Site%Location%lon = ll(2,1)
         Site%Location%elev = Site%Coords%Origin%elev
@@ -762,14 +815,14 @@ contains
             write(*,*) 'Based on our computation, site elevation = ',Site%Location%elev
         end if
     else
-        write(*,*) 'By default, using recorded location. Change in XML configuration file'
+        write(0,*) 'By default, using recorded location. Change in XML configuration file'
     end if
 
   end subroutine read_edi_channels
 
 
   subroutine read_edi_data_header(nf)
-    integer, intent(out) :: nf
+    integer, intent(inout) :: nf
    ! local
     character(len=200)               :: line, var, value
     integer                          :: num,nch
