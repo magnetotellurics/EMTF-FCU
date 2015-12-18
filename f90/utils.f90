@@ -203,6 +203,19 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
         minute = '00'
         second = '00'
     end if
+  case ('YYYYMMDD hh:mm:ss','YYYYMMDD') ! MT1 system field data file format
+    year = time1(1:4)
+    month = time1(5:6)
+    day = time1(7:8)
+    if (len_trim(time1) >= 9) then
+        hour = time1(10:11)
+        minute = time1(13:14)
+        second = time1(16:17)
+    else
+        hour = '00'
+        minute = '00'
+        second = '00'
+    end if
   case ('YYYY') ! Year only
     year = time1(1:4)
     month = '01'

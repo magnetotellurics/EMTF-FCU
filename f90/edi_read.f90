@@ -398,13 +398,13 @@ contains
             select case (trim(var))
             case ('AZIMUTH')
                 !read(value,*) Site%Declination
-            case ('LATITUDE') ! assume it's decimal if found in INFO block
+            case ('LATITUDE','SITE LATITUDE') ! assume it's decimal if found in INFO block
                 read(value,*) Site%Location%lat
                 readlat = .true.
-            case ('LONGITUDE') ! assume it's decimal if found in INFO block
+            case ('LONGITUDE','SITE LONGITUDE') ! assume it's decimal if found in INFO block
                 read(value,*) Site%Location%lon
                 readlon = .true.
-            case ('ELEVATION') ! read elevation and convert to meters if needed
+            case ('ELEVATION','SITE ELEVATION') ! read elevation and convert to meters if needed
                 read(value,*) Site%Location%elev
                 if(trim(elevunits) .eq. 'FT') then
                     Site%Location%elev = 0.3048 * Site%Location%elev
@@ -427,6 +427,11 @@ contains
 
     end do
 
+    if (.not.silent) then
+        write(*,*) 'Before exiting the INFO block, latitude  = ',Site%Location%lat
+        write(*,*) 'Before exiting the INFO block, longitude = ',Site%Location%lon
+        write(*,*) 'Before exiting the INFO block, elevation = ',Site%Location%elev
+    end if
 
   end subroutine read_edi_info
 
