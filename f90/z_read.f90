@@ -147,22 +147,33 @@ contains
   end subroutine parse_z_site_name
 
 
-  subroutine read_z_header(sitename, Site, Info, nf, nch)
+  subroutine read_z_header(sitename, Site, Info, nf, nch, header1, header2)
     character(len=80), intent(out)   :: sitename
     type(Site_t),  intent(out)       :: Site
 	type(UserInfo_t), intent(inout)  :: Info
 	integer, intent(out)             :: nf
     integer, intent(out), optional   :: nch
+    character(len=80), intent(out), optional :: header1, header2
 
 	call init_site_info(Site)
 
 	Site%QualityRating = Info%DefaultDataQuality
     Site%QualityComments = Info%DataQualityComment
 
-    read (zfile,*) temp
-    read (zfile,*) temp
+    read (zfile,'(a80)') temp
+    if (present(header1)) then
+        header1 = temp
+    end if
+    read (zfile,'(a80)') temp
+    if (present(header2)) then
+        header2 = temp
+    end if
     read (zfile,'(a80)') Info%RemoteRefType
-    read (zfile,'(a12,a80)') temp, sitename
+    read (zfile,'(a120)',iostat=ios) temp
+    write(*,*) 'Temp =', temp
+    i = index(temp,':')
+    read (temp(i+1:120),*) sitename
+
 
 	call parse_z_site_name(sitename, Site%ID, Info%RemoteSiteID, Site%RunList)
 
@@ -238,6 +249,7 @@ contains
 
     write(*,*) 'Reading  input channels from Z-file: ',nchin
 
+    ! orientation is relative to declination, NOT relative to geographic North
     if (nchin>0) then
         allocate(Input(nchin), stat=istat)
     end if
@@ -357,10 +369,14 @@ contains
        read (zfile,*,iostat=ios)
     end do
 
+    ! A.K. NOTE AS OF 2/12/2016: the variance of the real or imaginary component
+    ! would be this divided by 2. However, p 52 of the EDI manual explains that e.g. ZXY.VAR
+    ! refers to the complex variance (while ZXYR.VAR would mean the variance of the real part).
+    ! To be consistent with this definition, we are no longer dividing by two.
     TFVar=0.0d0
     do i=1,nchout
        do j=1,nchin
-          TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))/2
+          TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))
        end do
     end do
 
