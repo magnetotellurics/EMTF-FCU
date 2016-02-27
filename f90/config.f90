@@ -24,8 +24,8 @@ contains
 	type(Node), pointer             :: copyright,author
 	type(NodeList), pointer         :: authors
     ! local
-    character(len=200) copyright_file, datatype_file, readme_file, config_path
-    logical copyright_exists, datatype_exists, readme_exists
+    character(len=200) copyright_file, datatype_file, readme_file, acknowledgements_file, selectedpubs_file, config_path
+    logical copyright_exists, datatype_exists, readme_exists, acknowledgements_exist, selectedpubs_exist
     integer i,ios,istat,fileid,ediparse,ediwrite,computesitecoords,metadataonly,tsinfo,ntags,ignoresitename
 
   	call init_user_info(Info)
@@ -58,13 +58,67 @@ contains
     Info%Copyright%Title = getString(copyright,"Title")
     Info%Copyright%Year = getString(copyright,"Year")
     Info%Copyright%DOI = getString(copyright,"DOI")
+    Info%Copyright%SurveyDOI = getString(copyright,"SurveyDOI")
+    Info%Copyright%PAPERS = getString(doc,"PAPERS")
+    Info%Copyright%THANKS = getString(doc,"THANKS")
 	Info%Copyright%ReleaseStatus = getString(doc,"ReleaseStatus")
     Info%Copyright%README = getString(doc,"README")
 	
 	call init_homedir
 
+	if (len_trim(Info%Copyright%PAPERS)>0) then
+        selectedpubs_file = trim(config_path)//'/'//trim(Info%Copyright%PAPERS)
+        inquire (file=selectedpubs_file,exist=selectedpubs_exist)
+        if (.not. selectedpubs_exist) then
+            write(0,*) 'Selected publications file ',trim(selectedpubs_file),' not found'
+        end if
+    else
+        selectedpubs_exist = .false.
+    end if
+
+    if (selectedpubs_exist .and. .not. dry) then
+        fileid=103
+        write(6,*) 'Reading from PAPERS file: ',trim(selectedpubs_file)
+        write(6,*) 'Selected publications info: '
+        open (unit=fileid,file=selectedpubs_file,status='old',iostat=ios)
+        do i=1,size(Info%Copyright%SelectedPublications)
+            read (fileid,'(a800)',iostat=ios) Info%Copyright%SelectedPublications(i)
+            if (.not. isempty(Info%Copyright%SelectedPublications(i))) then
+                write(6,*) len_trim(Info%Copyright%SelectedPublications(i)),trim(Info%Copyright%SelectedPublications(i))
+            end if
+        end do
+        close (fileid)
+    end if
+
+    if (len_trim(Info%Copyright%THANKS)>0) then
+        acknowledgements_file = trim(config_path)//'/'//trim(Info%Copyright%THANKS)
+        inquire (file=acknowledgements_file,exist=acknowledgements_exist)
+        if (.not. acknowledgements_exist) then
+            write(0,*) 'Acknowledgements file ',trim(acknowledgements_file),' not found'
+        end if
+    else
+        acknowledgements_exist = .false.
+    end if
+
+    if (acknowledgements_exist .and. .not. dry) then
+        fileid=104
+        write(6,*) 'Reading from THANKS file: ',trim(acknowledgements_file)
+        write(6,*) 'Acknowledgements info: '
+        open (unit=fileid,file=acknowledgements_file,status='old',iostat=ios)
+        do i=1,size(Info%Copyright%Acknowledgement)
+            read (fileid,'(a800)',iostat=ios) Info%Copyright%Acknowledgement(i)
+            if (.not. isempty(Info%Copyright%Acknowledgement(i))) then
+                write(6,*) len_trim(Info%Copyright%Acknowledgement(i)),trim(Info%Copyright%Acknowledgement(i))
+            end if
+        end do
+        close (fileid)
+    end if
+
 	if (index(Info%Copyright%ReleaseStatus,'Unrestricted Release')>0) then
 	    copyright_file = trim(homedir)//'COPYRIGHT/UnrestrictedRelease.copyright'
+        inquire (file=copyright_file,exist=copyright_exists)
+    elseif (index(Info%Copyright%ReleaseStatus,'Paper Citation Required')>0) then
+        copyright_file = trim(homedir)//'COPYRIGHT/PaperCitationRequired.copyright'
         inquire (file=copyright_file,exist=copyright_exists)
 	elseif (index(Info%Copyright%ReleaseStatus,'Academic Use Only')>0) then
         copyright_file = trim(homedir)//'COPYRIGHT/AcademicUseOnly.copyright'
@@ -73,16 +127,17 @@ contains
         copyright_file = trim(homedir)//'COPYRIGHT/ConditionsApply.copyright'
         inquire (file=copyright_file,exist=copyright_exists)
     else
+        write(6,*) 'No copyright file exists for Release Status: ',trim(Info%Copyright%ReleaseStatus)
         copyright_exists = .false.
     end if
 
-	if (copyright_exists .and. .not. silent) then
+	if (copyright_exists .and. .not. dry) then
         fileid=105
         write(6,*) 'Reading from copyright file: ',trim(copyright_file)
         write(6,*) 'Conditions of use: '
         open (unit=fileid,file=copyright_file,status='old',iostat=ios)
         do i=1,size(Info%Copyright%ConditionsOfUse)
-            read (fileid,'(a100)',iostat=ios) Info%Copyright%ConditionsOfUse(i)
+            read (fileid,'(a800)',iostat=ios) Info%Copyright%ConditionsOfUse(i)
             if (.not. isempty(Info%Copyright%ConditionsOfUse(i))) then
                 write(6,*) len_trim(Info%Copyright%ConditionsOfUse(i)),trim(Info%Copyright%ConditionsOfUse(i))
             end if
@@ -106,7 +161,7 @@ contains
         write(6,*) 'Additional copyright info: '
         open (unit=fileid,file=readme_file,status='old',iostat=ios)
         do i=1,size(Info%Copyright%AdditionalInfo)
-            read (fileid,'(a100)',iostat=ios) Info%Copyright%AdditionalInfo(i)
+            read (fileid,'(a800)',iostat=ios) Info%Copyright%AdditionalInfo(i)
             if (.not. isempty(Info%Copyright%AdditionalInfo(i))) then
                 write(6,*) len_trim(Info%Copyright%AdditionalInfo(i)),trim(Info%Copyright%AdditionalInfo(i))
             end if

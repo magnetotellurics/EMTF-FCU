@@ -87,14 +87,16 @@ program z2z
 
   call init_user_info(Info)
 
-  call read_z_header(zsitename, zLocalSite, Info, nf, nch)
+  call read_z_header(zsitename, zLocalSite, Info, nf, nch, header1, header2)
 
   if (rotate .and. ((azimuth)<0.01)) then
      header1 = 'TRANSFER FUNCTIONS IN GEOGRAPHIC COORDINATES'
      header2 = '******** WITH FULL ERROR COVARIANCE ********'
-  else
-     header1 = 'TRANSFER FUNCTIONS IN MEASUREMENT COORDINATES'
+  elseif (rotate) then
+     header1 = 'TRANSFER FUNCTIONS ROTATED TO AZIMUTH '//coords
      header2 = '********* WITH FULL ERROR COVARIANCE ********'
+  else
+     ! use original file header
   end if
 
   call write_z_header(zsitename, zLocalSite, Info, nf, nch, header1, header2)

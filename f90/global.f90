@@ -79,13 +79,17 @@ module global
   type :: Copyright_t
     character(len=800):: Title
     character(len=800):: Authors
-    character(len=80) :: Year
-    character(len=80) :: DOI
-    character(len=800):: RelatedPublication ! optionally replaces data DOI
-    character(len=80) :: ReleaseStatus
-    character(len=100):: ConditionsOfUse(100)
-    character(len=80) :: README
-    character(len=100):: AdditionalInfo(100)
+    character(len=80) :: Year ! or year range
+    character(len=80) :: DOI ! for this site; assigned automatically by IRIS DMC
+    character(len=80) :: SurveyDOI ! for the survey; assigned once in the config.xml file
+    character(len=80) :: PAPERS ! selected publications file name
+    character(len=800):: SelectedPublications(100) ! necessary for ReleaseStatus = "Paper Citation Required"
+    character(len=80) :: THANKS ! acknowledgements file name
+    character(len=800):: Acknowledgement(100)
+    character(len=80) :: ReleaseStatus ! string; determines which fixed conditions of use to apply
+    character(len=800):: ConditionsOfUse(100)
+    character(len=80) :: README ! additional info file name
+    character(len=800):: AdditionalInfo(100)
   end type Copyright_t
 
   type :: UserInfo_t
@@ -333,8 +337,16 @@ contains
 		Info%Title = 'USArray TA Magnetotelluric Transfer Functions'
 		Info%Authors = ''
 		Info%Year = ''
-		Info%DOI = 'Unassigned'
-        Info%RelatedPublication = ''
+		Info%DOI = ''
+		Info%SurveyDOI = ''
+        Info%THANKS = ''
+        do i=1,size(Info%Acknowledgement)
+            Info%Acknowledgement = ''
+        end do
+        Info%PAPERS = ''
+        do i=1,size(Info%SelectedPublications)
+            Info%SelectedPublications = ''
+        end do
 		Info%ReleaseStatus = 'UNKNOWN'
 		do i=1,size(Info%ConditionsOfUse)
 		    Info%ConditionsOfUse = ''

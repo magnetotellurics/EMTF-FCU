@@ -160,12 +160,6 @@ contains
         call xml_NewElement(xmlfile, 'Filename')
         call xml_AddCharacters(xmlfile, trim(UserInfo%Basename)//'.'//trim(UserInfo%Image))
         call xml_EndElement(xmlfile, 'Filename')
-        call xml_NewElement(xmlfile, 'GroupKey')
-        call xml_AddCharacters(xmlfile, '0')
-        call xml_EndElement(xmlfile, 'GroupKey')
-        call xml_NewElement(xmlfile, 'OrderKey')
-        call xml_AddCharacters(xmlfile, '0')
-        call xml_EndElement(xmlfile, 'OrderKey')
         call xml_EndElement(xmlfile, 'PrimaryData')
     end if
 
@@ -265,12 +259,44 @@ contains
     call xml_NewElement(xmlfile, 'Year')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Year))
     call xml_EndElement(xmlfile, 'Year')
+    if (.not. isempty(UserInfo%Copyright%SurveyDOI)) then
+        call xml_NewElement(xmlfile, 'SurveyDOI')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%SurveyDOI))
+        call xml_EndElement(xmlfile, 'SurveyDOI')
+    end if
     if (.not. isempty(UserInfo%Copyright%DOI)) then
         call xml_NewElement(xmlfile, 'DOI')
         call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%DOI))
         call xml_EndElement(xmlfile, 'DOI')
     end if
     call xml_EndElement(xmlfile, 'Citation')
+
+    if (.not. isempty(UserInfo%Copyright%SelectedPublications(1))) then
+        call xml_NewElement(xmlfile, 'SelectedPublications')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%SelectedPublications(1)))
+        do i=2,size(UserInfo%Copyright%SelectedPublications)
+            if (isempty(UserInfo%Copyright%SelectedPublications(i))) then
+                cycle
+            end if
+            call xml_AddCharacters(xmlfile, achar(ascii_cr))
+            call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%SelectedPublications(i)))
+        end do
+        call xml_EndElement(xmlfile, 'SelectedPublications')
+    end if
+
+    if (.not. isempty(UserInfo%Copyright%Acknowledgement(1))) then
+        call xml_NewElement(xmlfile, 'Acknowledgement')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Acknowledgement(1)))
+        do i=2,size(UserInfo%Copyright%Acknowledgement)
+            if (isempty(UserInfo%Copyright%Acknowledgement(i))) then
+                cycle
+            end if
+            call xml_AddCharacters(xmlfile, achar(ascii_cr))
+            call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%Acknowledgement(i)))
+        end do
+        call xml_EndElement(xmlfile, 'Acknowledgement')
+    end if
+
     call xml_NewElement(xmlfile, 'ReleaseStatus')
     call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%ReleaseStatus))
     call xml_EndElement(xmlfile, 'ReleaseStatus')
