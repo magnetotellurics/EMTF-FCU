@@ -517,7 +517,7 @@ contains
 	    DataType%Description = ' '
         DataType%ExternalUrl = ' '
 	    DataType%Tag = ' '
-	    DataType%Name = ' '
+	    DataType%Name = 'NULL'
         DataType%Input = ' '
 	    DataType%Output = ' '
         DataType%Units = ' '

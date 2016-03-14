@@ -8,7 +8,7 @@ module z_read
 
   integer                        :: zfile
   character(len=120)             :: temp
-  integer                        :: ios,i,j
+  integer                        :: ios,i,j,k
   integer, save                  :: nchout
   integer, parameter             :: nchin=2
 
@@ -307,6 +307,7 @@ contains
     real(8),    dimension(:,:), intent(inout) :: TFVar
     complex(8), dimension(:,:), intent(inout) :: InvSigCov
     complex(8), dimension(:,:), intent(inout) :: ResidCov
+    real(8)           :: values(max(nchin,nchout)*2)
     real(8)           :: period
     integer           :: dec_level
     integer           :: num_points
@@ -339,34 +340,43 @@ contains
     TF=0.0d0
     read (zfile,*) temp !Transfer Functions
     do i=1,nchout
+       read (zfile,'(a100)',iostat=ios) temp
+       read(temp,*) values(1:2*nchin)
+       k=1
        do j=1,nchin
-          read (zfile,'(2E12.3)',iostat=ios,advance='no') TF(i,j)
+          TF(i,j) = cmplx(values(k),values(k+1))
+          k = k+2
        end do
-       read (zfile,*)
     end do
 
     InvSigCov=0.0d0
     read (zfile,*) temp !Inverse Coherent Signal
     do i=1,nchin
+       read (zfile,'(a100)',iostat=ios) temp
+       read(temp,*) values(1:2*i)
+       k=1
        do j=1,i
-          read (zfile,'(2E12.3)',iostat=ios,advance='no') InvSigCov(i,j)
+          InvSigCov(i,j) = cmplx(values(k),values(k+1))
+          k = k+2
           if (j<i) then
              InvSigCov(j,i) = conjg(InvSigCov(i,j))
           end if
        end do
-       read (zfile,*)
     end do
 
     ResidCov=0.0d0
     read (zfile,*) temp !Residual Covariance
     do i=1,nchout
+       read (zfile,'(a100)',iostat=ios) temp
+       read(temp,*) values(1:2*i)
+       k=1
        do j=1,i
-          read (zfile,'(2E12.3)',iostat=ios,advance='no') ResidCov(i,j)
+          ResidCov(i,j) = cmplx(values(k),values(k+1))
+          k = k+2
           if (j<i) then
              ResidCov(j,i) = conjg(ResidCov(i,j))
           end if
        end do
-       read (zfile,*,iostat=ios)
     end do
 
     ! A.K. NOTE AS OF 2/12/2016: the variance of the real or imaginary component

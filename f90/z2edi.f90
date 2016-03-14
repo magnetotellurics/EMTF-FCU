@@ -10,7 +10,7 @@ program z2edi
   character(len=80) :: site_info_list='Sites.xml'
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favourite station'
-  character(len=80) :: zsitename, basename, verbose=''
+  character(len=80) :: zsitename, basename, verbose='',coords=''
   type(UserInfo_t)  :: Info
   type(Site_t)                                 :: zLocalSite
   type(Run_t), dimension(:), allocatable       :: Run
@@ -24,8 +24,10 @@ program z2edi
   real(8),    dimension(:,:,:), allocatable    :: TFVar
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
+  real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
   character(len=80)     :: edi_date,xml_date
   real              :: Ex_len, Ey_len
+  real(8)           :: azimuth
   integer           :: i, j, k, narg, len, istat
   integer           :: nf, nch, nchin, nchout, nchoutE, nchoutH
 
@@ -50,6 +52,19 @@ program z2edi
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
+     end if
+  end if
+
+  if (narg>3) then
+     rotate = .true.
+     call get_command_argument(4,coords)
+     read(coords, '(f9.6)') azimuth
+     if (.not.silent) then
+        if ((azimuth)<0.01) then
+           write(*,*) 'Rotate to orthogonal geographic coords. '
+        else
+           write(*,*) 'Rotate to the new azimuth ',azimuth
+        end if
      end if
   end if
 
@@ -78,34 +93,56 @@ program z2edi
 
   allocate(F(nf),TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), stat=istat)
   allocate(InvSigCov(nf,nchin,nchin), ResidCov(nf,nchout,nchout), stat=istat)
+  allocate(U(nchin,nchin), V(nchout,nchout), stat=istat)
+
+  ! Initialize rotation to a different azimuth on output (zero indicates orthogonal geographic)
+  !  - note that rotations will only work with two input and two output electric channels at present
+  if (rotate) then
+     call rotate_z_channels(InputMagnetic, OutputElectric, U, V, azimuth)
+  end if
 
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
      call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
+     ! rotate to new azimuth (generality limited to 4 or 5 channels)
+     if (rotate) then
+        call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     end if
+
   end do
 
   ! Save into Data structure
   allocate(DataType(2), Data(2), stat=istat)
 
-  call init_data_type(DataType(1),'tipper')
-  call init_data(Data(1), DataType(1), nf, nchin, nchoutH)
-  do i = 1,nchoutH
-    do j = 1,nchin
-        Data(1)%Matrix(:,i,j) = TF(:,i,j) !T
-        Data(1)%Var(:,i,j) = TFVar(:,i,j)
-    end do
-  end do
+  if (nchoutH > 0) then
+      call init_data_type(DataType(1),'tipper')
+      call init_data(Data(1), DataType(1), nf, nchin, nchoutH)
+      do i = 1,nchoutH
+        do j = 1,nchin
+            Data(1)%Matrix(:,i,j) = TF(:,i,j) !T
+            Data(1)%Var(:,i,j) = TFVar(:,i,j)
+        end do
+      end do
+  else
+      call init_data_type(DataType(1))
+      call init_data(Data(1), DataType(1), nf, nchin, nchoutH)
+  end if
 
-  call init_data_type(DataType(2),'impedance')
-  call init_data(Data(2), DataType(2), nf, nchin, nchoutE)
-  do i = 1,nchoutE
-    do j = 1,nchin
-        Data(2)%Matrix(:,i,j) = TF(:,i+nchoutH,j) !Z
-        Data(2)%Var(:,i,j) = TFVar(:,i+nchoutH,j)
-    end do
-  end do
+  if (nchoutE > 0) then
+      call init_data_type(DataType(2),'impedance')
+      call init_data(Data(2), DataType(2), nf, nchin, nchoutE)
+      do i = 1,nchoutE
+        do j = 1,nchin
+            Data(2)%Matrix(:,i,j) = TF(:,i+nchoutH,j) !Z
+            Data(2)%Var(:,i,j) = TFVar(:,i+nchoutH,j)
+        end do
+      end do
+  else
+      call init_data_type(DataType(2))
+      call init_data(Data(2), DataType(2), nf, nchin, nchoutH)
+  end if
 
   call date_and_time(date)
 
@@ -122,8 +159,8 @@ program z2edi
 ! call end_edi_output()
 
   ! Exit nicely
-  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(F,TF, TFVar, InvSigCov, ResidCov)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric, stat=istat)
+  deallocate(F,TF, TFVar, InvSigCov, ResidCov, stat=istat)
 
   call end_z_input
 

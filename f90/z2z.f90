@@ -111,8 +111,8 @@ program z2z
   allocate(InvSigCov(nf,nchin,nchin), ResidCov(nf,nchout,nchout), stat=istat)
   allocate(U(nchin,nchin), V(nchout,nchout), stat=istat)
 
-  ! Initialize conversion to orthogonal geographic coords - note that rotations
-  ! will only work with two input and two output electric channels at present
+  ! Initialize rotation to a different azimuth on output (zero indicates orthogonal geographic)
+  !  - note that rotations will only work with two input and two output electric channels at present
   if (rotate) then
      call rotate_z_channels(InputMagnetic, OutputElectric, U, V, azimuth)
   end if
@@ -124,7 +124,7 @@ program z2z
      !write (*,*) 'Reading period number ', k
      call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
-     ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
+     ! rotate to new azimuth (generality limited to 4 or 5 channels)
      if (rotate) then
      	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
      end if

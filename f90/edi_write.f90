@@ -68,19 +68,18 @@ contains
     real(8), dimension(:,:), allocatable           :: zvar
 
     nf = size(F)
+    nchin = size(InputMagnetic)
+    nchoutH = size(OutputMagnetic)
+    nchoutE = size(OutputElectric)
     nch = size(InputMagnetic) + size(OutputMagnetic) + size(OutputElectric)
 
-    allocate(freq(nf),t(nf,2),z(nf,(nch-3)*2),tvar(nf,2),zvar(nf,(nch-3)*2))
+    allocate(freq(nf),t(nf,2),z(nf,(nchin)*2),tvar(nf,2),zvar(nf,(nchin)*2))
 
     freq = 0.0d0
     t = dcmplx(0.0d0,0.0d0)
     z = dcmplx(0.0d0,0.0d0)
     tvar = 0.0d0
     zvar = 0.0d0
-
-    nchin = size(InputMagnetic)
-    nchoutH = size(OutputMagnetic)
-    nchoutE = size(OutputElectric)
 
     if (nchoutE<2) then
         write(0,*) 'Unable to write the EDI: too few output channels.'
@@ -122,6 +121,9 @@ contains
 
             t(:,2) = Data(k)%Matrix(:,1,2) !TY
             tvar(:,2) = Data(k)%Var(:,1,2)
+
+        case ('NULL')
+            ! data type not initialized; do nothing
 
         case default
             write(0,*) 'Warning: ignoring data type ',trim(Data(k)%Type%Name),' for EDI output'
