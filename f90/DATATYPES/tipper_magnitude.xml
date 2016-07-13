@@ -1,4 +1,4 @@
-<DataType name="TIPMAG" type="real" output="H" input="H" units="[]">
+<DataType name="TIPMAG" type="real" units="[]">
 	<Description>Vertical Field Transfer Functions (Tipper) Magnitude</Description>
 	<Intention>derived data type</Intention>
 	<Tag>tipper_magnitude</Tag>
