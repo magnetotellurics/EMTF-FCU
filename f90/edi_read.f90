@@ -12,7 +12,7 @@ module edi_read
   character(len=80)              :: this_block, this_section
   integer                        :: missing_value_count=0
   character(len=80)              :: dummy_data_value
-  integer                        :: ios,i,j,maxblks=0
+  integer                        :: ios,i,j,k,maxblks=0
 
   save   :: edifile
   save   :: new_block, new_section
@@ -62,6 +62,9 @@ contains
      j = index(trim(fname),'.edi')
      if (j > 0) then
         sitename = trim(fname(i+1:j-1))
+        k=index( trim(sitename),'_imp')
+        if(k.gt.0)sitename=sitename(1:k-1)
+
         if (.not.silent) then
             write(6,*) 'Initialized reading site ',trim(sitename),' from EDI file'
         end if
