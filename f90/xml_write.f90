@@ -80,7 +80,7 @@ contains
     type(FreqInfo_t), intent(in) :: F   
 
 	call xml_NewElement(xmlfile, ElementName)
-    call xml_AddAttribute(xmlfile, 'value', F%value, fmt="r5")
+    call xml_AddAttribute(xmlfile, 'value', F%value, fmt="s7")
     call xml_AddAttribute(xmlfile, 'units', trim(F%units))
 
   end subroutine new_data_block
@@ -889,8 +889,8 @@ contains
 	end if
 
     call xml_NewElement(xmlfile, 'PeriodRange')
-    call xml_AddAttribute(xmlfile, 'min', minPeriod, fmt="r5")
-    call xml_AddAttribute(xmlfile, 'max', maxPeriod, fmt="r5")
+    call xml_AddAttribute(xmlfile, 'min', minPeriod, fmt="r9")
+    call xml_AddAttribute(xmlfile, 'max', maxPeriod, fmt="r9")
     call xml_EndElement(xmlfile, 'PeriodRange')
 
     !call xml_NewElement(xmlfile, 'FrequencyRange')
