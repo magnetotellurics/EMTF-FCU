@@ -190,6 +190,13 @@ program edi2xml
   allocate(F(nf), stat=istat)
   call read_edi_data(nf,F,Data)
 
+  ! Overwrite electric field channel orientations using the first value of ZROT in EDI file.
+  ! This is slightly more general than using the magnetic field channel orientation for this purpose.
+  ! However, this does not support non-perpendicular site layouts (information is not in the EDI)
+  ! as well as orientation that varies between frequencies or data types (cannot archive this robustly).
+  OutputElectric(1)%Orientation = Data(1)%Rot(1)
+  OutputElectric(2)%Orientation = Data(1)%Rot(1) + 90
+
   ! Read information for this site from a list. If successfully read,
   ! trust this information rather than that from the edi-file
   call read_site_list(UserInfo%SiteList, ediLocalSite%IRIS_ID, xmlLocalSite, site_list_exists)

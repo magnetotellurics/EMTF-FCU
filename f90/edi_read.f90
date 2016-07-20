@@ -1034,7 +1034,7 @@ contains
                     Data(ind)%Matrix(:,row,col) = Data(ind)%Matrix(:,row,col) + cvalue
                 end if
             case ('ROT')
-                Data(ind)%Rot(:) = dreal(cvalue) ! SAVING BUT WON'T USE THIS!!!
+                Data(ind)%Rot(:) = dreal(cvalue) ! WILL USE THIS TO OVERWRITE ELECTRIC CHANNEL ORIENTATIONS
             case ('VAR')
                 Data(ind)%Var(:,row,col) = dreal(cvalue)
             case ('ERR')
