@@ -190,6 +190,11 @@ program edi2xml
   allocate(F(nf), stat=istat)
   call read_edi_data(nf,F,Data)
 
+  ! For magnetic field channel orientation, clean things up to ensure a 90 degree difference.
+  if (InputMagnetic(2)%Orientation - InputMagnetic(1)%Orientation < 0) then
+    InputMagnetic(2)%Orientation = InputMagnetic(2)%Orientation + 360
+  end if
+
   ! Overwrite electric field channel orientations using the first value of ZROT in EDI file.
   ! This is slightly more general than using the magnetic field channel orientation for this purpose.
   ! However, this does not support non-perpendicular site layouts (information is not in the EDI)
