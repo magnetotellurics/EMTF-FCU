@@ -79,6 +79,7 @@ contains
   	integer                          :: l, k, i
 
   	SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//toupper(sitename(3:3))//sitename(4:5)
+        !SiteID = sitename(1:3)//sitename(4:6)  ! this is for CAFE_MT/CFNM_ZRR only!!! 
 	RunList = ' '
 
     ! Find spaces in the sitename
@@ -156,7 +157,7 @@ contains
     character(len=80), intent(out), optional :: header1, header2
 
 	call init_site_info(Site)
-
+        if(len_trim(Site%description).eq.0)Site%Description = Info%DefaultSiteName
 	Site%QualityRating = Info%DefaultDataQuality
     Site%QualityComments = Info%DataQualityComment
 
