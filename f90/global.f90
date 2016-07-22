@@ -14,7 +14,7 @@ module global
   ! this folder can be hardcoded here. If the code is run
   ! from a directory that contains DATATYPES and COPYRIGHT
   ! folders, homedir is overwritten with the current directory
-  character(len=80)     :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
+  character(len=80)     :: homedir='/home/mho/lana/EMTF-XML/f90/'
   !*********************************************************
   ! IRIS requires site ID to have no more than 5 chars
   ! respectively, run ID has no more than 6 chars
@@ -124,6 +124,8 @@ module global
     character(len=80) :: DummyDataValue ! for EDI input/output
     character(len=80) :: DefaultSiteName ! for EDI input/output
     logical           :: IgnoreSiteNameInFile ! for EDI input to use when site name is meaningless
+    character(len=80) :: DefaultStartTime ! for EDI input/output
+    character(len=80) :: DefaultEndTime ! for EDI input/output
     integer           :: DefaultDataQuality ! a priori data quality from 1 to 5 (0 = unrated)
     character(len=400):: DataQualityComment ! information about survey data quality
     logical           :: ComputeSiteCoords ! for EDI input/output

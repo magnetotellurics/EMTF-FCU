@@ -339,11 +339,19 @@ contains
     call xml_EndElement(xmlfile, 'AcquiredBy')
 
     call xml_NewElement(xmlfile, 'Start')
-    call xml_AddCharacters(xmlfile, trim(Site%Start))
+    if(len_trim(Site%Start).gt.0)then
+     call xml_AddCharacters(xmlfile, trim(Site%Start))
+    else
+     call xml_AddCharacters(xmlfile, trim(UserInfo%DefaultStartTime))
+    endif
     call xml_EndElement(xmlfile, 'Start')
 
     call xml_NewElement(xmlfile, 'End')
-    call xml_AddCharacters(xmlfile, trim(Site%End))
+    if(len_trim(Site%End).gt.0)then
+     call xml_AddCharacters(xmlfile, trim(Site%End))
+    else
+     call xml_AddCharacters(xmlfile, trim(UserInfo%DefaultEndTime))
+    endif
     call xml_EndElement(xmlfile, 'End')
 
     call xml_NewElement(xmlfile, 'RunList')

@@ -193,6 +193,8 @@ contains
     if (len_trim(Info%SignConvention)==0) then
         Info%SignConvention = sign_convention
     end if
+    Info%DefaultStartTime = getString(doc,"DefaultStartTime")
+    Info%DefaultEndTime = getString(doc,"DefaultEndTime")
     Info%DefaultSiteName = getString(doc,"DefaultSiteName")
     ignoresitename = -1
     ignoresitename = getInteger(doc,"IgnoreSiteNameInFile")
