@@ -249,6 +249,19 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
     hour = '00'
     minute = '00'
     second = '00'
+  case ('DD/MM/YYYY hh:mm') ! Lana added for AdelaideUni/capricorn_orogen 
+    year = time1(7:10)
+    month = time1(4:5)
+    day = time1(1:2)
+    if (len_trim(time1) >= 11) then
+        hour = time1(11:12)
+        minute = time1(14:15)
+        second = '00'
+    else
+        hour = '00'
+        minute = '00'
+        second = '00'
+    end if
   case default
     write(0,*) 'Warning: unknown input time format ',format1,' for ',time1
     time2 = time1
