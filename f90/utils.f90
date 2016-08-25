@@ -253,14 +253,16 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
     year = time1(7:10)
     month = time1(4:5)
     day = time1(1:2)
-    if (len_trim(time1) >= 11) then
-        hour = time1(11:12)
+    second = '00'   
+    if (len_trim(time1) == 16) then
+        hour = time1(12:13)
+        minute = time1(15:16)
+    elseif (len_trim(time1) == 15) then
+        hour = '0'//time1(12:12)
         minute = time1(14:15)
-        second = '00'
     else
         hour = '00'
         minute = '00'
-        second = '00'
     end if
   case default
     write(0,*) 'Warning: unknown input time format ',format1,' for ',time1
