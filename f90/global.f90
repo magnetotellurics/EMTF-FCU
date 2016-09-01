@@ -769,10 +769,11 @@ contains
 
 
     ! cleaning up the EDI units flexibility (use to_upper if needed)
+! Lana fixed BUG by commenting lines 776,785, 786 on 09.01.2016,since Channel%Units are never 'FT'!
     subroutine convert_channel_to_meters(Channel)
          type(Channel_t), intent(inout) :: Channel
 
-         if (trim(Channel%Units) .eq. 'FT') then
+         !if (trim(Channel%Units) .eq. 'FT') then ! Channel%Units are nT etc.
             Channel%X = 0.3048 * Channel%X
             Channel%Y = 0.3048 * Channel%Y
             Channel%Z = 0.3048 * Channel%Z
@@ -781,8 +782,8 @@ contains
                 Channel%Y2 = 0.3048 * Channel%Y2
                 Channel%Z2 = 0.3048 * Channel%Z2
             end if
-            Channel%Units = 'm'
-         end if
+            !Channel%Units = 'm'
+         !end if
 
     end subroutine convert_channel_to_meters
 
