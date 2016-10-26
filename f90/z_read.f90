@@ -62,10 +62,12 @@ contains
   ! Assumes no extra characters at the end of this string, and uses
   ! the following convention:
   ! a) no underscore - assume single station
-  ! b) 2-char after the underscore - insert a zero, e.g. A4 -> WAA04
-  ! c) 3-char atter the underscore with 2 digits, e.g. A11 -> WAA11
-  ! d) 4-char atter the underscore with 3 digits, e.g. C016 -> MC016
-  ! e) <2-char or >4-char after the underscore - do not attempt to parse
+  ! b)   2-char after the underscore - insert a zero, e.g. A4 -> WAA04
+  ! c)   3-char after the underscore with 2 digits, e.g. A11 -> WAA11
+  ! d)   3-char after the underscore with 3 letters, e.g. FRD -> FRD
+  ! e)   4-char after the underscore with 3 digits, e.g. C016 -> MC016
+  ! f) >=5-char after the underscore with 3 letters & 2 digits, e.g. SCY58coh -> SCY58
+  ! g)  <2-char after the underscore - do not attempt to parse
   ! Most importantly, assumes a 5-digit site name!!!!!!
   ! Please manually correct the station name in your Z-file to satisfy
   ! these criteria before attempting to run this program.
