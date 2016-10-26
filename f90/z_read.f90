@@ -112,7 +112,9 @@ contains
   	else if (len_trim(abbrev)==3) then
   		if (isdigit(abbrev(3:3))) then ! e.g. KSP35b_K33
   			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
-  		else ! Account for additional characters at the end e.g. ORG05bc_H6x
+  		else if (.not. isdigit(abbrev(1:1)) .and. .not. isdigit(abbrev(2:2))) then ! observatory, e.g. LCV54de_FRD
+            RemoteSiteID = abbrev(1:3)
+        else ! Account for additional characters at the end e.g. ORG05bc_H6x
    			RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
   		end if
     else if (len_trim(abbrev)==4) then
@@ -120,6 +122,8 @@ contains
             RemoteSiteID = SiteID(1:1)//toupper(abbrev(1:1))//abbrev(2:4)
         else if (isdigit(abbrev(3:3))) then ! e.g. KSP35b_K33x
             RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
+        else if (.not. isdigit(abbrev(1:1)) .and. .not. isdigit(abbrev(2:2))) then ! observatory, e.g. LCV54de_FRDx
+            RemoteSiteID = abbrev(1:3)
         else ! Account for additional characters at the end e.g. ORG05bc_H6xy
             RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
         end if
@@ -130,6 +134,8 @@ contains
             RemoteSiteID = SiteID(1:1)//toupper(abbrev(1:1))//abbrev(2:4)
         else if (isdigit(abbrev(3:3))) then ! e.g. KSP35b_K33xcoh
             RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//abbrev(2:3)
+        else if (.not. isdigit(abbrev(1:1)) .and. .not. isdigit(abbrev(2:2))) then ! observatory, e.g. LCV54de_FRDcohX
+            RemoteSiteID = abbrev(1:3)
         else ! Account for additional characters at the end e.g. ORG05bc_H6xcoh
             RemoteSiteID = SiteID(1:2)//toupper(abbrev(1:1))//'0'//abbrev(2:2)
         end if
