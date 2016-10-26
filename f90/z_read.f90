@@ -130,6 +130,8 @@ contains
     else if (len_trim(abbrev)>=5) then
         if (isdigit(abbrev(3:3)) .and. isdigit(abbrev(4:4)) .and. isdigit(abbrev(5:5))) then ! e.g. MF011a_MM012
             RemoteSiteID = toupper(abbrev(1:1))//toupper(abbrev(2:2))//abbrev(3:5)
+        else if (.not. isdigit(abbrev(3:3)) .and. isdigit(abbrev(4:4)) .and. isdigit(abbrev(5:5))) then ! e.g. NCV58bc_SCY58coh
+            RemoteSiteID = toupper(abbrev(1:1))//toupper(abbrev(2:2))//toupper(abbrev(3:3))//abbrev(4:5)
         else if (isdigit(abbrev(3:3)) .and. isdigit(abbrev(4:4))) then ! e.g. MF011a_M012xcoh
             RemoteSiteID = SiteID(1:1)//toupper(abbrev(1:1))//abbrev(2:4)
         else if (isdigit(abbrev(3:3))) then ! e.g. KSP35b_K33xcoh
