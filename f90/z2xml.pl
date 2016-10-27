@@ -23,7 +23,7 @@ my $input_fname;
 opendir(LS, "$input_dir/") || die "Unable to open the requested directory";
 print "Reading directory $input_dir/\n";
 while($input_fname = readdir(LS)){
-	if($input_fname =~ /^(\w+)\.(zss|zrr)$/){
+	if($input_fname =~ /^(\w+)\.(zss|zrr|zmm)$/){
 		push @take_files, $input_fname;
 	}
 }

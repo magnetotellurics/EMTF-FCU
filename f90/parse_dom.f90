@@ -80,7 +80,7 @@ contains
 	! If that doesn't work, try all child elements
 	list => getElementsByTagName(domNode, trim(xmlName))
 	if (getLength(list)<1) then
-		write(0,*) 'XML Error: no tag ',trim(xmlName)
+		write(0,*) 'XML Warning: no tag ',trim(xmlName)
 		return
 	end if
 
@@ -96,7 +96,7 @@ contains
     end do
 
     if (.not.hasAttr) then
-      	write(0,*) 'XML Error: no child ',trim(xmlName),' with attribute ',trim(attrName)
+      	write(0,*) 'XML Warning: no child ',trim(xmlName),' with attribute ',trim(attrName)
       	return
     end if
 
@@ -213,7 +213,7 @@ contains
 		! If that doesn't work, try all child elements
 		list => getElementsByTagName(domNode, trim(xmlName))
 		if (getLength(list)<1) then
-			write(0,*) 'XML Error: no tag ',trim(xmlName)
+			write(0,*) 'XML Warning: no tag ',trim(xmlName)
 			return
 		end if
 
@@ -235,7 +235,7 @@ contains
 	      		end if
 	      	end do
 	      	if (.not.hasAttr) then
-	      		write(0,*) 'XML Error: no child ',trim(xmlName),' with this value of attribute ',trim(attrName)
+	      		write(0,*) 'XML Warning: no child ',trim(xmlName),' with this value of attribute ',trim(attrName)
 	      		return
 	      	end if
 		else

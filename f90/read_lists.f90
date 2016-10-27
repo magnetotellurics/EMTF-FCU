@@ -43,6 +43,7 @@ contains
     character(len=*), intent(in)    :: id
     type(Site_t), intent(out)       :: Site
 	character(len=80)               :: IDstring
+	character(len=400)              :: str
 	type(Node), pointer             :: doc, thisSite
 	type(NodeList), pointer         :: sites
  	logical, intent(out)            :: exists
@@ -74,6 +75,14 @@ contains
   		if (trim(IDstring)==trim(id)) then
   			Site%ID = IDstring
             Site%IRIS_ID = IDstring
+            str = getString(thisSite,"Project")
+            if (len_trim(str)>0) then
+                Site%Project = trim(str)
+            end if
+            str = getString(thisSite,"Survey")
+            if (len_trim(str)>0) then
+                Site%Survey = trim(str)
+            end if
   			Site%Description = getString(thisSite,"Description")
     		Site%Location%lat = getReal(thisSite,"Latitude")
     		Site%Location%lon = getReal(thisSite,"Longitude")

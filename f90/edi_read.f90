@@ -342,6 +342,7 @@ contains
     character(len=2)                      :: elevunits
     logical                               :: readlat,readlon,readelev
     logical                               :: readinfo
+    integer                               :: i1
 
     elevunits = 'M'
 
@@ -365,70 +366,93 @@ contains
         write(*,*) 'Before entering the INFO block, elevation = ',Site%Location%elev
     end if
 
-    do i=1,n
-        read (edifile,'(a200)',iostat=ios) line
-        ! exit if we're no longer in the INFO block
-        if (ios /= 0 .or. .not. (trim(this_block) == 'INFO')) then
-            n = i-1
-            exit
-        end if
-        Notes(i) = line
 
-        call parse_edi_line(line,var,value)
-        if (.not.silent) then
-            write(*,*) 'Reading ',trim(var),' line: ',trim(value)
-        end if
-        ! ... or if the new section DEFINEMEAS is encountered
-        if (new_section) then
-            n = i-1
-            exit
-        end if
+    if (index(to_upper(Info%ProcessedBy),'PHOENIX')>0) then
 
-        if (Info%ParseEDIinfo) then
+        ! parse special Phoenix info format
+        do i=1,n
+            read (edifile,'(a200)',iostat=ios) line
+            ! exit if we're no longer in the INFO block
+            if (ios /= 0 .or. .not. (trim(this_block) == 'INFO')) then
+                n = i-1
+                exit
+            end if
+            Notes(i) = line
 
-            ! to parse the INFO block, first find an occurence of the site ID
-            ! then allow parsing of only one value of each type after site ID
-            if (trim(var) .eq. 'INFO') then
-                if (index(to_upper(value),trim(to_upper(Site%ID)))>0) then
-                    readinfo = .true.
-                    readlat = .false.
-                    readlon = .false.
-                    readelev = .false.
+            ! electric field channel
+            i1 = index(trim(temp),'Ex1=')
+
+        end do
+
+    else
+
+        ! parse the general INFO block
+        do i=1,n
+            read (edifile,'(a200)',iostat=ios) line
+            ! exit if we're no longer in the INFO block
+            if (ios /= 0 .or. .not. (trim(this_block) == 'INFO')) then
+                n = i-1
+                exit
+            end if
+            Notes(i) = line
+
+            call parse_edi_line(line,var,value)
+            if (.not.silent) then
+                write(*,*) 'Reading ',trim(var),' line: ',trim(value)
+            end if
+            ! ... or if the new section DEFINEMEAS is encountered
+            if (new_section) then
+                n = i-1
+                exit
+            end if
+
+            if (Info%ParseEDIinfo) then
+
+                ! to parse the INFO block, first find an occurence of the site ID
+                ! then allow parsing of only one value of each type after site ID
+                if (trim(var) .eq. 'INFO') then
+                    if (index(to_upper(value),trim(to_upper(Site%ID)))>0) then
+                        readinfo = .true.
+                        readlat = .false.
+                        readlon = .false.
+                        readelev = .false.
+                    end if
                 end if
-            end if
 
-            if (readinfo) then
-            select case (trim(var))
-            case ('AZIMUTH')
-                !read(value,*) Site%Declination
-            case ('LATITUDE','SITE LATITUDE') ! assume it's decimal if found in INFO block
-                read(value,*) Site%Location%lat
-                readlat = .true.
-            case ('LONGITUDE','SITE LONGITUDE') ! assume it's decimal if found in INFO block
-                read(value,*) Site%Location%lon
-                readlon = .true.
-            case ('ELEVATION','SITE ELEVATION') ! read elevation and convert to meters if needed
-                read(value,*) Site%Location%elev
-                if(trim(elevunits) .eq. 'FT') then
-                    Site%Location%elev = 0.3048 * Site%Location%elev
+                if (readinfo) then
+                select case (trim(var))
+                case ('AZIMUTH')
+                    !read(value,*) Site%Declination
+                case ('LATITUDE','SITE LATITUDE') ! assume it's decimal if found in INFO block
+                    read(value,*) Site%Location%lat
+                    readlat = .true.
+                case ('LONGITUDE','SITE LONGITUDE') ! assume it's decimal if found in INFO block
+                    read(value,*) Site%Location%lon
+                    readlon = .true.
+                case ('ELEVATION','SITE ELEVATION') ! read elevation and convert to meters if needed
+                    read(value,*) Site%Location%elev
+                    if(trim(elevunits) .eq. 'FT') then
+                        Site%Location%elev = 0.3048 * Site%Location%elev
+                    end if
+                    readelev = .true.
+                case ('INFO','DUMMY','COMMENT')
+                    ! these are already saved in the Notes if needed
+                case default
+                    ! but there might be something else that requires parsing
+                    write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
+                end select
                 end if
-                readelev = .true.
-            case ('INFO','DUMMY','COMMENT')
-                ! these are already saved in the Notes if needed
-            case default
-                ! but there might be something else that requires parsing
-                write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
-            end select
+
+                ! exit the reading loop when everything has been read
+                if (readlat .and. readlon .and. readelev) then
+                    readinfo = .false.
+                end if
+
             end if
 
-            ! exit the reading loop when everything has been read
-            if (readlat .and. readlon .and. readelev) then
-                readinfo = .false.
-            end if
+        end do
 
-        end if
-
-    end do
+    end if ! End the Info%ProcessedBy if statement
 
     if (.not.silent) then
         write(*,*) 'Before exiting the INFO block, latitude  = ',Site%Location%lat

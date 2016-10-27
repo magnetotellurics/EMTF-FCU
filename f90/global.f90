@@ -15,6 +15,7 @@ module global
   ! from a directory that contains DATATYPES and COPYRIGHT
   ! folders, homedir is overwritten with the current directory
   character(len=80)     :: homedir='/home/mho/lana/EMTF-XML/f90/'
+  !character(len=80)     :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
   !*********************************************************
   ! IRIS requires site ID to have no more than 5 chars
   ! respectively, run ID has no more than 6 chars
@@ -169,6 +170,8 @@ module global
   type :: Site_t
   	character(len=nid) :: ID
     character(len=5)   :: IRIS_ID
+    character(len=80)  :: Project ! ... in some very special circumstances, e.g. for remote site
+    character(len=400) :: Survey  ! Project & Survey might be different from UserInfo...
 	character(len=80)  :: Description
 	type(XYZ_t)        :: Coords
   	type(Location_t)   :: Location
@@ -448,6 +451,8 @@ contains
 
 		Site%ID = ' '
         Site%IRIS_ID = ' '
+        Site%Project = ' '
+        Site%Survey = ' '
 		Site%Description = ' '
 		Site%Coords%Type = ' '
 		Site%Coords%Units = ' '

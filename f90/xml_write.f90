@@ -429,11 +429,19 @@ contains
     	type(Site_t), optional, intent(in)              :: Site
 
 		call xml_NewElement(xmlfile, 'Project')
-		call xml_AddCharacters(xmlfile, trim(UserInfo%Project))
+		if (.not. isempty(Site%Project)) then
+		call xml_AddCharacters(xmlfile, trim(Site%Project))
+		else
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Project))
+        end if
 		call xml_EndElement(xmlfile, 'Project')
 		
 		call xml_NewElement(xmlfile, 'Survey')
-		call xml_AddCharacters(xmlfile, trim(UserInfo%Survey))
+        if (.not. isempty(Site%Survey)) then
+		call xml_AddCharacters(xmlfile, trim(Site%Survey))
+		else
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Survey))
+        end if
 		call xml_EndElement(xmlfile, 'Survey')
 		
         if (.not. isempty(UserInfo%YearCollected)) then
