@@ -555,7 +555,7 @@ contains
             write(0,*) 'Warning: optional metadata ignored for channel ',trim(Channel%ID)
         end if
 
-    case ('H')
+    case ('H')        
         ! magnetic field channel
         i1 = index(trim(temp),'CHTYPE=')
         i2 = index(trim(temp),'CHTYPE =')
@@ -742,9 +742,12 @@ contains
         Site%Coords%Y = 0.3048 * Site%Coords%Y
         Site%Coords%Z = 0.3048 * Site%Coords%Z
         Site%Coords%Units = 'meters'
+        write(0,*)'DEBUG FT->M, channel units:', Channel(1)%Units
+        write(0,*)'DEBUG FT->M, before:',Channel(1)%X,Channel(1)%Y,Channel(1)%Z
         do i=1,nch
             call convert_channel_to_meters(Channel(i))
         end do
+        write(0,*)'DEBUG FT->M, after:',Channel(1)%X,Channel(1)%Y,Channel(1)%Z
     end if
 
     ! now, obtain site coordinates relative to an origin from the channels
