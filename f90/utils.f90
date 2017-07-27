@@ -249,15 +249,30 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
     hour = '00'
     minute = '00'
     second = '00'
-  case ('DD/MM/YYYY hh:mm') ! Lana added for AdelaideUni/capricorn_orogen 
+  case ('DD/MM/YYYY') ! Lana added for AdelaideUni Surveys 
     year = time1(7:10)
     month = time1(4:5)
     day = time1(1:2)
     second = '00'   
-    if (len_trim(time1) == 16) then
+    if (len_trim(time1) == 16) then ! hh:mm
         hour = time1(12:13)
         minute = time1(15:16)
-    elseif (len_trim(time1) == 15) then
+    elseif (len_trim(time1) == 15) then ! h:mm
+        hour = '0'//time1(12:12)
+        minute = time1(14:15)
+    else
+        hour = '00'
+        minute = '00'
+    end if
+  case ('DD/MM/YYYY hh:mm') ! Lana added for AdelaideUni Surveys 
+    year = time1(7:10)
+    month = time1(4:5)
+    day = time1(1:2)
+    second = '00'   
+    if (len_trim(time1) == 16) then ! hh:mm
+        hour = time1(12:13)
+        minute = time1(15:16)
+    elseif (len_trim(time1) == 15) then ! h:mm
         hour = '0'//time1(12:12)
         minute = time1(14:15)
     else
