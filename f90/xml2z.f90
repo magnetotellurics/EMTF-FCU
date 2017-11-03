@@ -115,8 +115,14 @@ program xml2z
     select case (DataType(i)%Output)
     case ('H')
         call read_xml_data(DataType(i), Data(i), InputMagnetic, OutputMagnetic)
+        if (trim(xmlLocalSite%Orientation) .eq. 'orthogonal') then
+            Data(i)%orthogonal = .true.
+        end if
     case ('E')
         call read_xml_data(DataType(i), Data(i), InputMagnetic, OutputElectric)
+        if (trim(xmlLocalSite%Orientation) .eq. 'orthogonal') then
+            Data(i)%orthogonal = .true.
+        end if
     case default
         write(0,*) 'Error: unknown data type ',trim(DataType(i)%Name),' with output ',trim(DataType(i)%Output)
     end select
