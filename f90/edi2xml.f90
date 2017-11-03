@@ -2,6 +2,7 @@ program edi2xml
 
   use global
   use config
+  use rotation
   use edi_read
   use xml_write
   use read_lists
@@ -11,7 +12,7 @@ program edi2xml
   character(len=80) :: edi_file=''
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
-  character(len=80) :: edisitename, basename, verbose='', action=''
+  character(len=80) :: edisitename, basename, verbose='', action='',rotinfo=''
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: ediLocalSite, ediRemoteSite, xmlLocalSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -24,11 +25,12 @@ program edi2xml
   character(200), dimension(:), pointer       :: Notes
   character(10)     :: TFname
   real(8),    dimension(:), allocatable        :: value
+  logical           :: is_spectra
   logical           :: config_exists, site_list_exists
   logical			:: run_list_exists, channel_list_exists
   integer           :: NotesLength
   integer           :: i, j, k, narg, l, maxblks, istat
-  integer           :: nf, nchin, nchout, nchoutE, nchoutH
+  integer           :: nf, nch, nchin, nchout, nchoutE, nchoutH
   character(80)     :: type
 
   narg = command_argument_count()
@@ -40,14 +42,15 @@ program edi2xml
      call get_command_argument(1,edi_file)
   end if
 
+  l = len_trim(edi_file)
+  basename = edi_file(1:l-4)
   if (narg>1) then
      call get_command_argument(2,xml_file)
   else
-     l = len_trim(edi_file)
-     basename = edi_file(1:l-4)
      xml_file = trim(basename)//'.xml'
   end if
 
+  silent = .false.
   if (narg>2) then
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
@@ -55,9 +58,27 @@ program edi2xml
      end if
   end if
 
-  ! A dry run only outputs file location and basic info
   if (narg>3) then
-     call get_command_argument(4,action)
+    rotate = .true.
+    call get_command_argument(4,rotinfo)
+    if (index(rotinfo,'original')>0 .or. index(rotinfo,'sitelayout')>0) then
+        orthogonalORsitelayout = 'sitelayout'
+    else
+        read(rotinfo, *) azimuth
+        if ((azimuth)<0.01) then
+           write(*,*) 'Rotate ',trim(basename),' to orthogonal geographic coords. '
+        else
+           write(*,*) 'Rotate ',trim(basename),' to the new azimuth ',azimuth
+        end if
+        orthogonalORsitelayout = 'orthogonal'
+    end if
+  else
+    write(*,*) 'No further rotation requested for ',trim(basename),'. Using original coords. '
+  end if
+
+  ! A dry run only outputs file location and basic info
+  if (narg>4) then
+     call get_command_argument(5,action)
      if (index(action,'dry')>0) then
         dry = .true.
      end if
@@ -171,7 +192,7 @@ program edi2xml
   nchout = nchoutH + nchoutE
 
   ! Read EDI data header and create generic Data variables
-  call read_edi_data_header(nf)
+  call read_edi_data_header(nf,nch,is_spectra)
   write(*,*) 'Allocating data structure for ',size(DataType),' data types, ',nf,' frequencies'
   allocate(Data(size(DataType)), stat=istat)
   do i=1,size(DataType)
@@ -188,19 +209,48 @@ program edi2xml
 
   ! Allocate periods and read in the EDI data
   allocate(F(nf), stat=istat)
-  call read_edi_data(nf,F,Data)
+  if (is_spectra) then
+    call read_edi_spectra(nf,nch,F,Data)
+  else
+    call read_edi_data(nf,F,Data)
+  end if
+
+  ! AK Oct 2017: WE ARE NO LONGER ROTATING THE CHANNELS, LEAVING THEM AS THEY ARE FOR ARCHIVING
+  ! .. INSTEAD, IF WE ROTATE THE TFs TO AN ORTHOGONAL COORDINATE SYSTEM, RECORD ORIENTATION.
 
   ! For magnetic field channel orientation, clean things up to ensure a 90 degree difference.
-  if (InputMagnetic(2)%Orientation - InputMagnetic(1)%Orientation < 0) then
-    InputMagnetic(2)%Orientation = InputMagnetic(2)%Orientation + 360
-  end if
+  !if (InputMagnetic(2)%Orientation - InputMagnetic(1)%Orientation < 0) then
+  !  InputMagnetic(2)%Orientation = InputMagnetic(2)%Orientation + 360
+  !end if
 
   ! Overwrite electric field channel orientations using the first value of ZROT in EDI file.
   ! This is slightly more general than using the magnetic field channel orientation for this purpose.
   ! However, this does not support non-perpendicular site layouts (information is not in the EDI)
   ! as well as orientation that varies between frequencies or data types (cannot archive this robustly).
-  OutputElectric(1)%Orientation = Data(1)%Rot(1)
-  OutputElectric(2)%Orientation = Data(1)%Rot(1) + 90
+  !OutputElectric(1)%Orientation = Data(1)%Rot(1)
+  !OutputElectric(2)%Orientation = Data(1)%Rot(1) + 90
+
+  if (rotate) then
+      ediLocalSite%Orientation = trim(orthogonalORsitelayout)
+      ediLocalSite%AngleToGeogrNorth = azimuth
+      if (.not. is_spectra) then
+            ! In the absence of covariance matrices, rotate the variances matrix just like we rotate the TF
+            ! and let's be clear that this is not the right way to do it!
+            write(0,*) 'WARNING: rotating the TF variances without the full covariance matrix is WRONG'
+            write(0,*) '         but since you insist, we are doing it anyway'
+      end if
+      do i=1,size(DataType)
+        write(*,'(a9,a20,a4,a10,a14,f9.6)') 'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
+        select case (DataType(i)%Output)
+        case ('H')
+            call rotate_data(Data(i),InputMagnetic,OutputMagnetic,orthogonalORsitelayout,azimuth)
+        case ('E')
+            call rotate_data(Data(i),InputMagnetic,OutputElectric,orthogonalORsitelayout,azimuth)
+        case default
+            ! do nothing
+        end select
+      end do
+  end if
 
   ! Read information for this site from a list. If successfully read,
   ! trust this information rather than that from the edi-file
@@ -213,6 +263,8 @@ program edi2xml
   if (len_trim(xmlLocalSite%ID)>0) then
     write(*,*) 'Using site name and location from a site list, but using the original site IDs.'
     xmlLocalSite%ID = ediLocalSite%ID
+    xmlLocalSite%Orientation = ediLocalSite%Orientation
+    xmlLocalSite%AngleToGeogrNorth = ediLocalSite%AngleToGeogrNorth
     if (UserInfo%WriteEDIInfo) then
         call add_xml_header(xmlLocalSite, UserInfo, Notes, NotesLength)
     else
@@ -248,6 +300,7 @@ program edi2xml
 
   call add_GridOrigin(ediLocalSite)
 
+  call new_element('SiteLayout')
   call new_channel_block('InputChannels')
   do i=1,nchin
      call add_Channel(InputMagnetic(i), location=.false.)
@@ -262,6 +315,7 @@ program edi2xml
      call add_Channel(OutputElectric(i), location=.false.)
   end do
   call end_block('OutputChannels')
+  call end_element('SiteLayout')
 
   ! Read and write frequency blocks: transfer functions, variance, covariance
   if (.not. UserInfo%MetadataOnly) then
@@ -276,9 +330,17 @@ program edi2xml
         case ('H')
             call add_Data(Data(i), k, InputMagnetic, OutputMagnetic)
             call add_Var(Data(i), k, InputMagnetic, OutputMagnetic)
+            if (Data(i)%fullcov) then
+                call add_InvSigCov(Data(i), k, InputMagnetic)
+                call add_ResidCov(Data(i), k, OutputMagnetic)
+            end if
         case ('E')
             call add_Data(Data(i), k, InputMagnetic, OutputElectric)
             call add_Var(Data(i), k, InputMagnetic, OutputElectric)
+            if (Data(i)%fullcov) then
+                call add_InvSigCov(Data(i), k, InputMagnetic)
+                call add_ResidCov(Data(i), k, OutputElectric)
+            end if
         case default
             ! use only for scalar data
             call add_Data(Data(i), k)
@@ -310,8 +372,6 @@ program edi2xml
 
   call end_xml_output('EM_TF')
 
-  if (.not.silent) then
-     write(*,*) 'Written to file: ',xml_file
-  end if
+  write(*,*) 'Written to file: ',trim(xml_file)
 
 end program edi2xml

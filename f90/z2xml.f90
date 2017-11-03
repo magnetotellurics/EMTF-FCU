@@ -2,6 +2,7 @@ program z2xml
 
   use global
   use config
+  use rotation
   use read_lists
   use z_read
   use xml_write
@@ -11,7 +12,7 @@ program z2xml
   character(len=80) :: z_file=''
   character(len=80) :: xml_file=''
   character(len=80) :: config_file = 'config.xml'
-  character(len=80) :: zsitename, basename, verbose=''
+  character(len=80) :: zsitename, basename, verbose='',rotinfo=''
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -43,19 +44,39 @@ program z2xml
      call get_command_argument(1,z_file)
   end if
 
+  l = len_trim(z_file)
+  basename = z_file(1:l-4)
   if (narg>1) then
      call get_command_argument(2,xml_file)
   else
-     l = len_trim(z_file)
-     basename = z_file(1:l-4)
      xml_file = trim(basename)//'.xml'
   end if
 
+  silent = .false.
   if (narg>2) then
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
      end if
+  end if
+
+  if (narg>3) then
+    rotate = .true.
+    call get_command_argument(4,rotinfo)
+    if (index(rotinfo,'original')>0 .or. index(rotinfo,'sitelayout')>0) then
+        write(0,*) 'Unable to rotate Z-file to site layout: can only rotate to specified orthogonal coordinates. Exiting...'
+        stop
+    else
+        read(rotinfo, *) azimuth
+        if ((azimuth)<0.01) then
+           write(*,*) 'Rotate ',trim(basename),' to orthogonal geographic coords. '
+        else
+           write(*,*) 'Rotate ',trim(basename),' to the new azimuth ',azimuth
+        end if
+        orthogonalORsitelayout = 'orthogonal'
+    end if
+  else
+    write(*,*) 'No further rotation requested for ',trim(basename),'. Using original coords. '
   end if
 
   ! Update output file name
@@ -115,7 +136,6 @@ program z2xml
   	write(0,*) '		<LastMod>1987-10-12</LastMod>'
   	write(0,*) '		<Author>Gary Egbert</Author>'
   	write(0,*) '	</ProcessingSoftware>'
-  	write(0,*) '	<OrthogonalGeographic>1</OrthogonalGeographic>'
   	write(0,*) '	<RunList>Runs.xml</RunList>'
   	write(0,*) '	<SiteList>Sites.xml</SiteList>'
   	write(0,*) '	<ChannelList>Channels.xml</ChannelList>'
@@ -162,9 +182,9 @@ program z2xml
   allocate(U(nchin,nchin), V(nchout,nchout), stat=istat)
 
   ! Initialize conversion to orthogonal geographic coords
-  if (UserInfo%OrthogonalGeographic > 0) then
-     call rotate_z_channels(InputMagnetic, OutputElectric, U, V)
-  end if
+  !if (UserInfo%OrthogonalGeographic > 0) then
+  !   call rotate_z_channels(InputMagnetic, OutputElectric, U, V)
+  !end if
 
   do k=1,nf
 
@@ -172,9 +192,9 @@ program z2xml
      call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
      ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
-     if (UserInfo%OrthogonalGeographic > 0) then
-     	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
-     end if
+     !if (UserInfo%OrthogonalGeographic > 0) then
+     !	call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     !end if
 
   end do
 
@@ -189,12 +209,16 @@ program z2xml
         Data(i)%Var = TFVar(:,1:nchoutH,:)
         Data(i)%InvSigCov = InvSigCov(:,:,:)
         Data(i)%ResidCov = ResidCov(:,1:nchoutH,1:nchoutH)
+        Data(i)%fullcov = .true.
+        Data(i)%orthogonal = .false.
     case ('E')
         call init_data(Data(i),DataType(i),nf,nchin,nchoutE)
         Data(i)%Matrix = TF(:,nchoutH+1:nchout,:)
         Data(i)%Var = TFVar(:,nchoutH+1:nchout,:)
         Data(i)%InvSigCov = InvSigCov(:,:,:)
         Data(i)%ResidCov = ResidCov(:,nchoutH+1:nchout,nchoutH+1:nchout)
+        Data(i)%fullcov = .true.
+        Data(i)%orthogonal = .false.
     case default
         write(0,*) 'Error: unable to initialize the data variable #',i
     end select
@@ -204,12 +228,30 @@ program z2xml
 
   ! Finished reading Z-file
 
+  if (rotate) then
+      zLocalSite%Orientation = trim(orthogonalORsitelayout)
+      zLocalSite%AngleToGeogrNorth = azimuth
+      do i=1,size(DataType)
+        write(*,'(a9,a20,a4,a10,a14,f9.6)') 'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
+        select case (DataType(i)%Output)
+        case ('H')
+            call rotate_data(Data(i),InputMagnetic,OutputMagnetic,orthogonalORsitelayout,azimuth)
+        case ('E')
+            call rotate_data(Data(i),InputMagnetic,OutputElectric,orthogonalORsitelayout,azimuth)
+        case default
+            ! do nothing
+        end select
+      end do
+  end if
+
   ! Read information for this site from a list. If successfully read,
   ! trust this information rather than that from the Z-file
   call read_site_list(UserInfo%SiteList, zLocalSite%ID, xmlLocalSite, site_list_exists)
 
   if (len_trim(xmlLocalSite%ID)>0) then
 
+    xmlLocalSite%Orientation = zLocalSite%Orientation
+    xmlLocalSite%AngleToGeogrNorth = zLocalSite%AngleToGeogrNorth
   	call add_xml_header(xmlLocalSite, UserInfo, Notes)
   else
 
@@ -259,6 +301,7 @@ program z2xml
   end do
   call end_element('DataTypes')
 
+  call new_element('SiteLayout')
   call new_channel_block('InputChannels')
   do i=1,size(InputMagnetic)
      call add_Channel(InputMagnetic(i), location=.false.)
@@ -273,6 +316,7 @@ program z2xml
      call add_Channel(OutputElectric(i), location=.false.)
   end do
   call end_block('OutputChannels')
+  call end_element('SiteLayout')
 
   ! Read and write frequency blocks: transfer functions, variance, covariance
   if (.not. UserInfo%MetadataOnly) then
@@ -323,8 +367,6 @@ program z2xml
 
   call end_xml_output('EM_TF')
 
-  if (.not.silent) then
-     write(*,*) 'Written to file: ',xml_file
-  end if
+  write(*,*) 'Written to file: ',trim(xml_file)
 
 end program z2xml

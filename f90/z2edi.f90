@@ -27,7 +27,6 @@ program z2edi
   real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
   character(len=80)     :: edi_date,xml_date
   real              :: Ex_len, Ey_len
-  real(8)           :: azimuth
   integer           :: i, j, k, narg, len, istat
   integer           :: nf, nch, nchin, nchout, nchoutE, nchoutH
 
@@ -58,7 +57,7 @@ program z2edi
   if (narg>3) then
      rotate = .true.
      call get_command_argument(4,coords)
-     read(coords, '(f9.6)') azimuth
+     read(coords, *) azimuth
      if (.not.silent) then
         if ((azimuth)<0.01) then
            write(*,*) 'Rotate to orthogonal geographic coords. '

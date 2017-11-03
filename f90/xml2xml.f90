@@ -1,20 +1,20 @@
-program xml2edi
+program xml2xml
 
   use global
   use rotation
-  use edi_write
   use xml_read
+  use xml_write
   implicit none
 
-  character(len=80) :: edi_file=''
   character(len=80) :: xml_file=''
+  character(len=80) :: xml_file_out=''
   character(len=19) :: xml_time, edi_date 
   character(len=80) :: site_info_list='Sites.xml'
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favorite station'
   character(len=80) :: xmlsitename, basename, verbose='',rotinfo=''
   type(UserInfo_t)  :: UserInfo
-  type(Site_t)      :: xmlLocalSite, xmlRemoteSite
+  type(Site_t)      :: xmlLocalSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputMagnetic
   type(Channel_t), dimension(:), pointer      :: OutputElectric
@@ -22,6 +22,7 @@ program xml2edi
   type(DataType_t), dimension(:), pointer     :: DataType, Estimate
   type(FreqInfo_t), dimension(:), pointer     :: F
   type(Run_t), dimension(:), allocatable      :: Run
+  integer           :: nchin, nchout, nchoutE, nchoutH
   integer           :: i, j, k, narg, l, istat
   integer           :: nf, nch, ndt
 
@@ -37,15 +38,18 @@ program xml2edi
   l = len_trim(xml_file)
   basename = xml_file(1:l-4)
   if (narg>1) then
-     call get_command_argument(2,edi_file)
+     call get_command_argument(2,xml_file_out)
   else
-     edi_file = trim(basename)//'.edi'
+     xml_file_out = trim(basename)//'_out.xml'
   end if
 
+  silent = .true.
   if (narg>2) then
      call get_command_argument(3,verbose)
      if (index(verbose,'silent')>0) then
         silent = .true.
+     else if (index(verbose,'debug')>0 .or. index(verbose,'verbose')>0) then
+        silent = .false.
      end if
   end if
 
@@ -68,13 +72,12 @@ program xml2edi
   end if
 
   ! Update output file name
-  if (index(edi_file,'.')==0) then
- 	edi_file = trim(edi_file)//'.edi'
+  if (index(xml_file_out,'.')==0) then
+ 	xml_file = trim(xml_file_out)//'.xml'
   end if
   
   ! Initialize site structures
   call init_site_info(xmlLocalSite)
-  call init_site_info(xmlRemoteSite)
 
   ! Initialize input and output
   call initialize_xml_input(xml_file, xml_time)
@@ -82,6 +85,8 @@ program xml2edi
   call read_xml_header(xmlsitename, xmlLocalSite, UserInfo, nf, nch, ndt)
 
   call read_xml_channels(InputMagnetic, OutputMagnetic, OutputElectric)
+
+  call read_xml_statistical_estimates(Estimate)
 
   call read_xml_data_types(DataType)
 
@@ -101,12 +106,11 @@ program xml2edi
 
   call read_xml_periods(F)
 
+  call end_xml_input
 
   if (rotate) then
       xmlLocalSite%Orientation = trim(orthogonalORsitelayout)
       xmlLocalSite%AngleToGeogrNorth = azimuth
-      write(0,*) 'WARNING: by writing to EDI file, full error covariances are LOST'
-      write(0,*) '         but we are using them, if present in XML file, to rotate'
       do i=1,size(DataType)
         write(*,'(a10,a20,a4,a10,a14,f9.6)') 'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
         select case (DataType(i)%Output)
@@ -120,23 +124,102 @@ program xml2edi
       end do
   end if
 
+  ! Define channel dimensions
+  nchin = size(InputMagnetic)
+  nchoutH = size(OutputMagnetic)
+  nchoutE = size(OutputElectric)
+  nchout = nchoutH + nchoutE
 
-  edi_date = xml_time(6:7)//'/'//xml_time(9:10)//'/'//xml_time(3:4)
+  ! Initialize output
+  call initialize_xml_output(xml_file_out,'EM_TF')
 
-  ! Implemented correct EDI output workflow that can accommodate any rotations and metadata;
-  ! currently writing out impedances and tippers, if present
-  call initialize_edi_output(edi_file)
-  call write_edi_header(edi_date, xmlsitename, xmlLocalSite, UserInfo)
-  call write_edi_info(xmlLocalSite,UserInfo)
-  call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, xmlLocalSite)
-  call write_edi_data(xmlsitename, F, Data)
-  call end_edi_output()
+  ! Write XML header
+  call add_xml_header(xmlLocalSite, UserInfo)
+
+  ! Processing notes follow
+  call add_ProcessingInfo(UserInfo)
+
+  call new_element('StatisticalEstimates')
+  do i=1,size(Estimate)
+    call add_Estimate(Estimate(i))
+  end do
+  call end_element('StatisticalEstimates')
+
+  call new_element('DataTypes')
+  do i=1,size(DataType)
+    call add_DataType(DataType(i))
+  end do
+  call end_element('DataTypes')
+
+  !call add_GridOrigin(xmlLocalSite)
+
+  call new_element('SiteLayout')
+  call new_channel_block('InputChannels')
+  do i=1,nchin
+     call add_Channel(InputMagnetic(i), location=.false.)
+  end do
+  call end_block('InputChannels')
+
+  call new_channel_block('OutputChannels')
+  do i=1,nchoutH
+     call add_Channel(OutputMagnetic(i), location=.false.)
+  end do
+  do i=1,nchoutE
+     call add_Channel(OutputElectric(i), location=.false.)
+  end do
+  call end_block('OutputChannels')
+  call end_element('SiteLayout')
+
+  ! Read and write frequency blocks: transfer functions, variance, covariance
+  if (.not. UserInfo%MetadataOnly) then
+  call initialize_xml_freq_block_output(nf)
+
+  do k=1,nf
+
+      call new_data_block('Period',F(k))
+
+      do i=1,size(Data)
+        select case (Data(i)%Type%Output)
+        case ('H')
+            call add_Data(Data(i), k, InputMagnetic, OutputMagnetic)
+            call add_Var(Data(i), k, InputMagnetic, OutputMagnetic)
+            if (Data(i)%fullcov) then
+                call add_InvSigCov(Data(i), k, InputMagnetic)
+                call add_ResidCov(Data(i), k, OutputMagnetic)
+            end if
+        case ('E')
+            call add_Data(Data(i), k, InputMagnetic, OutputElectric)
+            call add_Var(Data(i), k, InputMagnetic, OutputElectric)
+            if (Data(i)%fullcov) then
+                call add_InvSigCov(Data(i), k, InputMagnetic)
+                call add_ResidCov(Data(i), k, OutputElectric)
+            end if
+        case default
+            ! use only for scalar data
+            call add_Data(Data(i), k)
+            call add_Var(Data(i), k)
+        end select
+      end do
+
+      call end_block('Period')
+
+  end do
+
+  call end_xml_freq_block_output
+  end if
+
+  call add_PeriodRange(F)
 
   ! Exit nicely
-  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric, stat=istat)
+  deallocate(F, stat=istat)
+  do i = 1,size(DataType)
+    call deall_data(Data(i))
+  end do
+  deallocate(Data, stat=istat)
 
-  call end_xml_input
+  call end_xml_output('EM_TF')
 
-  write(*,*) 'Written to file: ',trim(edi_file)
+  write(*,*) 'Written to file: ',trim(xml_file_out)
 
-end program xml2edi
+end program xml2xml

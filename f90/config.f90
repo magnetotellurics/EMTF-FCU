@@ -134,12 +134,16 @@ contains
 	if (copyright_exists .and. .not. dry) then
         fileid=105
         write(6,*) 'Reading from copyright file: ',trim(copyright_file)
-        write(6,*) 'Conditions of use: '
+        if (.not. silent) then
+            write(6,*) 'Conditions of use: '
+        end if
         open (unit=fileid,file=copyright_file,status='old',iostat=ios)
         do i=1,size(Info%Copyright%ConditionsOfUse)
             read (fileid,'(a800)',iostat=ios) Info%Copyright%ConditionsOfUse(i)
-            if (.not. isempty(Info%Copyright%ConditionsOfUse(i))) then
-                write(6,*) len_trim(Info%Copyright%ConditionsOfUse(i)),trim(Info%Copyright%ConditionsOfUse(i))
+            if (.not. silent) then
+                if (.not. isempty(Info%Copyright%ConditionsOfUse(i))) then
+                    write(6,*) len_trim(Info%Copyright%ConditionsOfUse(i)),trim(Info%Copyright%ConditionsOfUse(i))
+                end if
             end if
         end do
         close (fileid)
@@ -158,12 +162,16 @@ contains
     if (readme_exists .and. .not. dry) then
         fileid=106
         write(6,*) 'Reading from README file: ',trim(readme_file)
-        write(6,*) 'Additional copyright info: '
+        if (.not. silent) then
+            write(6,*) 'Additional copyright info: '
+        end if
         open (unit=fileid,file=readme_file,status='old',iostat=ios)
         do i=1,size(Info%Copyright%AdditionalInfo)
             read (fileid,'(a800)',iostat=ios) Info%Copyright%AdditionalInfo(i)
-            if (.not. isempty(Info%Copyright%AdditionalInfo(i))) then
-                write(6,*) len_trim(Info%Copyright%AdditionalInfo(i)),trim(Info%Copyright%AdditionalInfo(i))
+            if (.not. silent) then
+                if (.not. isempty(Info%Copyright%AdditionalInfo(i))) then
+                    write(6,*) len_trim(Info%Copyright%AdditionalInfo(i)),trim(Info%Copyright%AdditionalInfo(i))
+                end if
             end if
         end do
         close (fileid)

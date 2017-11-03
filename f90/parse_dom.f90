@@ -41,6 +41,7 @@ module parse_dom
 	type(NodeList), pointer         :: list
 	integer                         :: i
 
+    public :: hasContent
 	public :: getStringAttr, getString
 	public :: getRealAttr, getReal
 	public :: getIntegerAttr, getInteger
@@ -168,6 +169,52 @@ contains
 	end if
 
   end function getIntegerAttr
+
+! *****************************************************************
+! Get the text node from the first child element
+! of domNode with tag xmlName. Output a logical.
+
+  function hasContent(domNode, xmlName) result (exists)
+    type(Node), pointer             :: domNode,childNode
+    character(len=*), intent(in)    :: xmlName
+    logical                         :: exists
+
+    ! Initialize output
+    exists = .false.
+
+    ! Make sure the pointer is associated
+    if (.not.(associated(domNode))) then
+        write(0,*) 'Error: pointer not associated in isElement'
+        return
+    end if
+
+    if (getLocalName(domNode)==trim(xmlName)) then
+
+        textNode => domNode
+    else
+
+        ! If that doesn't work, try all child elements
+        list => getElementsByTagName(domNode, trim(xmlName))
+        if (getLength(list)<1) then
+            ! element does not exist, so exists is still .false.
+            return
+        end if
+
+        ! Take the first child of this node that has the tag of interest
+        textNode => item(list, 0)
+
+    end if
+
+    ! and we know that the data we are interested in is in the text node which is the first child of that node.
+    if (hasChildNodes(textNode)) then
+        childNode => getFirstChild(textNode)
+        exists = .true.
+    else
+        ! the element is empty, so for our purposes it doesn't exist...
+        return
+    end if
+
+  end function hasContent
 
 ! *****************************************************************
 ! Get the text node from the first child element
@@ -304,7 +351,8 @@ contains
 			if (index(str,'.')==0) then
 				str = trim(str)//'.'
 			end if
-			read(str, '(f9.6)') value
+            read(str, *) value
+			!read(str, '(f9.6)') value
 		end if
 	else
 		write(0,*) 'XML Error: unable to convert the text node from the element ',trim(xmlName),' to a real value'

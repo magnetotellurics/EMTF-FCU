@@ -1,6 +1,7 @@
 program xml2z
 
   use global
+  use rotation
   use z_write
   use xml_read
   implicit none
@@ -10,7 +11,7 @@ program xml2z
   character(len=80) :: site_info_list='Sites.xml'
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favourite station'
-  character(len=80) :: zsitename, basename, verbose=''
+  character(len=80) :: zsitename, basename, verbose='',rotinfo=''
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: xmlLocalSite, xmlRemoteSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -51,6 +52,24 @@ program xml2z
      end if
   end if
 
+  if (narg>3) then
+    rotate = .true.
+    call get_command_argument(4,rotinfo)
+    if (index(rotinfo,'original')>0 .or. index(rotinfo,'sitelayout')>0) then
+        orthogonalORsitelayout = 'sitelayout'
+    else
+        read(rotinfo, *) azimuth
+        if ((azimuth)<0.01) then
+           write(*,*) 'Rotate ',trim(basename),' to orthogonal geographic coords. '
+        else
+           write(*,*) 'Rotate ',trim(basename),' to the new azimuth ',azimuth
+        end if
+        orthogonalORsitelayout = 'orthogonal'
+    end if
+  else
+    write(*,*) 'No further rotation requested for ',trim(basename),'. Using original coords. '
+  end if
+
   ! Initialize site structures
   call init_site_info(xmlLocalSite)
   call init_site_info(xmlRemoteSite)
@@ -75,8 +94,6 @@ program xml2z
 
   ! Read and write channels
   call read_xml_channels(InputMagnetic, OutputMagnetic, OutputElectric)
-
-  call write_z_channels(zsitename, InputMagnetic, OutputMagnetic, OutputElectric)
 
   nchin = size(InputMagnetic)
   nchout = size(OutputMagnetic) + size(OutputElectric)
@@ -104,6 +121,31 @@ program xml2z
         write(0,*) 'Error: unknown data type ',trim(DataType(i)%Name),' with output ',trim(DataType(i)%Output)
     end select
   end do
+
+
+  if (rotate) then
+      xmlLocalSite%Orientation = trim(orthogonalORsitelayout)
+      xmlLocalSite%AngleToGeogrNorth = azimuth
+      do i=1,size(DataType)
+        write(*,'(a9,a20,a4,a10,a14,f9.6)') 'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
+        select case (DataType(i)%Output)
+        case ('H')
+            call rotate_data(Data(i),InputMagnetic,OutputMagnetic,orthogonalORsitelayout,azimuth)
+        case ('E')
+            call rotate_data(Data(i),InputMagnetic,OutputElectric,orthogonalORsitelayout,azimuth)
+        case default
+            ! do nothing
+        end select
+      end do
+  end if
+
+  ! For Z-file output only, update channels orientation to reflect the TFs in file, or as rotated
+  if (xmlLocalSite%Orientation .ne. 'sitelayout') then
+    call rotate_channels(InputMagnetic, OutputMagnetic, xmlLocalSite%AngleToGeogrNorth)
+    call rotate_channels(InputMagnetic, OutputElectric, xmlLocalSite%AngleToGeogrNorth)
+  end if
+
+  call write_z_channels(zsitename, InputMagnetic, OutputMagnetic, OutputElectric)
 
   nchoutH = size(OutputMagnetic)
   nchoutE = size(OutputElectric)

@@ -5,17 +5,24 @@ module global
 
   !integer, save         :: nf, ndt
   logical, save         :: dry=.false.
-  logical, save         :: silent=.false.
-  logical, save         :: rotate=.false.
+  logical, save         :: silent=.true.
   character(len=10)     :: date, time, zone
+  !*********************************************************
+  ! Rotation options: if .not. rotate, leave the TFs alone.
+  ! orthogonalORsitelayout is either 'orthogonal' or 'sitelayout'
+  ! If 'orthogonal, rotate to azimuth. If 'sitelayout', rotate
+  ! to the original set of orientations, may not be orthogonal.
+  logical, save         :: rotate=.false.
+  character(len=10)     :: orthogonalORsitelayout='orthogonal'
+  real(8)               :: azimuth=0.0d0
   !*********************************************************
   ! General data types and statistical estimate information
   ! is read from a folder called DATATYPES. The location of
   ! this folder can be hardcoded here. If the code is run
   ! from a directory that contains DATATYPES and COPYRIGHT
   ! folders, homedir is overwritten with the current directory
-  character(len=80)     :: homedir='/home/mho/lana/EMTF-XML/f90/'
-  !character(len=80)     :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
+  !character(len=80)     :: homedir='/home/mho/lana/EMTF-XML/f90/'
+  character(len=80)     :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
   !*********************************************************
   ! IRIS requires site ID to have no more than 5 chars
   ! respectively, run ID has no more than 6 chars
@@ -33,11 +40,16 @@ module global
   character(len=10)     :: datum='WGS84'
   !*********************************************************
   ! The version only changes if the XML schema changes
-  character(len=3)      :: version='3.0'
+  ! - version 4 includes the channels in the SiteLayout element
+  !   and adds the element AngleToGeographicNorth;
+  !   the channels are as recorded, no longer rotated.
+  character(len=3)      :: version='4.0'
   !*********************************************************
   ! The sign convention is always going to be +1
   ! except when not! - e.g., if Larsen's code was used,
-  ! in which case this should be set in configuration file
+  ! in which case this should be set in configuration file.
+  ! EMTF assumes + i\omega t.
+  ! BIRRP assumes - i\omega t.
   character(len=16)     :: sign_convention='exp(+ i\omega t)'
   !*********************************************************
   ! The units are always going to be non-SI
@@ -176,6 +188,8 @@ module global
 	type(XYZ_t)        :: Coords
   	type(Location_t)   :: Location
 	real(8)            :: Declination
+	character(10)      :: Orientation ! TFs as in file either 'orthogonal' or 'sitelayout'
+	real(8)            :: AngleToGeogrNorth ! if 'orthogonal' this is the azimuth
 	integer			   :: QualityRating ! 1-5
 	real(8)			   :: GoodFromPeriod
 	real(8)			   :: GoodToPeriod
@@ -217,7 +231,7 @@ module global
     character(len=10)  :: Intention ! Input/Output
 	real               :: DipoleLength
 	real               :: DipoleAzimuth ! instrument orientation
-	real               :: Orientation   ! orientation in final TF
+	real               :: Orientation   ! orientation as originally recorded
 	real               :: Tilt
 	real               :: X,Y,Z,X2,Y2,Z2  ! location relative to site
 	type(Location_t)   :: Location
@@ -232,6 +246,7 @@ module global
     character(len=80)  :: Filter
     character(len=80)  :: Gain
     character(len=19)  :: MeasuredDate
+    integer            :: OrderInFile
   end type Channel_t
 
 
@@ -283,6 +298,8 @@ module global
     complex(8),dimension(:,:),   pointer :: MultCoh ! (nf,nchout)
     complex(8),dimension(:,:),   pointer :: SigAmp ! (nf,nchout)
     complex(8),dimension(:,:),   pointer :: SigNoise ! (nf,nchout)
+    logical          :: orthogonal = .false.
+    logical          :: fullcov = .false.
     logical          :: allocated = .false.
   end type Data_t
 
@@ -462,6 +479,8 @@ contains
         call init_location(Site%Coords%Origin)
 		call init_location(Site%Location)
 		Site%Declination = 0.0d0
+		Site%Orientation = 'sitelayout'
+		Site%AngleToGeogrNorth = 0.0d0
 		Site%QualityRating = 0
 		Site%GoodFromPeriod = 0.0d0
 		Site%GoodToPeriod = 0.0d0

@@ -59,7 +59,8 @@ contains
 !...  it is set to zero if channel orientations are correct.
 
     write (zfile,'(a80)') Info%RemoteRefType
-    write (zfile,'(a12,a80)') 'station    :', sitename
+    write (zfile,'(a12)',advance='no') 'station    :'
+    write (zfile,*) trim(adjustl(sitename))
 
 	lon = Site%Location%lon
 	lat = Site%Location%lat

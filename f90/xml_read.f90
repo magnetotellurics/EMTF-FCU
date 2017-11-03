@@ -3,6 +3,7 @@ module xml_read
 	use FoX_dom
 	use parse_dom
 	use global
+	use utils
 	implicit none
 	private
 
@@ -18,7 +19,7 @@ module xml_read
 
 	public  :: initialize_xml_input, end_xml_input
 	public  :: read_xml_header, read_xml_channels, read_xml_periods
-    public  :: read_xml_data_types, read_xml_data
+    public  :: read_xml_statistical_estimates, read_xml_data_types, read_xml_data
 
 contains
   
@@ -26,7 +27,7 @@ contains
     character(len=*), intent(in)    :: xmlFile
 	character(len=19), optional, intent(out)  :: xmlTime
 	! local
-	type(Node), pointer   :: parent
+	type(Node), pointer   :: parent, sitelayout
   	
   	! Load in the document
   	doc => parseFile(xmlFile)
@@ -35,10 +36,20 @@ contains
 	periods => getElementsByTagName(doc, "Period")
 
 	! Get all channels and count them
-    parent => item(getElementsByTagName(doc, "InputChannels"),0)
+	sitelayout => item(getElementsByTagName(doc, "SiteLayout"),0)
+	if (.not. associated(sitelayout)) then
+	    write(0,*) 'Reading the old XML 3.0 or earlier file format.'
+	    write(0,*) 'Data will still be read, but orientation is defined by channel orientations. Check for consistency.'
+        write(0,*) 'In the new format, data orientation is explicitly specified and can be distinct from site layout.'
+	    sitelayout => doc
+	else
+        write(0,*) 'Good news: we are reading the new XML 4.0 or above file format.'
+	end if
+
+    parent => item(getElementsByTagName(sitelayout, "InputChannels"),0)
 	hichannels => getElementsByTagName(parent, "Magnetic")
 
-    parent => item(getElementsByTagName(doc, "OutputChannels"),0)
+    parent => item(getElementsByTagName(sitelayout, "OutputChannels"),0)
     hochannels => getElementsByTagName(parent, "Magnetic")
     eochannels => getElementsByTagName(parent, "Electric")
 
@@ -50,7 +61,7 @@ contains
 	end if
 	
 	if (.not.silent) then
-		write(*,*) 'Reading from file ',xmlFile
+		write(*,*) 'Reading from file ',trim(xmlFile)
 	end if
 	
   end subroutine initialize_xml_input
@@ -63,6 +74,9 @@ contains
     integer, intent(out)            :: nf, nch, ndt
 	type(Node), pointer             :: infoNode
 	character(len=80)               :: project
+	character(len=80000)            :: longtext
+    character(800), pointer         :: strarray(:)
+    integer                         :: nlines
 
 	! Initialize site information
 	call init_site_info(Site)
@@ -73,15 +87,58 @@ contains
     nch = getLength(hichannels) + getLength(hochannels) + getLength(eochannels)
     ndt = getLength(datatypes)
 
+    ! URLs and attachments - only one of each is being read, can be generalized if needed
+    infoNode => item(getElementsByTagName(doc, "ExternalUrl"),0)
+    if (hasContent(infoNode,"Url")) then
+        UserInfo%ExternalUrlInfo = getString(infoNode,"Description")
+        UserInfo%ExternalUrl = getString(infoNode,"Url")
+    end if
+
+    infoNode => item(getElementsByTagName(doc, "PrimaryData"),0)
+    if (hasContent(infoNode,"Filename")) then
+        longtext = getString(infoNode,"Filename")
+        i = index(longtext,'.')
+        UserInfo%Basename = trim(longtext(1:i-1))
+        UserInfo%Image = trim(longtext(i+1:100))
+    end if
+
+    infoNode => item(getElementsByTagName(doc, "Attachment"),0)
+    if (hasContent(infoNode,"Filename")) then
+        longtext = getString(infoNode,"Filename")
+        i = index(longtext,'.')
+        UserInfo%Basename = trim(longtext(1:i-1))
+        UserInfo%Original = trim(longtext(i+1:100))
+    end if
+
+    ! Read in the provenance info if present
+    infoNode => item(getElementsByTagName(doc, "Creator"),0)
+    if (hasContent(infoNode,"Name")) then
+        UserInfo%Creator%Name = getString(infoNode,"Name")
+        UserInfo%Creator%Email = getString(infoNode,"Email")
+        UserInfo%Creator%Org = getString(infoNode,"Org")
+        UserInfo%Creator%OrgUrl = getString(infoNode,"OrgUrl")
+    end if
+    infoNode => item(getElementsByTagName(doc, "Submitter"),0)
+    if (hasContent(infoNode,"Name")) then
+        UserInfo%Submitter%Name = getString(infoNode,"Name")
+        UserInfo%Submitter%Email = getString(infoNode,"Email")
+        UserInfo%Submitter%Org = getString(infoNode,"Org")
+        UserInfo%Submitter%OrgUrl = getString(infoNode,"OrgUrl")
+    end if
+
     ! Read in file and site metadata
 	UserInfo%Project = getString(doc,"Project")
 	UserInfo%Survey = getString(doc,"Survey")
 	UserInfo%YearCollected = getString(doc,"YearCollected")
+	UserInfo%Country = getString(doc,"Country")
 	UserInfo%AcquiredBy = getString(doc,"AcquiredBy")
 	UserInfo%ProcessedBy = getString(doc,"ProcessedBy")
+	UserInfo%ProcessDate = getString(doc,"ProcessDate")
 
 	infoNode => item(getElementsByTagName(doc, "ProcessingSoftware"),0)
 	UserInfo%ProcessingSoftware = getString(infoNode,"Name")
+	UserInfo%ProcessingSoftwareLastMod = getString(infoNode,"LastMod")
+	UserInfo%ProcessingSoftwareAuthor = getString(infoNode,"Author")
 
 	! Need to create this node since tags like ID and Location
 	! are encountered several times throughout the document
@@ -93,6 +150,16 @@ contains
 	Site%Location%lon = getReal(infoNode,"Longitude")
 	Site%Location%elev = getReal(infoNode,"Elevation")
 	Site%Declination = getReal(infoNode,"Declination")
+
+	! By default, orientation is set to "sitelayout"
+	if (hasContent(infoNode,"Orientation")) then
+	    Site%Orientation = getString(infoNode,"Orientation")
+	end if
+    if (to_upper(trim(Site%Orientation)) .eq. 'ORTHOGONAL') then
+	    Site%AngleToGeogrNorth = getRealAttr(infoNode,"Orientation","angle_to_geographic_north")
+	end if
+	Site%Start = getString(infoNode,"Start")
+	Site%End = getString(infoNode,"End")
 	Site%RunList = getString(infoNode,"RunList")
 
 	id = getString(doc,"ProcessingTag")
@@ -104,8 +171,65 @@ contains
 		UserInfo%RemoteRef = .true.
 	end if
 	UserInfo%SignConvention = getString(infoNode,"SignConvention")
-	UserInfo%RemoteSiteID = getString(infoNode,"Id")
+	if (hasContent(infoNode,"Id")) then
+	    UserInfo%RemoteSiteID = getString(infoNode,"Id")
+	end if
 	UserInfo%ProcessingTag = id
+
+	infoNode => item(getElementsByTagName(doc, "Copyright"),0)
+	UserInfo%Copyright%ReleaseStatus = getString(infoNode,"ReleaseStatus")
+    if (hasContent(infoNode,"ConditionsOfUse")) then
+        longtext = getString(infoNode,"ConditionsOfUse")
+        call parse_str(longtext,new_line(longtext),strarray,nlines)
+        do i=1,nlines
+            UserInfo%Copyright%ConditionsOfUse(i) = trim(strarray(i))
+        end do
+	end if
+    if (hasContent(infoNode,"SelectedPublications")) then
+        longtext = getString(infoNode,"SelectedPublications")
+        call parse_str(longtext,new_line(longtext),strarray,nlines)
+        do i=1,nlines
+            UserInfo%Copyright%SelectedPublications(i) = trim(strarray(i))
+        end do
+    end if
+    if (hasContent(infoNode,"Acknowledgement")) then
+        longtext = getString(infoNode,"Acknowledgement")
+        call parse_str(longtext,new_line(longtext),strarray,nlines)
+        do i=1,nlines
+            UserInfo%Copyright%Acknowledgement(i) = trim(strarray(i))
+        end do
+    end if
+    if (hasContent(infoNode,"AdditionalInfo")) then
+        longtext = getString(infoNode,"AdditionalInfo")
+        call parse_str(longtext,new_line(longtext),strarray,nlines)
+        do i=1,nlines
+            UserInfo%Copyright%AdditionalInfo(i) = trim(strarray(i))
+        end do
+    end if
+
+    infoNode => item(getElementsByTagName(doc, "Citation"),0)
+    UserInfo%Copyright%Title = getString(infoNode,"Title")
+    UserInfo%Copyright%Authors = getString(infoNode,"Authors")
+    UserInfo%Copyright%Year = getString(infoNode,"Year")
+    UserInfo%Copyright%SurveyDOI = getString(infoNode,"SurveyDOI")
+    if (hasContent(infoNode,"DOI")) then
+        UserInfo%Copyright%DOI = getString(infoNode,"DOI")
+    end if
+
+    ! assuming that all quality comments were added by the creator of the file
+    infoNode => item(getElementsByTagName(doc, "DataQualityNotes"),0)
+    if (hasContent(infoNode,"Rating")) then
+        Site%QualityRating = getInteger(infoNode,"Rating")
+        Site%QualityComments = getString(infoNode,"Comments")
+        Site%GoodFromPeriod = getReal(infoNode,"GoodFromPeriod")
+        Site%GoodToPeriod = getReal(infoNode,"GoodToPeriod")
+    end if
+
+    infoNode => item(getElementsByTagName(doc, "DataQualityWarnings"),0)
+    if (hasContent(infoNode,"Flag")) then
+        Site%WarningFlag = getInteger(infoNode,"Flag")
+        Site%WarningComments = getString(infoNode,"Comments")
+    end if
 
   end subroutine read_xml_header
   
@@ -124,7 +248,11 @@ contains
     do i=1,nchin
        this => item(hichannels, i-1)
        Input(i)%ID = getAttribute(this,"name")
+       Input(i)%Type = 'H'
        Input(i)%orientation = getRealAttr(this,"Magnetic","orientation")
+       Input(i)%X = getRealAttr(this,"Magnetic","x")
+       Input(i)%Y = getRealAttr(this,"Magnetic","y")
+       Input(i)%Z = getRealAttr(this,"Magnetic","z")
        Input(i)%tilt = 0.0
        !Input(i)%units = getAttribute(this,"units")
     end do
@@ -134,9 +262,19 @@ contains
     do i=1,nchoutH
        this => item(hochannels, i-1)
        OutputH(i)%ID = getAttribute(this,"name")
+       OutputH(i)%Type = 'H'
        OutputH(i)%orientation = getRealAttr(this,"Magnetic","orientation")
-       OutputH(i)%tilt = 0.0
-       !OutputH(i)%units = getAttribute(this,"units")
+       OutputH(i)%X = getRealAttr(this,"Magnetic","x")
+       OutputH(i)%Y = getRealAttr(this,"Magnetic","y")
+       OutputH(i)%Z = getRealAttr(this,"Magnetic","z")
+       if (hasAttribute(this,"tilt")) then
+            OutputH(i)%tilt = getRealAttr(this,"Magnetic","tilt")
+       else
+            OutputH(i)%tilt = 0.0
+       end if
+       if (hasAttribute(this,"units")) then
+            OutputH(i)%units = getStringAttr(this,"Electric","units")
+       end if
     end do
 
     nchoutE = getLength(eochannels)
@@ -144,13 +282,60 @@ contains
     do i=1,nchoutE
        this => item(eochannels, i-1)
        OutputE(i)%ID = getAttribute(this,"name")
+       OutputE(i)%Type = 'E'
        OutputE(i)%orientation = getRealAttr(this,"Electric","orientation")
-       OutputE(i)%tilt = 0.0
-       !OutputE(i)%units = getAttribute(this,"units")
+       OutputE(i)%X = getRealAttr(this,"Electric","x")
+       OutputE(i)%Y = getRealAttr(this,"Electric","y")
+       OutputE(i)%Z = getRealAttr(this,"Electric","z")
+       OutputE(i)%X2 = getRealAttr(this,"Electric","x2")
+       OutputE(i)%Y2 = getRealAttr(this,"Electric","y2")
+       OutputE(i)%Z2 = getRealAttr(this,"Electric","z2")
+       if (hasAttribute(this,"tilt")) then
+            OutputE(i)%tilt = getRealAttr(this,"Electric","tilt")
+       else
+            OutputE(i)%tilt = 0.0
+       end if
+       if (hasAttribute(this,"units")) then
+            OutputE(i)%units = getStringAttr(this,"Electric","units")
+       end if
     end do
 
   end subroutine read_xml_channels
   
+  subroutine read_xml_statistical_estimates(DataType)
+    type(DataType_t), pointer, intent(inout)        :: DataType(:)
+    ! local
+    type(Node), pointer                             :: this
+    character(80)                                   :: str
+    integer                                         :: ndt,i,istat
+
+
+    ! Get all estimates and count them
+    datatypes => getElementsByTagName(doc, "Estimate")
+    ndt = getLength(datatypes)
+    allocate(DataType(ndt), stat=istat)
+
+    do i=1,ndt
+        this => item(datatypes, i-1)
+        call init_data_type(DataType(i))
+        DataType(i)%Intention = getString(this,"Intention")
+        DataType(i)%Description = getString(this,"Description")
+        DataType(i)%ExternalUrl = getString(this,"ExternalUrl")
+        DataType(i)%Tag = getString(this,"Tag")
+        DataType(i)%Name = getAttribute(this,"name")
+        str = getAttribute(this,"type")
+        if (index(str,'complex')>0) then
+            DataType(i)%isComplex = .true.
+        else
+            DataType(i)%isComplex = .false.
+        end if
+        if (hasContent(doc,"SeeAlso")) then
+            DataType%SeeAlso = getString(doc,"SeeAlso")
+        end if
+        DataType%allocated = .true.
+    end do
+
+  end subroutine read_xml_statistical_estimates
   
   subroutine read_xml_data_types(DataType)
     type(DataType_t), pointer, intent(inout)        :: DataType(:)
@@ -160,7 +345,7 @@ contains
     integer                                         :: ndt,i,istat
 
 
-    ! Get all channels and count them
+    ! Get all data types and count them
     datatypes => getElementsByTagName(doc, "DataType")
     ndt = getLength(datatypes)
     allocate(DataType(ndt), stat=istat)
@@ -193,7 +378,9 @@ contains
             DataType(i)%derivedType = .true.
             DataType(i)%DerivedFrom = getString(doc,"DerivedFrom")
         end if
-        DataType%SeeAlso = getString(doc,"SeeAlso")
+        if (hasContent(doc,"SeeAlso")) then
+            DataType%SeeAlso = getString(doc,"SeeAlso")
+        end if
         DataType%allocated = .true.
     end do
 
@@ -213,6 +400,7 @@ contains
     real(8)                                   :: vreal, vimag
     character(20)                             :: TFname, chname
     integer                                   :: nf,iPer,i,chin,chout
+    logical                                   :: invsigcov, residcov
 
     nf = getLength(periods)
 
@@ -226,6 +414,9 @@ contains
             return
         end if
     end if
+
+    invsigcov = .false.
+    residcov = .false.
 
     do iPer=1,nf
         thisFreq => item(periods, iPer-1)
@@ -315,6 +506,7 @@ contains
                 end if
                 Data%InvSigCov(iPer,chout,chin) = dcmplx(vreal,vimag)
             end do
+            invsigcov = .true.
         end if
 
         ! RESIDCOV (note that this matrix relates Output channels to Output)
@@ -343,11 +535,20 @@ contains
                 end if
                 Data%ResidCov(iPer,chout,chin) = dcmplx(vreal,vimag)
             end do
+            residcov = .true.
         end if
+
 
         ! WILL ADD OTHER STATISTIC AS NEEDED - PLACEHOLDERS IN DATA VARIABLE
 
     end do ! period loop
+
+    Data%fullcov = invsigcov .and. residcov
+    if (Data%fullcov) then
+        write(*,*) 'Full error covariance present in input file for data type ',trim(DataType%Name)
+    else
+        write(*,*) 'Full error covariance not found in input file for data type ',trim(DataType%Name)
+    end if
 
   end subroutine read_xml_data
 

@@ -24,7 +24,6 @@ program z2z
   complex(8), dimension(:,:,:), allocatable    :: InvSigCov
   complex(8), dimension(:,:,:), allocatable    :: ResidCov
   real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
-  real(8)           :: azimuth
   logical           :: config_exists, run_list_exists, site_list_exists
   integer           :: i, j, k, l, narg, istat
   integer           :: nf, nch, nchin, nchout
@@ -59,7 +58,7 @@ program z2z
   if (narg>3) then
      rotate = .true.
      call get_command_argument(4,coords)
-     read(coords, '(f9.6)') azimuth
+     read(coords, *) azimuth
      if (.not.silent) then
         if ((azimuth)<0.01) then
            write(*,*) 'Rotate to orthogonal geographic coords. '

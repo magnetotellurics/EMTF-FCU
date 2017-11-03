@@ -411,6 +411,7 @@ contains
    	real(8),         dimension(:,:), intent(out)   :: U, V ! rotation matrices
    	real(8),         optional, intent(inout)       :: azimuth ! new azimuth
     ! local variables
+    real(8),         dimension(2,2)                :: Uinv
     real(8)                                        :: theta0
     real(8),         dimension(:), allocatable     :: theta, thetanew
     integer                                        :: i, j, istat
@@ -429,14 +430,14 @@ contains
     theta(1) = Input(1)%orientation; thetanew(1) = theta0
     theta(2) = Input(2)%orientation; thetanew(2) = theta0 + 90.0
 
-    call identity(U)
+    call identity(Uinv)
 
-    U(1,1) = cos(D2R*(theta(1) - theta0))
-    U(1,2) = sin(D2R*(theta(1) - theta0))
-    U(2,1) = cos(D2R*(theta(2) - theta0))
-    U(2,2) = sin(D2R*(theta(2) - theta0))
+    Uinv(1,1) = cos(D2R*(theta(1) - theta0))
+    Uinv(1,2) = sin(D2R*(theta(1) - theta0))
+    Uinv(2,1) = cos(D2R*(theta(2) - theta0))
+    Uinv(2,2) = sin(D2R*(theta(2) - theta0))
 
-	call inverse22(U,U)
+	U = rmatinv2(Uinv)
 
 	! define the new channel orientations
     do i=1,size(Input)
@@ -497,9 +498,15 @@ contains
 	ResidCov = matmul(V, matmul(ResidCov,transpose(V)))
 
 	! finally, update the variances
+    ! A.K. NOTE AS OF 8/14/2017: the variance of the real or imaginary component
+    ! would be this divided by 2. However, p 52 of the EDI manual explains that e.g. ZXY.VAR
+    ! refers to the complex variance (while ZXYR.VAR would mean the variance of the real part).
+    ! To be consistent with this definition, we are no longer dividing by two.
+    ! This was fixed in the reading routine, but not here, so it is likely that the XML files
+    ! in the database are affected and need to be updated.
     do i=1,nchout
        do j=1,nchin
-          TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))/2
+          TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))
        end do
     end do
 

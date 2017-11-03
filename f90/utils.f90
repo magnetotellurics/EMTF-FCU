@@ -18,9 +18,9 @@ real(8), parameter    :: EarthEcc2 = 0.00669437999014 ! eccentricity squared
 
 
 ! **********************************************************************
-!  subroutines to compute 2x2 and 3x3 matrix inverses
+!  subroutines to compute 2x2 and 3x3 matrix inverses and conjugates
 
-public                     ::  inverse22, inverse33
+public                     ::  matconjg, rmatinv2, matinv2, matinv3
 
 ! **********************************************************************
 !  ascii character functions
@@ -280,7 +280,7 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
         minute = '00'
     end if
   case default
-    write(0,*) 'Warning: unknown input time format ',format1,' for ',time1
+    write(0,*) 'Warning: unknown input time format ',trim(format1),' for ',trim(time1)
     time2 = time1
     return
   end select
@@ -332,7 +332,7 @@ subroutine identity(a)
   integer :: i, n
 
   if (size(a,1) /= size(a,2)) then
-  	write(*,*) 'Error in identity: not a square matrix'
+  	write(0,*) 'Error in identity: not a square matrix'
   	return
   end if
 
@@ -347,77 +347,155 @@ subroutine identity(a)
 end subroutine identity
 
 ! **********************************************************************
-! inverse22(): computes the inverse of a 2x2 real double precision matrix
-! (C) Anna Kelbert, 2009
+! matconjg(): computes a general conjugate transpose of a complex matrix
+! (C) Anna Kelbert, 2017
 
-subroutine inverse22(a,b)
+pure function matconjg(A) result(B)
+    !! Performs a direct calculation of the conjugate transpose of an NxM matrix.
+    complex(8), intent(in)   :: A(:,:)   !! Matrix
+    complex(8), allocatable  :: B(:,:)   !! Conjugate transpose matrix
+    integer :: istat, i, j, nc1, nc2
 
-  real(8), intent(in),  dimension(:,:) :: a
-  real(8), intent(out), dimension(:,:) :: b
-  real(8)						       :: det
+    ! Calculate the hermitian conjugate of the matrix
+    nc1 = size(A,1)
+    nc2 = size(A,2)
+    allocate(B(nc2,nc1), STAT=istat)
+    B = transpose(A)
+    do i=1,nc2
+       do j=1,nc1
+          B(i,j) = dconjg(B(i,j))
+       end do
+    end do
 
-  if ((size(a,1) /= 2) .or. (size(a,2) /= 2)) then
-  	write(*,*) 'Error in inverse22: input matrix is not 2x2'
-  	return
-  else if ((size(b,1) /= 2) .or. (size(b,2) /= 2)) then
-  	write(*,*) 'Error in inverse22: output matrix is not 2x2'
-  	return
-  end if
-
-  det = a(1,1) * a(2,2) - a(1,2) * a(2,1)
-
-  if (abs(det) < 1.0e-8) then
-     write(*,*) 'Error in inverse22: zero determinant'
-     return
-  end if
-
-  b(1,1) =  a(2,2)/det
-  b(2,2) =  a(1,1)/det
-  b(1,2) = -a(1,2)/det
-  b(2,1) = -a(2,1)/det
-
-end subroutine inverse22
-
+  end function
 
 ! **********************************************************************
-! inverse33(): computes the inverse of a 3x3 real double precision matrix
-! (C) Anna Kelbert, 2009
+! rmatinv2(): computes the inverse of a 2x2 real matrix
 
-subroutine inverse33(a,b)
+  function rmatinv2(A) result(B)
+    !! Performs a direct calculation of the inverse of a 2×2 matrix.
+    real(8), intent(in) :: A(2,2)   !! Matrix
+    real(8)             :: B(2,2)   !! Inverse matrix
+    real(8)             :: det,detinv
 
-  real(8), intent(in),  dimension(:,:) :: a
-  real(8), intent(out), dimension(:,:) :: b
-  real(8)						       :: det
+    det = (A(1,1)*A(2,2) - A(1,2)*A(2,1))
 
-  if ((size(a,1) /= 3) .or. (size(a,2) /= 3)) then
-  	write(*,*) 'Error in inverse33: input matrix is not 3x3'
-  	return
-  else if ((size(b,1) /= 3) .or. (size(b,2) /= 3)) then
-  	write(*,*) 'Error in inverse33: output matrix is not 3x3'
-  	return
-  end if
+    if (abs(det) < 1.0e-16) then
+        write(0,*) 'Error in matinv2: zero determinant'
+        return
+    end if
 
-  det = a(1,1) * (a(2,2) * a(3,3) - a(2,3) * a(3,2)) &
-       & + a(1,2) * (a(2,3) * a(3,1) - a(2,1) * a(3,3)) &
-       & + a(1,3) * (a(2,1) * a(3,2) - a(2,2) * a(3,1))
+    ! Calculate the inverse determinant of the matrix
+    detinv = 1/det
 
-  if (abs(det) < 1.0e-8) then
-     write(*,*) 'Error in inverse33: zero determinant'
-     return
-  end if
+    ! Calculate the inverse of the matrix
+    B(1,1) = +detinv * A(2,2)
+    B(2,1) = -detinv * A(2,1)
+    B(1,2) = -detinv * A(1,2)
+    B(2,2) = +detinv * A(1,1)
+  end function
 
-  b(1,1) = (a(2,2) * a(3,3) - a(2,3) * a(3,2)) / det
-  b(2,1) = (a(2,3) * a(3,1) - a(2,1) * a(3,3)) / det
-  b(3,1) = (a(2,1) * a(3,2) - a(2,2) * a(3,1)) / det
-  b(1,2) = (a(3,2) * a(1,3) - a(3,3) * a(1,2)) / det
-  b(2,2) = (a(3,3) * a(1,1) - a(3,1) * a(1,3)) / det
-  b(3,2) = (a(3,1) * a(1,2) - a(3,2) * a(1,1)) / det
-  b(1,3) = (a(1,2) * a(2,3) - a(1,3) * a(2,2)) / det
-  b(2,3) = (a(1,3) * a(2,1) - a(1,1) * a(2,3)) / det
-  b(3,3) = (a(1,1) * a(2,2) - a(1,2) * a(2,1)) / det
+! **********************************************************************
+! matinv2(): computes the inverse of a 2x2 complex matrix
 
-end subroutine inverse33
+  function matinv2(A) result(B)
+    !! Performs a direct calculation of the inverse of a 2×2 matrix.
+    complex(8), intent(in) :: A(2,2)   !! Matrix
+    complex(8)             :: B(2,2)   !! Inverse matrix
+    complex(8)             :: det,detinv
 
+    det = (A(1,1)*A(2,2) - A(1,2)*A(2,1))
+
+    if (abs(det) < 1.0e-16) then
+        write(0,*) 'Error in matinv2: zero determinant'
+        return
+    end if
+
+    ! Calculate the inverse determinant of the matrix
+    detinv = 1/det
+
+    ! Calculate the inverse of the matrix
+    B(1,1) = +detinv * A(2,2)
+    B(2,1) = -detinv * A(2,1)
+    B(1,2) = -detinv * A(1,2)
+    B(2,2) = +detinv * A(1,1)
+  end function
+
+! **********************************************************************
+! matinv3(): computes the inverse of a 3x3 complex matrix
+
+  function matinv3(A) result(B)
+    !! Performs a direct calculation of the inverse of a 3×3 matrix.
+    complex(8), intent(in) :: A(3,3)   !! Matrix
+    complex(8)             :: B(3,3)   !! Inverse matrix
+    complex(8)             :: det,detinv
+
+    det = (A(1,1)*A(2,2)*A(3,3) - A(1,1)*A(2,3)*A(3,2)&
+              - A(1,2)*A(2,1)*A(3,3) + A(1,2)*A(2,3)*A(3,1)&
+              + A(1,3)*A(2,1)*A(3,2) - A(1,3)*A(2,2)*A(3,1))
+
+    if (abs(det) < 1.0e-16) then
+        write(0,*) 'Error in matinv3: zero determinant'
+        return
+    end if
+
+    ! Calculate the inverse determinant of the matrix
+    detinv = 1/det
+
+    ! Calculate the inverse of the matrix
+    B(1,1) = +detinv * (A(2,2)*A(3,3) - A(2,3)*A(3,2))
+    B(2,1) = -detinv * (A(2,1)*A(3,3) - A(2,3)*A(3,1))
+    B(3,1) = +detinv * (A(2,1)*A(3,2) - A(2,2)*A(3,1))
+    B(1,2) = -detinv * (A(1,2)*A(3,3) - A(1,3)*A(3,2))
+    B(2,2) = +detinv * (A(1,1)*A(3,3) - A(1,3)*A(3,1))
+    B(3,2) = -detinv * (A(1,1)*A(3,2) - A(1,2)*A(3,1))
+    B(1,3) = +detinv * (A(1,2)*A(2,3) - A(1,3)*A(2,2))
+    B(2,3) = -detinv * (A(1,1)*A(2,3) - A(1,3)*A(2,1))
+    B(3,3) = +detinv * (A(1,1)*A(2,2) - A(1,2)*A(2,1))
+  end function
+
+! **********************************************************************
+! matinv4(): computes the inverse of a 4x4 complex matrix
+
+  function matinv4(A) result(B)
+    !! Performs a direct calculation of the inverse of a 4×4 matrix.
+    complex(8), intent(in) :: A(4,4)   !! Matrix
+    complex(8)             :: B(4,4)   !! Inverse matrix
+    complex(8)             :: det,detinv
+
+    det = (A(1,1)*(A(2,2)*(A(3,3)*A(4,4)-A(3,4)*A(4,3))+A(2,3)*(A(3,4)*A(4,2)-A(3,2)*A(4,4))+A(2,4)*(A(3,2)*A(4,3)-A(3,3)*A(4,2)))&
+       - A(1,2)*(A(2,1)*(A(3,3)*A(4,4)-A(3,4)*A(4,3))+A(2,3)*(A(3,4)*A(4,1)-A(3,1)*A(4,4))+A(2,4)*(A(3,1)*A(4,3)-A(3,3)*A(4,1)))&
+       + A(1,3)*(A(2,1)*(A(3,2)*A(4,4)-A(3,4)*A(4,2))+A(2,2)*(A(3,4)*A(4,1)-A(3,1)*A(4,4))+A(2,4)*(A(3,1)*A(4,2)-A(3,2)*A(4,1)))&
+       - A(1,4)*(A(2,1)*(A(3,2)*A(4,3)-A(3,3)*A(4,2))+A(2,2)*(A(3,3)*A(4,1)-A(3,1)*A(4,3))+A(2,3)*(A(3,1)*A(4,2)-A(3,2)*A(4,1))))
+
+    if (abs(det) < 1.0e-8) then
+        write(0,*) 'Error in matinv4: zero determinant'
+        return
+    end if
+
+    ! Calculate the inverse determinant of the matrix
+    detinv = 1/det
+
+    ! Calculate the inverse of the matrix
+    B(1,1) = detinv*(A(2,2)*(A(3,3)*A(4,4)-A(3,4)*A(4,3))+A(2,3)*(A(3,4)*A(4,2)-A(3,2)*A(4,4))+A(2,4)*(A(3,2)*A(4,3)-A(3,3)*A(4,2)))
+    B(2,1) = detinv*(A(2,1)*(A(3,4)*A(4,3)-A(3,3)*A(4,4))+A(2,3)*(A(3,1)*A(4,4)-A(3,4)*A(4,1))+A(2,4)*(A(3,3)*A(4,1)-A(3,1)*A(4,3)))
+    B(3,1) = detinv*(A(2,1)*(A(3,2)*A(4,4)-A(3,4)*A(4,2))+A(2,2)*(A(3,4)*A(4,1)-A(3,1)*A(4,4))+A(2,4)*(A(3,1)*A(4,2)-A(3,2)*A(4,1)))
+    B(4,1) = detinv*(A(2,1)*(A(3,3)*A(4,2)-A(3,2)*A(4,3))+A(2,2)*(A(3,1)*A(4,3)-A(3,3)*A(4,1))+A(2,3)*(A(3,2)*A(4,1)-A(3,1)*A(4,2)))
+    B(1,2) = detinv*(A(1,2)*(A(3,4)*A(4,3)-A(3,3)*A(4,4))+A(1,3)*(A(3,2)*A(4,4)-A(3,4)*A(4,2))+A(1,4)*(A(3,3)*A(4,2)-A(3,2)*A(4,3)))
+    B(2,2) = detinv*(A(1,1)*(A(3,3)*A(4,4)-A(3,4)*A(4,3))+A(1,3)*(A(3,4)*A(4,1)-A(3,1)*A(4,4))+A(1,4)*(A(3,1)*A(4,3)-A(3,3)*A(4,1)))
+    B(3,2) = detinv*(A(1,1)*(A(3,4)*A(4,2)-A(3,2)*A(4,4))+A(1,2)*(A(3,1)*A(4,4)-A(3,4)*A(4,1))+A(1,4)*(A(3,2)*A(4,1)-A(3,1)*A(4,2)))
+    B(4,2) = detinv*(A(1,1)*(A(3,2)*A(4,3)-A(3,3)*A(4,2))+A(1,2)*(A(3,3)*A(4,1)-A(3,1)*A(4,3))+A(1,3)*(A(3,1)*A(4,2)-A(3,2)*A(4,1)))
+    B(1,3) = detinv*(A(1,2)*(A(2,3)*A(4,4)-A(2,4)*A(4,3))+A(1,3)*(A(2,4)*A(4,2)-A(2,2)*A(4,4))+A(1,4)*(A(2,2)*A(4,3)-A(2,3)*A(4,2)))
+    B(2,3) = detinv*(A(1,1)*(A(2,4)*A(4,3)-A(2,3)*A(4,4))+A(1,3)*(A(2,1)*A(4,4)-A(2,4)*A(4,1))+A(1,4)*(A(2,3)*A(4,1)-A(2,1)*A(4,3)))
+    B(3,3) = detinv*(A(1,1)*(A(2,2)*A(4,4)-A(2,4)*A(4,2))+A(1,2)*(A(2,4)*A(4,1)-A(2,1)*A(4,4))+A(1,4)*(A(2,1)*A(4,2)-A(2,2)*A(4,1)))
+    B(4,3) = detinv*(A(1,1)*(A(2,3)*A(4,2)-A(2,2)*A(4,3))+A(1,2)*(A(2,1)*A(4,3)-A(2,3)*A(4,1))+A(1,3)*(A(2,2)*A(4,1)-A(2,1)*A(4,2)))
+    B(1,4) = detinv*(A(1,2)*(A(2,4)*A(3,3)-A(2,3)*A(3,4))+A(1,3)*(A(2,2)*A(3,4)-A(2,4)*A(3,2))+A(1,4)*(A(2,3)*A(3,2)-A(2,2)*A(3,3)))
+    B(2,4) = detinv*(A(1,1)*(A(2,3)*A(3,4)-A(2,4)*A(3,3))+A(1,3)*(A(2,4)*A(3,1)-A(2,1)*A(3,4))+A(1,4)*(A(2,1)*A(3,3)-A(2,3)*A(3,1)))
+    B(3,4) = detinv*(A(1,1)*(A(2,4)*A(3,2)-A(2,2)*A(3,4))+A(1,2)*(A(2,1)*A(3,4)-A(2,4)*A(3,1))+A(1,4)*(A(2,2)*A(3,1)-A(2,1)*A(3,2)))
+    B(4,4) = detinv*(A(1,1)*(A(2,2)*A(3,3)-A(2,3)*A(3,2))+A(1,2)*(A(2,3)*A(3,1)-A(2,1)*A(3,3))+A(1,3)*(A(2,1)*A(3,2)-A(2,2)*A(3,1)))
+  end function
+
+! **********************************************************************
 function to_upper(strIn) result(strOut)
 ! Adapted from http://www.star.le.ac.uk/~cgp/fortran.html (25 May 2012)
 
@@ -880,5 +958,96 @@ idx(i)=m
 goto 10
 end subroutine
 !EOC
+
+! **********************************************************************
+! (C) 2006 Xavier Garcia from edi2edi
+
+Pure Integer Function fin(string)
+! this routine locates the end of a character string without spaces
+character(LEN=*), INTENT (IN) :: string
+fin=index(string,' ')-1
+if (fin == -1 .AND. len(string) /= 0) fin=len(string)
+return
+end function fin
+
+!...............................................................................
+
+Pure Integer Function txtfin(string)
+! this routine locates the end of a character string with spaces, e.g., a windows path
+character(LEN=*), INTENT (IN) :: string
+integer :: n
+n=len(string)
+do while(string(n:n) == ' ' .AND. n>0)
+   n=n-1
+end do
+txtfin=n
+return
+end function txtfin
+
+!...............................................................................
+
+subroutine tin(text,dfault)
+implicit none
+character(LEN=*), INTENT(INOUT):: dfault
+character(LEN=*), INTENT(IN):: text
+character(LEN=1024) line
+character(LEN=120):: AUX
+integer :: n
+line=''
+n=len_trim(dfault)
+write(AUX,'(A)') dfault
+AUX=adjustl(AUX)
+aux=aux(1:n)//']: '
+write(*,'(a,a,a)',advance='no') text//' [Default: ',trim(aux),' '
+write(*,'($)')
+read(*,'(a)') line
+if(line /= "") read(line,'(A)') dfault
+end subroutine tin
+
+!...............................................................................
+
+subroutine yin(text,dfault)
+implicit none
+character(LEN=*), INTENT(INOUT):: dfault
+character(LEN=*), INTENT(IN):: text
+character(LEN=1) line
+character(LEN=120):: AUX
+integer :: n
+dfault = to_upper(dfault)
+if (dfault /= 'Y' .AND. dfault /= 'N') then
+   write(*,'(A)') 'Error using yin.'
+   stop
+end if
+line=''
+n=len_trim(dfault)
+do while (.TRUE.)
+   write(AUX,'(A)') dfault
+   AUX=adjustl(AUX)
+   aux=aux(1:n)//']: '
+   write(*,'(a,a,a)',advance='no') text//' [Default: ',trim(aux),' '
+   write(*,'($)')
+   read(*,'(a)') line
+   if(line /= "") read(line,*) dfault
+   dfault = to_upper(dfault)
+   if(dfault(1:1) == 'Y' .OR. dfault(1:1) == 'N') exit
+end do
+end subroutine yin
+!...............................................................................
+
+Integer(kind=2) Function t2i (text)
+character(LEN=*), INTENT(IN) :: text
+!character(LEN=LEN(text)) :: aux
+!aux=adjustl(text)
+!read(aux,'(I4)') t2i
+read(text,*) t2i
+end function t2i
+
+!...............................................................................
+
+real(8) function t2e(text,flag)
+character(len=*), INTENT(IN) :: text
+integer, optional :: flag
+read(text,*) t2e
+end function t2e
 
 end module utils

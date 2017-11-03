@@ -7,12 +7,13 @@ module edi_read
   private
 
   integer                        :: edifile
-  character(len=200)             :: temp
+  character(len=200)             :: temp, spectra_line
   logical                        :: new_block, new_section
   character(len=80)              :: this_block, this_section
   integer                        :: missing_value_count=0
   character(len=80)              :: dummy_data_value
   integer                        :: ios,i,j,k,maxblks=0
+  integer                        :: Ex=0,Ey=0,Hx=0,Hy=0,Hz=0,Rx=0,Ry=0
 
   save   :: edifile
   save   :: new_block, new_section
@@ -20,6 +21,8 @@ module edi_read
   save   :: missing_value_count
   save   :: dummy_data_value
   save   :: maxblks
+  save   :: spectra_line
+  save   :: Ex,Ey,Hx,Hy,Hz,Rx,Ry
 
   public :: initialize_edi_input
   public :: read_edi_header
@@ -27,6 +30,7 @@ module edi_read
   public :: read_edi_data_header
   public :: read_edi_data_block
   public :: read_edi_data
+  public :: read_edi_spectra
   public :: parse_edi_data_block_name
   public :: read_edi_info
   public :: end_edi_input
@@ -166,7 +170,7 @@ contains
     call parse_edi_line(line,var,value)
     if (.not. (trim(var) == 'BLOCK' .or. trim(value) == 'HEAD')) then
         write(0,*) 'Error reading the first line of EDI header:'
-        write(0,*) line
+        write(0,*) trim(line)
     end if
 
 	do
@@ -179,19 +183,21 @@ contains
             exit
         end if
         if (.not.silent) then
-            write(*,*) 'Reading ',trim(var),' line: ',trim(value)
+            if (.not. (trim(var) .eq. 'DATA')) then
+                write(*,*) 'Reading ',trim(var),' line: ',trim(value)
+            end if
         end if
 
         select case (trim(var))
         case ('DATAID')
             ! do nothing: info extracted from file name more reliable
         case ('ACQBY')
-            if (isempty(Info%AcquiredBy)) then ! prefer the XML config info
-                Info%AcquiredBy = value
+            if (len_trim(Info%AcquiredBy) == 0) then ! prefer the XML config info
+                Info%AcquiredBy = trim(value)
             end if
         case ('FILEBY') ! only use this if the information is missing from config
             if (len_trim(Info%ProcessedBy) == 0) then
-                Info%ProcessedBy = value
+                Info%ProcessedBy = trim(value)
             end if
         case ('ACQDATE') ! date of (start of) data acquisition
             Site%Start = datestr(value,Info%DateFormat,'XML')
@@ -350,7 +356,7 @@ contains
     call parse_edi_line(line,var,value)
     if (.not. (trim(var) == 'MAXINFO')) then
         write(0,*) 'Error reading the first line of EDI INFO block:'
-        write(0,*) line
+        write(0,*) trim(line)
         n = 1000
     else
         read (value,'(i8)',iostat=ios) n
@@ -366,47 +372,34 @@ contains
         write(*,*) 'Before entering the INFO block, elevation = ',Site%Location%elev
     end if
 
+    ! parse the general INFO block
+    do i=1,n
+        read (edifile,'(a200)',iostat=ios) line
+        ! exit if we're no longer in the INFO block
+        if (ios /= 0 .or. .not. (trim(this_block) == 'INFO')) then
+            n = i-1
+            exit
+        end if
+        Notes(i) = line
 
-    if (index(to_upper(Info%ProcessedBy),'PHOENIX')>0) then
+        call parse_edi_line(line,var,value)
+        if (.not.silent) then
+            write(*,*) 'Reading ',trim(var),' line: ',trim(value)
+        end if
+        ! ... or if the new section DEFINEMEAS is encountered
+        if (new_section) then
+            n = i-1
+            exit
+        end if
 
-        ! parse special Phoenix info format
-        do i=1,n
-            read (edifile,'(a200)',iostat=ios) line
-            ! exit if we're no longer in the INFO block
-            if (ios /= 0 .or. .not. (trim(this_block) == 'INFO')) then
-                n = i-1
-                exit
-            end if
-            Notes(i) = line
+        if (Info%ParseEDIinfo) then
 
-            ! electric field channel
-            i1 = index(trim(temp),'Ex1=')
+            if (index(to_upper(Info%ProcessedBy),'PHOENIX')>0) then
 
-        end do
+                ! parse special Phoenix info format - for now, do nothing
 
-    else
+            else
 
-        ! parse the general INFO block
-        do i=1,n
-            read (edifile,'(a200)',iostat=ios) line
-            ! exit if we're no longer in the INFO block
-            if (ios /= 0 .or. .not. (trim(this_block) == 'INFO')) then
-                n = i-1
-                exit
-            end if
-            Notes(i) = line
-
-            call parse_edi_line(line,var,value)
-            if (.not.silent) then
-                write(*,*) 'Reading ',trim(var),' line: ',trim(value)
-            end if
-            ! ... or if the new section DEFINEMEAS is encountered
-            if (new_section) then
-                n = i-1
-                exit
-            end if
-
-            if (Info%ParseEDIinfo) then
 
                 ! to parse the INFO block, first find an occurence of the site ID
                 ! then allow parsing of only one value of each type after site ID
@@ -420,27 +413,27 @@ contains
                 end if
 
                 if (readinfo) then
-                select case (trim(var))
-                case ('AZIMUTH')
-                    !read(value,*) Site%Declination
-                case ('LATITUDE','SITE LATITUDE') ! assume it's decimal if found in INFO block
-                    read(value,*) Site%Location%lat
-                    readlat = .true.
-                case ('LONGITUDE','SITE LONGITUDE') ! assume it's decimal if found in INFO block
-                    read(value,*) Site%Location%lon
-                    readlon = .true.
-                case ('ELEVATION','SITE ELEVATION') ! read elevation and convert to meters if needed
-                    read(value,*) Site%Location%elev
-                    if(trim(elevunits) .eq. 'FT') then
-                        Site%Location%elev = 0.3048 * Site%Location%elev
-                    end if
-                    readelev = .true.
-                case ('INFO','DUMMY','COMMENT')
-                    ! these are already saved in the Notes if needed
-                case default
-                    ! but there might be something else that requires parsing
-                    write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
-                end select
+                    select case (trim(var))
+                        case ('AZIMUTH')
+                            !read(value,*) Site%Declination
+                        case ('LATITUDE','SITE LATITUDE') ! assume it's decimal if found in INFO block
+                            read(value,*) Site%Location%lat
+                            readlat = .true.
+                        case ('LONGITUDE','SITE LONGITUDE') ! assume it's decimal if found in INFO block
+                            read(value,*) Site%Location%lon
+                            readlon = .true.
+                        case ('ELEVATION','SITE ELEVATION','Elev') ! read elevation and convert to meters if needed
+                            read(value,*) Site%Location%elev
+                            if(trim(elevunits) .eq. 'FT') then
+                                Site%Location%elev = 0.3048 * Site%Location%elev
+                            end if
+                            readelev = .true.
+                        case ('INFO','DUMMY','COMMENT')
+                            ! these are already saved in the Notes if needed
+                        case default
+                            ! but there might be something else that requires parsing
+                            write(0,*) 'Warning: INFO block ',trim(var),' value ',trim(value),' ignored'
+                    end select
                 end if
 
                 ! exit the reading loop when everything has been read
@@ -448,11 +441,11 @@ contains
                     readinfo = .false.
                 end if
 
-            end if
+            end if ! End the Info%ProcessedBy if statement
 
-        end do
+        end if
 
-    end if ! End the Info%ProcessedBy if statement
+    end do
 
     if (.not.silent) then
         write(*,*) 'Before exiting the INFO block, latitude  = ',Site%Location%lat
@@ -504,11 +497,23 @@ contains
         end if
         Channel%ID = trim(var)
         call init_channel_units(Channel)
+        ! define the default azimuths, to be overwritten if present in file
+        select case (edichar2)
+        case ('X')
+            Channel%Orientation = 0.0
+        case ('Y')
+            Channel%Orientation = 90.0
+        end select
         ! read in the numeric ID
         i1 = index(trim(temp),'ID=')
         i2 = index(trim(temp),'ID =')
         i = max(i1,i2+1)
         read(temp(i+3:N),*,iostat=istat) Channel%NumericID
+        ! read in channel azimuth
+        i1 = index(trim(temp),'AZM=')
+        i2 = index(trim(temp),'AZM =')
+        i = max(i1,i2+1)
+        read(temp(i+4:N),*,iostat=istat) Channel%Orientation
         ! read in the XYZ coordinates
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
@@ -562,22 +567,33 @@ contains
         i = max(i1,i2+1)
         if (i > 1) then
             var = trim(temp(i+7:i+9))
+            edichar2 = var(2:2)
         else
             write(0,*) 'Error: unknown EDI channel type'
             return
         end if
         Channel%ID = trim(var)
         call init_channel_units(Channel)
+        ! define the default azimuths, to be overwritten if present in file
+        select case (edichar2)
+        case ('X')
+            Channel%Orientation = 0.0
+        case ('Y')
+            Channel%Orientation = 90.0
+        case ('Z')
+            Channel%Orientation = 0.0
+        end select
         ! read in the numeric ID
         i1 = index(trim(temp),'ID=')
         i2 = index(trim(temp),'ID =')
         i = max(i1,i2+1)
         read(temp(i+3:N),*,iostat=istat) Channel%NumericID
-        ! read in the XYZ coordinates
+        ! read in channel azimuth
         i1 = index(trim(temp),'AZM=')
         i2 = index(trim(temp),'AZM =')
         i = max(i1,i2+1)
         read(temp(i+4:N),*,iostat=istat) Channel%Orientation
+        ! read in the XYZ coordinates
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
         i = max(i1,i2+1)
@@ -620,6 +636,8 @@ contains
             need_second_line = .true.
         end if
     end if
+
+    !write(0,*) 'DEBUG ID,AZM,X,Y,X2,Y2: ',Channel%ID,Channel%Orientation,Channel%X,Channel%Y,Channel%X2,Channel%Y2
 
   end subroutine parse_edi_channel
 
@@ -676,7 +694,12 @@ contains
         case ('BLOCK')
             num = num+1
             if (num > nch) then
-                write(0,*) 'Warning: skipping channel number ',num
+                if (num==nch+1) then
+                    Rx = num
+                elseif (num==nch+2) then
+                    Ry = num
+                end if
+                write(0,*) 'Warning: remote channel number ',num,' will not be copied to the new file format'
             else
                 call parse_edi_channel(value,Channel(num),channel_on_two_lines)
                 if (channel_on_two_lines) then
@@ -686,8 +709,20 @@ contains
                 end if
                 if (trim(Channel(num)%Type) .eq. 'H') then
                     hch = hch+1
+                    if (Channel(num)%ID(2:2) .eq. 'X') then
+                        Hx = num
+                    elseif (Channel(num)%ID(2:2) .eq. 'Y') then
+                        Hy = num
+                    elseif (Channel(num)%ID(2:2) .eq. 'Z') then
+                        Hz = num
+                    end if
                 elseif (trim(Channel(num)%Type) .eq. 'E') then
                     ech = ech+1
+                    if (Channel(num)%ID(2:2) .eq. 'X') then
+                        Ex = num
+                    elseif (Channel(num)%ID(2:2) .eq. 'Y') then
+                        Ey = num
+                    end if
                 else
                     write(0,*) 'Warning: Unknown channel type ',Channel(num)%Type,' found for channel #',num
                 end if
@@ -735,6 +770,13 @@ contains
         end select
     end do
 
+    ! if no remote channels are encountered in file, assume single station
+    if (Rx==0) then
+        Rx = Hx
+    end if
+    if (Ry==0) then
+        Ry = Hy
+    end if
 
     ! first convert site and channel locations to meters, if needed
     if(trim(Site%Coords%Units) .eq. 'FT') then
@@ -757,18 +799,20 @@ contains
     Site%Coords%Z = Channel(1)%Z
 
     ! adjust the channel location so that it's now relative to the site
-    do i=1,nch
-        Channel(i)%X = Channel(i)%X - Site%Coords%X
-        Channel(i)%Y = Channel(i)%Y - Site%Coords%Y
-        Channel(i)%Z = Channel(i)%Z - Site%Coords%Z
-        ! for electric output channels, also update the end of the dipole
-        if (trim(Channel(i)%Type) .eq. 'E') then
-            Channel(i)%X2 = Channel(i)%X2 - Site%Coords%X
-            Channel(i)%Y2 = Channel(i)%Y2 - Site%Coords%Y
-            Channel(i)%Z2 = Channel(i)%Z2 - Site%Coords%Z
-        end if
-        Channel(i)%Units = Site%Coords%Units
-    end do
+    ! A.K. UPDATE as of 8 Oct 2017: turns out that this adjustment is actually
+    ! unnecessary and confusing; leave the channel coordinates alone as they were
+    !do i=1,nch
+    !    Channel(i)%X = Channel(i)%X - Site%Coords%X
+    !    Channel(i)%Y = Channel(i)%Y - Site%Coords%Y
+    !    Channel(i)%Z = Channel(i)%Z - Site%Coords%Z
+    !    ! for electric output channels, also update the end of the dipole
+    !    if (trim(Channel(i)%Type) .eq. 'E') then
+    !        Channel(i)%X2 = Channel(i)%X2 - Site%Coords%X
+    !        Channel(i)%Y2 = Channel(i)%Y2 - Site%Coords%Y
+    !        Channel(i)%Z2 = Channel(i)%Z2 - Site%Coords%Z
+    !    end if
+    !    Channel(i)%Units = Site%Coords%Units
+    !end do
 
     ! Usually, input channels come first; output channels follow.
     ! However some old EDI files have electric channels first, and magnetic channels to follow.
@@ -856,12 +900,18 @@ contains
   end subroutine read_edi_channels
 
 
-  subroutine read_edi_data_header(nf)
+  subroutine read_edi_data_header(nf,nch,spectraFile)
     integer, intent(inout) :: nf
+    integer, intent(inout), optional :: nch
+    logical, intent(inout), optional :: spectraFile
    ! local
     character(len=200)               :: line, var, value
-    integer                          :: num,nch
+    integer                          :: num
     character(len=80)                :: chname
+
+    if (present(spectraFile)) then
+        spectraFile = .false.
+    end if
 
     maxblks = 100
 
@@ -872,6 +922,10 @@ contains
         end if
         call parse_edi_line(line,var,value)
         if (new_block) then
+            ! if dealing with SPECTRA, save the full data block header
+            if (trim(this_section) .eq. 'SPECTRASECT') then
+                spectra_line = value
+            end if
             exit ! proceed to read the data
         end if
         if (.not.silent) then
@@ -917,6 +971,9 @@ contains
             end select
         elseif (trim(this_section) .eq. 'SPECTRASECT') then
             ! do nothing
+            if (present(spectraFile)) then
+                spectraFile = .true.
+            end if
             select case (trim(var))
             case ('SECTID')
                 !Site%Description = value
@@ -968,7 +1025,7 @@ contains
             return
         end if
         call parse_edi_line(line,var,value)
-        if (.not.silent) then
+        if (.not.silent .and. (trim(var) .ne. 'DATA')) then
             write(*,*) 'Reading ',trim(var),' line: ',trim(value)
         end if
         ! if we enter a new block, exit
@@ -995,7 +1052,6 @@ contains
     end if
 
   end subroutine read_edi_data_block
-
 
   subroutine read_edi_data(nf,F,Data)
     type(FreqInfo_t), intent(inout) :: F(:) ! periods
@@ -1061,7 +1117,8 @@ contains
                     Data(ind)%Matrix(:,row,col) = Data(ind)%Matrix(:,row,col) + cvalue
                 end if
             case ('ROT')
-                Data(ind)%Rot(:) = dreal(cvalue) ! WILL USE THIS TO OVERWRITE ELECTRIC CHANNEL ORIENTATIONS
+                Data(ind)%Rot(:) = dreal(cvalue)
+                Data(ind)%orthogonal = .true.
             case ('VAR')
                 Data(ind)%Var(:,row,col) = dreal(cvalue)
             case ('ERR')
@@ -1074,6 +1131,7 @@ contains
       end do
 
   end subroutine read_edi_data
+
 
   ! TF names that are supported:
   ! Z, RHO, PHS, ZSTRIKE, ZSKEW, ZELLIP
@@ -1088,12 +1146,12 @@ contains
   subroutine parse_edi_data_block_name(blockdef,TFname,row,col,type,stat)
     character(*), intent(in)    :: blockdef ! full name of data block
     character(80), intent(out)  :: TFname ! ROT etc from block definition
-    integer, intent(out)  	    :: row,col ! row & column in a matrix
+    integer, intent(out)        :: row,col ! row & column in a matrix
     character(4),  intent(out)  :: type ! real/imag
     character(80), intent(out)  :: stat ! VAR, ERR, etc
     character(len=200)          :: line, var, value, data_block
     character(len=80)           :: TFcomp,info,str,str1,str2
-    integer			            :: i,j,lenstr,len1,len2,idot
+    integer                     :: i,j,lenstr,len1,len2,idot
     logical                     :: isComplex
 
     str = adjustl(blockdef)
@@ -1234,6 +1292,329 @@ contains
 
   end subroutine parse_edi_data_block_name
 
+
+  subroutine read_edi_spectra_block(nch,data)
+    integer, intent(in)         :: nch ! number of channels incl remote; read nch^2
+    real(8), intent(out)        :: data(nch,nch) ! real data values
+    character(len=200)          :: line, var, value, data_block
+    character(len=20000)        :: datalist
+    integer                     :: i
+
+    data_block = this_block
+    datalist = ''
+
+    do
+        read (edifile,'(a200)',iostat=ios) line
+        if ((ios /= 0) .or. (trim(this_block) .eq. 'END')) then
+            return
+        end if
+        call parse_edi_line(line,var,value)
+        if (.not.silent .and. (trim(var) .ne. 'DATA')) then
+            write(*,*) 'Reading ',trim(var),' line: ',trim(value)
+        end if
+        ! if we enter a new block, save the header and exit
+        if (new_block) then
+            spectra_line = value
+            exit
+        else if (trim(var) .eq. 'DATA') then
+            datalist = trim(datalist)//' '//trim(value)
+        end if
+    end do
+
+    ! if we find a missing value, provide a warning (for now)
+    ! will implement replacing these with NaNs if needed
+    !  - this will require a little book keeping
+    i=index(datalist,dummy_data_value)
+    if (i>0) then
+        write(*,*) 'Warning: found a missing value ',trim(dummy_data_value)
+        write(*,*) 'Warning: replacing with NaN not currently implemented'
+        missing_value_count = missing_value_count + 1
+    end if
+
+    read (datalist, *, iostat=ios) data
+    if (ios /= 0) then
+        write(*,*) 'Warning: unable to read ',nch*nch,' data values from block ',trim(data_block)
+    end if
+    data = transpose(data)
+
+  end subroutine read_edi_spectra_block
+
+! Wrote by Anna Kelbert, 24 Sep 2017 to calculate the full covariance matrix
+! from EDI spectra files. Using Xavi Garcia's edi2edi code as the basis, but
+! reading the EDI file independently, and computing the full covariances
+! instead of the approximate variance. No rotation of spectra because we can
+! later rotate using the covariance matrices.
+! The order of channels is very important for SPECTRA files; we are recording
+! this order in Ex,Ey,Hx,Hy,Hz,Rx,Ry integers. We do not "unpack" the cross-
+! power spectra matrix but merely refer to the row and columns by channel.
+! On input, assuming Data(1) for the tipper, Data(2) for impedances
+! but checking for this anyway.
+  subroutine read_edi_spectra(nf,nch,F,Data)
+    type(FreqInfo_t), intent(inout) :: F(:) ! periods
+    type(Data_t), intent(inout)     :: Data(:) ! one for each data type
+    integer, intent(inout)          :: nf ! number of freq to read
+    integer, intent(inout)          :: nch ! number of channels incl remote
+    ! local variables
+    !real(8), dimension(:,:,:), allocatable :: rspectra
+    !real(8), dimension(:,:),   allocatable :: tspectra
+    !real(8), dimension(:),     allocatable :: rotspec,bw,avgt
+    !complex(8), dimension(:,:), allocatable :: cavg
+    !integer                                :: ch(7)
+    real(8)             :: freq
+    real(8)             :: rotspec,bw,avgt
+    real(8)             :: value(nch,nch) ! real data values
+    complex(8)          :: cavg(nch,nch) ! complex data values
+    character(4)        :: type ! real/imag
+    integer             :: row,col ! row & column in a matrix
+    integer             :: i,j,k,n,ind,istat,imp,tip
+    character(len=80)   :: TFcomp, TFname, info, stat
+    ! ... extend the definition of "E" to all output channels, incl. Hz
+    ! nch-4 stands for all channels minus 2 input minus 2 remote
+    real(8)      :: TFVar(nch-4,2)
+    complex(8)   :: Z(nch-4,2), Zh(2,nch-4), ResidCov(nch-4,nch-4), InvSigCov(2,2)
+    complex(8)   :: RhH(2,2), RhE(2,nch-4), HhE(2,nch-4), RhR(2,2), EhE(nch-4,nch-4), HhH(2,2)
+    complex(8)   :: czero
+    real(8)      :: delta
+    logical      :: rew
+    !character(len=12), dimension(7,2) :: chID
+
+    czero = dcmplx(0.0d0,0.0d0)
+    delta = 0e0
+    Z = czero
+    Zh = czero
+    ResidCov = czero
+    InvSigCov = czero
+    TFVar = 0.0d0
+
+    imp = find_data_type(Data,'Z')
+    if (imp == 0) then
+        write(0,*) 'Error: data storage not allocated for impedance in read_spectra'
+        stop
+    end if
+    tip = find_data_type(Data,'T')
+    if ((tip == 0) .and. (Ex.eq.0) .and. (Ey.ne.0)) then
+        write(0,*) 'Warning: data storage not allocated for tipper in read_spectra, while tipper data are present'
+    else if ((Ex.eq.0) .or. (Ey.eq.0)) then
+        write(0,*) 'Warning: not trying to read tipper data in read_spectra, because the electric field channels are missing'
+        tip = 0
+    end if
+
+    do k=1,nf
+        if ((ios /= 0) .or. (trim(this_block) .eq. 'END')) then
+            if (missing_value_count>0) then
+                write(*,*) 'Found ',missing_value_count,' data type components with missing values'
+                write(*,*) 'Warning: these are not dealt with correctly yet; need to replace with NaNs'
+                write(*,*) 'Warning: the necessary book keeping has not yet been implemented'
+            else
+                write(*,*) 'No missing values encountered in EDI file'
+            end if
+            return
+        end if
+        temp = spectra_line
+        call parse_edi_spectra_block_name(temp,freq,rotspec,bw,avgt)
+        call init_freq_info(F(k))
+        F(k)%value = 1.0d0/freq
+        if (.not.silent) then
+            write(*,'(a25,a10,a2,i4,a7,es14.3)') 'Reading DATA from block ',trim(this_block),' #',k,': FREQ=',freq
+        end if
+        call read_edi_spectra_block(nch,value)
+        !rspectra(j,:,:) = value
+        ! unpack spectra matrix but do not rotate - set delta to zero
+        ! (we may rotate later using the covariance matrices)
+        ! also do not switch order of rows and columns.
+        !call unpackspectra(nch,value,delta,cavg,ch)
+        do i=1,nch
+            do j=i,nch
+                if (i==j) then
+                    cavg(i,j) = dcmplx(value(i,j), 0e0)
+                else
+                    cavg(i,j) = dcmplx(value(j,i), -value(i,j))
+                    cavg(j,i) = dcmplx(value(j,i),  value(i,j))
+                end if
+            end do
+        end do
+
+        ! initialize all cross-spectra matrices
+        ! R* H
+        RhH(1,1) = cavg(Rx,Hx)
+        RhH(1,2) = cavg(Rx,Hy)
+        RhH(2,1) = cavg(Ry,Hx)
+        RhH(2,2) = cavg(Ry,Hy)
+        !RhH = matconjg2(RhH)
+        ! R* R
+        RhR(1,1) = cavg(Rx,Rx)
+        RhR(1,2) = cavg(Rx,Ry)
+        RhR(2,1) = cavg(Ry,Rx)
+        RhR(2,2) = cavg(Ry,Ry)
+        !RhR = matconjg2(RhR)
+        ! H* H
+        HhH(1,1) = cavg(Hx,Hx)
+        HhH(1,2) = cavg(Hx,Hy)
+        HhH(2,1) = cavg(Hy,Hx)
+        HhH(2,2) = cavg(Hy,Hy)
+        !HhH = matconjg2(HhH)
+
+        if ( tip.ne.0 ) then
+            ! R* E
+            RhE(1,1) = cavg(Rx,Hz)
+            RhE(1,2) = cavg(Rx,Ex)
+            RhE(1,3) = cavg(Rx,Ey)
+            RhE(2,1) = cavg(Ry,Hz)
+            RhE(2,2) = cavg(Ry,Ex)
+            RhE(2,3) = cavg(Ry,Ey)
+            !RhE = matconjg2(RhE)
+            ! H* E
+            HhE(1,1) = cavg(Hx,Hz)
+            HhE(1,2) = cavg(Hx,Ex)
+            HhE(1,3) = cavg(Hx,Ey)
+            HhE(2,1) = cavg(Hy,Hz)
+            HhE(2,2) = cavg(Hy,Ex)
+            HhE(2,3) = cavg(Hy,Ey)
+            !HhE = matconjg2(HhE)
+            ! E* E
+            EhE(1,1) = cavg(Hz,Hz)
+            EhE(1,2) = cavg(Hz,Ex)
+            EhE(1,3) = cavg(Hz,Ey)
+            EhE(2,1) = cavg(Ex,Hz)
+            EhE(2,2) = cavg(Ex,Ex)
+            EhE(2,3) = cavg(Ex,Ey)
+            EhE(3,1) = cavg(Ey,Hz)
+            EhE(3,2) = cavg(Ey,Ex)
+            EhE(3,3) = cavg(Ey,Ey)
+            !EhE = matconjg2(EhE)
+        else
+            ! R* E
+            RhE(1,1) = cavg(Rx,Ex)
+            RhE(1,2) = cavg(Rx,Ey)
+            RhE(2,1) = cavg(Ry,Ex)
+            RhE(2,2) = cavg(Ry,Ey)
+            !RhE = matconjg2(RhE)
+            ! H* E
+            HhE(1,1) = cavg(Hx,Ex)
+            HhE(1,2) = cavg(Hx,Ey)
+            HhE(2,1) = cavg(Hy,Ex)
+            HhE(2,2) = cavg(Hy,Ey)
+            !HhE = matconjg2(HhE)
+            ! E* E
+            EhE(1,1) = cavg(Ex,Ex)
+            EhE(1,2) = cavg(Ex,Ey)
+            EhE(2,1) = cavg(Ey,Ex)
+            EhE(2,2) = cavg(Ey,Ey)
+            !EhE = matconjg2(EhE)
+        end if
+
+        ! calculate impedances:
+        Zh = matmul(matinv2(RhH), RhE)
+        Z = matconjg(Zh)
+
+        ! calculate full covariances for remote reference
+        InvSigCov = matmul(matinv2(RhH), matmul(RhR, matinv2(matconjg(RhH))))
+        ResidCov = (EhE - matmul(matconjg(Zh),HhE) - matmul(matconjg(HhE),Zh) &
+            + matmul(matconjg(Zh), matmul(HhH,Zh))) / avgt
+
+        do i=1,nch-4
+            do j=1,2
+                TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))
+            end do
+        end do
+
+        !write(0,*) 'DEBUG: ',k, TFVar
+
+        ! save in Data
+        if (tip.ne.0) then
+            Data(tip)%Rot(k) = rotspec
+            Data(tip)%Matrix(k,:,:) = Z(1:1,:)
+            Data(tip)%Var(k,:,:) = TFVar(1:1,:)
+            Data(tip)%InvSigCov(k,:,:) = InvSigCov
+            Data(tip)%ResidCov(k,:,:) = ResidCov(1:1,1:1)
+            Data(tip)%fullcov = .true.
+            Data(imp)%Rot(k) = rotspec
+            Data(imp)%Matrix(k,:,:) = Z(2:nch-4,:)
+            Data(imp)%Var(k,:,:) = TFVar(2:nch-4,:)
+            Data(imp)%InvSigCov(k,:,:) = InvSigCov
+            Data(imp)%ResidCov(k,:,:) = ResidCov(2:nch-4,2:nch-4)
+            Data(imp)%fullcov = .true.
+        else
+            Data(imp)%Rot(k) = rotspec
+            Data(imp)%Matrix(k,:,:) = Z
+            Data(imp)%Var(k,:,:) = TFVar
+            Data(imp)%InvSigCov(k,:,:) = InvSigCov
+            Data(imp)%ResidCov(k,:,:) = ResidCov
+            Data(imp)%fullcov = .true.
+        end if
+
+    end do
+
+    ! Find the order in which the different EM channels are:
+    !call findchannels(edifile, ch, chID, rew = .TRUE.)
+
+    !allocate(rspectra(nf,nch,nch),tspectra(nch,nch),cavg(nch,nch), STAT=istat)
+
+    !call readspectra(edifile,nf,nch,freq,rspectra,rotspec,bw,avgt)
+
+    !freq_loop_sp: do n=1, nf
+
+        !tspectra = rspectra(n,:,:)
+
+        ! unpack spectra matrix but do not rotate - set delta to zero
+        ! (we may rotate later using the covariance matrices)
+        !call unpackspectra(nch,tspectra,delta,cavg,ch)
+
+    !end do freq_loop_sp
+
+
+  end subroutine read_edi_spectra
+
+! Example line to parse:
+!>SPECTRA  FREQ=3.200E+02 ROTSPEC=0 BW=8.0000E+01 AVGT=9.1888E+03 // 49
+  subroutine parse_edi_spectra_block_name(value, freq, rotspec, bw, avgt)
+    character(len=*), intent(in)     :: value
+    real(8), intent(out)             :: freq, rotspec, bw, avgt
+    ! local
+    integer                          :: i, i1, i2, N=200, istat
+
+    temp = adjustl(value)
+    N = len_trim(value)
+    i1 = 0
+    i2 = 0
+    i = 0
+    freq = 0.0d0
+    rotspec = 0.0d0
+    bw = 0.0d0
+    avgt = 0.0d0
+
+    if (.not. silent) then
+        write(*,*) 'Parsing SPECTRA block: ',value
+    end if
+
+    ! read in frequency
+    i1 = index(trim(temp),'FREQ=')
+    i2 = index(trim(temp),'FREQ =')
+    i = max(i1,i2+1)
+    if (i <= 0) then
+        write(*,*) 'Error: unknown frequency for SPECTRA block!!!'
+        return
+    end if
+    read(temp(i+5:N),*,iostat=istat) freq
+    if (istat .ne. 0) then
+        write(*,*) 'Error: unable to read frequency for SPECTRA block!!!'
+    end if
+    ! read in the rotation
+    i1 = index(trim(temp),'ROTSPEC=')
+    i2 = index(trim(temp),'ROTSPEC =')
+    i = max(i1,i2+1)
+    read(temp(i+8:N),*,iostat=istat) rotspec
+    ! read in bw and avgt
+    i1 = index(trim(temp),'BW=')
+    i2 = index(trim(temp),'BW =')
+    i = max(i1,i2+1)
+    read(temp(i+3:N),*,iostat=istat) bw
+    i1 = index(trim(temp),'AVGT=')
+    i2 = index(trim(temp),'AVGT =')
+    i = max(i1,i2+1)
+    read(temp(i+5:N),*,iostat=istat) avgt
+
+  end subroutine parse_edi_spectra_block_name
 
 
   subroutine end_edi_input

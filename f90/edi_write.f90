@@ -9,7 +9,16 @@ module edi_write
   ! transfer functions will not be written into the EDI file. All special    !
   ! cases could be easily incorporated into the code, but at the moment it   !
   ! only works for the typical ZXX, ZXY, ZYX, ZYY, TX, TY set of TFs.        !
-  ! Date: 1 Nov 2007                                                         !
+  ! Date: 1 Nov 2007 @ Anna Kelbert, OSU                                     !
+  !--------------------------------------------------------------------------!
+  ! Implementing the correct workflow to allow for flexible data rotations:  !
+  ! call initialize_edi_output(edi_file_out)                                 !
+  ! call write_edi_header(edi_date, edisitename, ediLocalSite, UserInfo)     !
+  ! call write_edi_info(ediLocalSite,UserInfo,Notes,NotesLength)             !
+  ! call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite)
+  ! call write_edi_data(sectid, F, Data)                                     !
+  ! call end_edi_output()                                                    !
+  ! Date: 6 Oct 2017 @ Anna Kelbert, USGS                                    !
   !--------------------------------------------------------------------------!
 
   use global
@@ -21,27 +30,533 @@ module edi_write
   integer                         :: edifile = 30
   integer                         :: ldataid,lacqby,lyname
   integer                         :: lcdate,lclat,lclong,lcelev,lsectid
+  character(16), save             :: clat,clong,celev
   integer                         :: ios,i,j,k,ii,jj,kk,ns
-  integer                         :: nf,nch,nchin,nchoutH,nchoutE
+  integer                         :: nf,nch,nchin,nchout,nchoutH,nchoutE
   real                            :: c1,s1,rot,a
   integer                         :: irun=1,istation=100 ! needed to create HMEAS/EMEAS ID's
+  real, save                      :: sid(10)             ! used to store HMEAN/EMEAS ID's
 
+  ! old code - deprecated
   public :: write_edi_file
+
+  ! new code
+  public :: initialize_edi_output
+  public :: write_edi_header
+  public :: write_edi_info
+  public :: write_edi_channels
+  public :: write_edi_data
+  public :: end_edi_output
 
 contains
 
-!  subroutine initialize_edi_output(fname)
-!     character(len=*), intent(in) :: fname
-!     integer              :: ios
-!     character(20)        :: str
+  subroutine initialize_edi_output(fname)
+     character(len=*), intent(in) :: fname
+     integer              :: ios
+     character(20)        :: str
+
+     open (unit=edifile,file=fname,status='unknown',iostat=ios)
+
+     if(ios/=0) then
+        write(0,*) 'Error opening file:', fname
+     endif
+
+  end subroutine initialize_edi_output
+
+
+  subroutine write_edi_header(edi_date, edisitename, Site, UserInfo)
+    character(len=*), intent(in)                   :: edi_date
+    character(len=*), intent(in)                   :: edisitename
+    type(Site_t), intent(in)                       :: Site
+    type(UserInfo_t), intent(in)                   :: UserInfo
+    ! local variables
+    real(8)                                        :: lat, long, elev
+    character(len=80)                              :: dataid, acqby
+    character(len=16)                              :: yname
+    character(len=9)                               :: cdate
+    logical empty
+
+    dataid = Site%ID
+    lat = Site%Location%lat
+    long = Site%Location%lon
+    elev = Site%Location%elev
+    acqby = UserInfo%AcquiredBy
+
+
+!-----------------------------------------------------------------------
+!     HEAD block
+
+!      print*,'enter name for output edi file for station ',k
+!      read(*,'(a)') fname
+!      print*,'enter dataid string'
+!      read(*,'(a)') dataid
+!      open (edifile,file=fname)
+
+      write(edifile,*)'>HEAD'
+
+!-DATAID
+      ldataid=16
+      call trmstr(dataid,ldataid,empty)
+      ldataid = min( ldataid, 16)
+      write(edifile,*) 'DATAID="', dataid(1:ldataid), '"'
+!-ACQBY
+      write(edifile,*) 'ACQBY="', trim(acqby), '"'
+!-FILEBY
+      yname='EMTF FCU'
+      lyname=16
+      call trmstr(yname,lyname,empty)
+      lyname = min( lyname, 16)
+      write(edifile,*) 'FILEBY="', yname(1:lyname), '"'
+!-FILEDATE
+      cdate = trim(edi_date)
+      lcdate=9
+      call trmstr(cdate,lcdate,empty)
+      lcdate = min( lcdate, 16)
+      write(edifile,*) 'FILEDATE=', cdate(1:lcdate)
+!-LAT
+!-LONG
+!-ELEV
+      clat=deg2dms(lat)
+      clong=deg2dms(long)
+      write(celev,'(i4)') int(elev)
+
+      lclat=16
+      lclong=16
+      lcelev=16
+      call trmstr( clat,  lclat,  empty)
+      call trmstr( clong, lclong, empty)
+      call trmstr( celev, lcelev, empty)
+
+      write(edifile,*) 'LAT=', clat(1:lclat)
+      write(edifile,*) 'LONG=', clong(1:lclong)
+      write(edifile,*) 'ELEV=', celev(1:lcelev)
+!-STDVERS
+      write(edifile,*) 'STDVERS=SEG 1.0'
+!-PROGVERS
+      write(edifile,*) 'PROGVERS="',version,'"'
+!-PROGDATE
+      write(edifile,*) 'PROGDATE=06/20/11'
+!-MAXSECT
+      write(edifile,*) 'MAXSECT=999'
+!-EMPTY
+      write(edifile,*) 'EMPTY=1.0e+32'
+
+  end subroutine write_edi_header
+
+
+  subroutine write_edi_info(Site,UserInfo,Notes,n)
+    type(Site_t),  intent(inout)          :: Site
+    type(UserInfo_t), intent(inout)       :: UserInfo
+    character(200), dimension(:), pointer, optional :: Notes
+    integer, intent(inout), optional                :: n
+    ! local variables
+    character(len=80), dimension(11)               :: info_block
+    character(len=80)                              :: runlist
+
+
+    if (len_trim(Site%RunList) > 70) then
+        runlist = 'UNKNOWN'
+    else
+        runlist = Site%RunList
+    end if
+
+    ! create a block of additional information
+    write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
+    write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
+    write(info_block(3),*) 'YEAR=',trim(UserInfo%YearCollected)
+    write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
+    write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
+    write(info_block(6),*) 'PROCESSINGTAG=',trim(UserInfo%ProcessingTag)
+    write(info_block(7),*) 'SITENAME=',trim(Site%Description)
+    write(info_block(8),*) 'RUNLIST=',trim(runlist)
+    write(info_block(9),*) 'REMOTEREF=',trim(UserInfo%RemoteRefType)
+    write(info_block(10),*) 'REMOTESITE=',trim(UserInfo%RemoteSiteID)
+    write(info_block(11),*) 'SIGNCONVENTION=',trim(UserInfo%SignConvention)
+
+!-----------------------------------------------------------------------
+!     INFO block
+
+      write(edifile,*)' '
+      write(edifile,*) '>INFO'
+      write(edifile,*) 'MAXINFO=999'
+
+      do j=1,size(info_block)
+        write(edifile,*) trim(info_block(j))
+      end do
+
+    if (present(Notes)) then
+      write(edifile,*)
+      do j=1,size(Notes)
+        if (index(Notes(j),'>=DEFINEMEAS') > 0) then
+            return
+        end if
+        write(edifile,*) trim(Notes(j))
+      end do
+    end if
+
+
+  end subroutine write_edi_info
+
+
+  subroutine write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, Site)
+    type(Channel_t), dimension(:), intent(in)      :: InputMagnetic
+    type(Channel_t), dimension(:), intent(in)      :: OutputMagnetic
+    type(Channel_t), dimension(:), intent(in)      :: OutputElectric
+    type(Site_t), intent(in)                       :: Site
+    ! local variables
+      integer ex_x1,ex_x2,ex_y1,ex_y2,ey_x1,ey_x2,ey_y1,ey_y2
+      real site_x, site_y, site_z
+
+    nchin = size(InputMagnetic)
+    nchoutH = size(OutputMagnetic)
+    nchoutE = size(OutputElectric)
+    nch = size(InputMagnetic) + size(OutputMagnetic) + size(OutputElectric)
+
+! -----station id
+
+        do j=1,7
+          sid(j) = 10.0*float(istation)+j+float(irun)/1000.
+        end do
+
+!-----------------------------------------------------------------------
+!     DEFINEMEAS block
+
+      write(edifile,*)' '
+      write(edifile,*) '>=DEFINEMEAS'
+
+      write(edifile,*) 'MAXCHAN=7'
+      write(edifile,*) 'MAXRUN=999'
+      write(edifile,*) 'MAXMEAS=9999'
+      write(edifile,*) 'UNITS=M'
+      write(edifile,*) 'REFTYPE=CART'
+
+      write(edifile,*) 'REFLAT=', clat(1:lclat)
+      write(edifile,*) 'REFLONG=', clong(1:lclong)
+      write(edifile,*) 'REFELEV=', celev(1:lcelev)
+
+!-----------------------------------------------------------------------
+!     EMEAS & HMEAS blocks for each site
+
+      site_x=0.0
+      site_y=0.0
+      site_z=0.0
+
+! -----get ex coordinates x1, x2, and y1, y2 for "L" array
+!        c1=cos(azm/57.2958)
+!        s1=sin(azm/57.2958)
+!        ex_x1=0
+!        ex_x2=int(exl*c1)
+!        ex_y1=0
+!        ex_y2=int(exl*s1)
+! -----get ey coordinates
+!        ey_x1=0
+!        ey_x2=int(eyl*s1)
+!        ey_y1=0
+!        ey_y2=int(eyl*c1)
+
+! -----station id
+
+        do j=1,7
+          sid(j) = 10.0*float(istation)+j+float(irun)/1000.
+        end do
 !
-!     open (unit=edifile,file=fname,status='unknown',iostat=ios)
+! ----WRITE OUT THE MEASUREMENT IDS, STARTING WITH HX,HY,HZ
+ 3000   FORMAT('>HMEAS ID=',F8.3,' CHTYPE=',A2,' X=',F5.1,' Y=',F5.1,' Z=',F5.1, &
+                 ' AZM=',F5.1)
+! 3100   FORMAT('>HMEAS ID=',F8.3,' CHTYPE=HY',' X=',F3.1,' Y=',F3.1,' Z=',F3.1, &
+!               ' AZM=',F5.1)
+! 3200   FORMAT('>HMEAS ID=',F8.3,' CHTYPE=HZ',' X=',F3.1,' Y=',F3.1,' Z=',F3.1, &
+!                 ' AZM=',F5.1)
+        write (edifile,*) ' '
+        write(edifile,*) '>!****CHANNELS USING ORIGINAL SITE LAYOUT. FOR ROTATIONS SEE ZROT****!'
+        j = 1
+        do k=1,size(InputMagnetic)
+            WRITE (edifile,3000) sid(j),InputMagnetic(k)%ID,InputMagnetic(k)%X,InputMagnetic(k)%Y,InputMagnetic(k)%Z,InputMagnetic(k)%Orientation
+            j = j+1
+        end do
+        do k=1,size(OutputMagnetic)
+            WRITE (edifile,3000) sid(j),OutputMagnetic(k)%ID,OutputMagnetic(k)%X,OutputMagnetic(k)%Y,OutputMagnetic(k)%Z,OutputMagnetic(k)%Orientation
+            j = j+1
+        end do
+
+        !WRITE (edifile,3100) sid(2),site_X,site_Y,site_Z,AZM+90
+        !WRITE (edifile,3200) sid(3),site_X,site_Y,site_Z,0.
 !
-!     if(ios/=0) then
-!        write(0,*) 'Error opening file:', fname
-!     endif
+! ----ADD MEASIDS FOR EX AND EY
+! 3300   FORMAT('>EMEAS ID=', F8.3, ' CHTYPE=EX',' X=',I7,' Y=',I7, &
+!                 ' X2=',I7,' Y2=',I7)
+! 3400   FORMAT('>EMEAS ID=', F8.3, ' CHTYPE=EY',' X=',I7,' Y=', I7, &
+!                 ' X2=',I7,' Y2=',I7)
+!        WRITE (edifile,3300)sid(4),EX_X1,EX_Y1,EX_X2,EX_Y2
+!        WRITE (edifile,3400)sid(5),EY_X1,EY_Y1,EY_X2,EY_Y2
+ 3300   FORMAT('>EMEAS ID=',F8.3,' CHTYPE=',A2,' X=',F5.1,' Y=',F5.1,' Z=',F5.1,' X2=',F5.1,' Y2=',F5.1,' AZM=',F5.1)
+! 3400   FORMAT('>EMEAS ID=',F8.3,' CHTYPE=EY',' X=',F3.1,' Y=',F3.1,' Z=',F3.1)
+
+        do k=1,size(OutputElectric)
+            WRITE (edifile,3300) sid(j),OutputElectric(k)%ID,OutputElectric(k)%X,OutputElectric(k)%Y,OutputElectric(k)%Z, &
+                                OutputElectric(k)%X2,OutputElectric(k)%Y2,OutputElectric(k)%Orientation
+            j = j+1
+        end do
+!        WRITE (edifile,3300)sid(4),site_X,site_Y,site_Z
+!        WRITE (edifile,3400)sid(5),site_X,site_Y,site_Z
 !
-!  end subroutine initialize_edi_output
+! ----WRITE OUT IDS FOR REFERENCE CHANNELS
+!         WRITE (edifile,3000) sid(6),site_X,site_Y,site_Z,AZM
+!         WRITE (edifile,3100) sid(7),site_X,site_Y,site_Z,AZM+90
+
+  end subroutine write_edi_channels
+
+
+  subroutine write_edi_data(sectid,F,Data)
+    character(len=*), intent(in)                   :: sectid
+    type(FreqInfo_t), dimension(:), intent(in)     :: F
+    type(Data_t), dimension(:), intent(in)         :: Data
+    ! local variables
+    logical                                        :: tipper_present
+    real(8), dimension(:), allocatable             :: freq
+    complex(8), dimension(:,:), allocatable        :: z, t
+    real(8), dimension(:,:), allocatable           :: v, vt
+    real(8), dimension(:), allocatable             :: r, rt
+    integer                                        :: k,istat
+    ! local variables from the original code by Randy Mackie
+    complex(8), dimension(:,:), allocatable        :: zs, ts
+    real(8), dimension(:,:), allocatable           :: vs, vts
+    real(8), dimension(:),   allocatable           :: fs, rs, rts
+    integer, dimension(:),   allocatable           :: idx
+    character(4)                                   :: zrotstr, trotstr
+    !  real(8) fs(nf), vs(nf,4), vts(nf,2), rs(nf), rts(nf)
+    !  complex(8) zs(nf,4), ts(nf,2)
+    !  integer idx(nf)
+    ! end local variables
+
+
+    nf = size(F)
+    allocate(freq(nf), STAT=istat)
+    freq = 0.0d0
+
+    if (nchoutE<2) then
+        write(0,*) 'Unable to write the EDI: too few output channels.'
+        return
+    end if
+
+    do i=1,nf
+        if (index(F(i)%info_type,'period')>0) then
+            freq(i) = 1.0d0/F(i)%value
+        else
+            freq(i) = F(i)%value
+        end if
+    end do
+
+    tipper_present = .false.
+    do k=1,size(Data)
+
+        nchin = Data(k)%nchin
+        nchout = Data(k)%nchout
+
+        select case (trim(Data(k)%Type%Name))
+        case ('Z')
+            allocate(z(nf,nchout*2), v(nf,nchout*2), r(nf), STAT=istat)
+            z = dcmplx(0.0d0,0.0d0)
+            v = 0.0d0
+            r = 0.0d0
+
+            write(*,*) 'Extracting impedance for EDI write...'
+            z(:,1) = Data(k)%Matrix(:,1,1) !ZXX
+            v(:,1) = Data(k)%Var(:,1,1)
+
+            z(:,2) = Data(k)%Matrix(:,1,2) !ZXY
+            v(:,2) = Data(k)%Var(:,1,2)
+
+            z(:,3) = Data(k)%Matrix(:,2,1) !ZYX
+            v(:,3) = Data(k)%Var(:,2,1)
+
+            z(:,4) = Data(k)%Matrix(:,2,2) !ZYY
+            v(:,4) = Data(k)%Var(:,2,2)
+
+            r = Data(k)%Rot ! ZROT
+            if (Data(k)%orthogonal) then
+                zrotstr = 'ZROT'
+            else
+                zrotstr = 'NONE'
+            end if
+
+        case ('T')
+            allocate(t(nf,nchout*2), vt(nf,nchout*2), rt(nf), STAT=istat)
+            t = dcmplx(0.0d0,0.0d0)
+            vt = 0.0d0
+            rt = 0.0d0
+
+            write(*,*) 'Extracting tipper for EDI write...'
+            tipper_present = .true.
+
+            t(:,1) = Data(k)%Matrix(:,1,1) !TX
+            vt(:,1) = Data(k)%Var(:,1,1)
+
+            t(:,2) = Data(k)%Matrix(:,1,2) !TY
+            vt(:,2) = Data(k)%Var(:,1,2)
+
+            rt = Data(k)%Rot ! TROT
+            if (Data(k)%orthogonal) then
+                trotstr = 'TROT'
+            else
+                trotstr = 'NONE'
+            end if
+
+        case ('NULL')
+            ! data type not initialized; do nothing
+
+        case default
+            write(0,*) 'Warning: ignoring data type ',trim(Data(k)%Type%Name),' for EDI output'
+        end select
+
+    end do
+
+    write(*,*) 'Start EDI DATA write...'
+    !call wrt_edi(fname,dataid,sectid,acqby,info_block, &
+    !        freq,v,vt,z,t,lat,long,elev, &
+    !        edi_date,tipper_present,azimuth)
+
+!
+!-----------------------------------------------------------------------
+!     MTSECT blocks for each site
+
+        write (edifile,*) ' '
+        write (edifile,'(A8)') '>=MTSECT'
+
+!-SECTID
+        lsectid = index(trim(sectid),' ')-1
+        if (lsectid <= 0) lsectid = len_trim(sectid)
+        lsectid = min( lsectid, 16)
+        write(edifile,*) 'SECTID="', sectid(1:lsectid), '"'
+
+        write (edifile,'(A6,I2 )') 'NFREQ=',nf
+        write (edifile,'(A3,F9.3)') 'HX=',sid(1)
+        write (edifile,'(A3,F9.3)') 'HY=',sid(2)
+        write (edifile,'(A3,F9.3)') 'HZ=',sid(3)
+        write (edifile,'(A3,F9.3)') 'EX=',sid(4)
+        write (edifile,'(A3,F9.3)') 'EY=',sid(5)
+
+!=======================================================================
+!
+!    sort data into ascending frequency order
+!
+    allocate(fs(nf), vs(nf,4), vts(nf,2), rs(nf), rts(nf), idx(nf), zs(nf,4), ts(nf,2), STAT=istat)
+
+        call sortidx(nf,freq,idx)
+
+        fs = freq(idx)
+        zs = z(idx,:)
+        vs = v(idx,:)
+        ts = t(idx,:)
+        vts = vt(idx,:)
+        rs = r(idx)
+        rts = rt(idx)
+
+!=======================================================================
+!
+!    write frequencies, rotations and data
+!
+        write(edifile,*) ' '
+        write(edifile,*) '>!****FREQUENCIES****!'
+        WRITE(edifile,'(A8,I2)') '>FREQ //',nf
+        WRITE(edifile,50) (Fs(I),I=nf,1,-1)
+
+        if (zrotstr .eq. 'ZROT') then
+            write(edifile,*)' '
+            write(edifile,*) '>!****IMPEDANCE ROTATION ANGLES****!'
+            WRITE(edifile,'(A8,I2)') '>ZROT //',nf
+            WRITE(edifile,50) (rs(I),I=nf,1,-1)
+        end if
+
+        write(edifile,*)' '
+        write(edifile,*) '>!****IMPEDANCES****!'
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZXXR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (REAL(Zs(I,1)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZXXI ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (AIMAG(Zs(I,1)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A13,A4,A4,I2)') '>ZXX.VAR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (Vs(I,1),I=nf,1,-1)
+
+        write (edifile,*) ' '
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZXYR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (REAL(Zs(I,2)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZXYI ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (AIMAG(Zs(I,2)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A13,A4,A4,I2)') '>ZXY.VAR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (Vs(I,2),I=nf,1,-1)
+
+        write (edifile,*) ' '
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZYXR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (REAL(Zs(I,3)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZYXI ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (AIMAG(Zs(I,3)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A13,A4,A4,I2)') '>ZYX.VAR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (Vs(I,3),I=nf,1,-1)
+
+        write (edifile,*) ' '
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZYYR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (REAL(Zs(I,4)),I =nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A10,A4,A4,I2)') '>ZYYI ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (AIMAG(Zs(I,4)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A13,A4,A4,I2)') '>ZYY.VAR ROT=',zrotstr,' //',nf
+        WRITE(edifile,50) (Vs(I,4),I=nf,1,-1)
+
+
+      if(tipper_present) then
+        if (trotstr .eq. 'TROT') then
+            write(edifile,*)' '
+            write(edifile,*) '>!****TIPPER ROTATION ANGLES****!'
+            WRITE(edifile,'(A8,I2)') '>TROT //',nf
+            WRITE(edifile,50) (rts(I),I=nf,1,-1)
+        end if
+
+        write(edifile,*)' '
+        write(edifile,*) '>!****TIPPER PARAMETERS****!'
+        WRITE(edifile,'(A13,A4,A4,I2)') '>TXR.EXP ROT=',trotstr,' //',nf
+        WRITE(edifile,50) (REAL(Ts(I,1)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A13,A4,A4,I2)') '>TXI.EXP ROT=',trotstr,' //',nf
+        WRITE(edifile,50) (AIMAG(Ts(I,1)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A15,A4,A4,I2)') '>TXVAR.EXP ROT=',trotstr,' //',nf
+        WRITE(edifile,50) (VTs(I,1),I=nf,1,-1)
+
+        write (edifile,*) ' '
+        WRITE(edifile,'(A13,A4,A4,I2)') '>TYR.EXP ROT=',trotstr,' //',nf
+        WRITE(edifile,50) (REAL(Ts(I,2)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A13,A4,A4,I2)') '>TYI.EXP ROT=',trotstr,' //',nf
+        WRITE(edifile,50) (AIMAG(Ts(I,2)),I = nf,1,-1)
+        write (edifile,*) ' '
+        WRITE(edifile,'(A15,A4,A4,I2)') '>TYVAR.EXP ROT=',trotstr,' //',nf
+        WRITE(edifile,50) (VTs(I,2),I=nf,1,-1)
+      end if
+
+50    FORMAT(6es16.6,1X)
+
+    deallocate(fs, vs, vts, rs, rts, idx, zs, ts, STAT=istat)
+
+    deallocate(freq,t,z,vt,v, STAT=istat)
+
+  end subroutine write_edi_data
+
+
+  subroutine end_edi_output
+
+    WRITE (edifile,'(A4)') '>END'
+
+    close(edifile)
+  end subroutine end_edi_output
+
+  !--------------------------------------------------------------------------!
 
   subroutine write_edi_file(fname,edi_date,sectid,Site, &
             InputMagnetic,OutputMagnetic,OutputElectric,F,Data,UserInfo)
@@ -181,19 +696,19 @@ contains
 ! Date: 1 Nov 2007                                                         !
 !--------------------------------------------------------------------------!
   subroutine wrt_edi(fname,dataid,sectid,acqby,info, &
-  						 f,v,vt,z,t,lat,long,elev, &
-                         cdate,ltip,azm)
+  						 freq,v,vt,z,t,lat,long,elev, &
+                         cdate,tipper_present,azm)
 
 	  character(80), intent(in)                      :: fname, dataid, sectid, acqby
 	  character(80), dimension(:), intent(in)        :: info !goes into the info block
-      real(8), dimension(nf), intent(in)             :: f !list of frequencies
+      real(8), dimension(nf), intent(in)             :: freq !list of frequencies
       real(8), dimension(nf,4), intent(in)           :: v !variances for impedances
       real(8), dimension(nf,2), intent(in)           :: vt !variances for the tipper
       complex(8), dimension(nf,4), intent(in)        :: z !impedances
       complex(8), dimension(nf,2), intent(in)        :: t !tippers
       real(8), intent(in)                            :: lat, long, elev !location
       character(9), intent(in)                       :: cdate !character date
-      logical, intent(in)                            :: ltip !logical: is tipper defined?
+      logical, intent(in)                            :: tipper_present !logical: is tipper defined?
 	  real, intent(in)                               :: azm ! azimuth
 !
 ! write out an EDI file with the results
@@ -212,9 +727,9 @@ contains
 !
 !    sort data into ascending frequency order
 !
-	    call sortidx(nf,f,idx)
+	    call sortidx(nf,freq,idx)
 	     
-	    fs = f(idx)	
+	    fs = freq(idx)
 	    zs = z(idx,:)
 	    vs = v(idx,:)
 	    ts = t(idx,:)
@@ -232,7 +747,7 @@ contains
 !      read(*,'(a)') dataid
 !      open (edifile,file=fname)
 
-      open (unit=edifile,file=fname,iostat=ios)   
+      open (unit=edifile,file=fname,iostat=ios)
      
       if(ios/=0) then
          write(0,*) 'Error opening file:', fname
@@ -442,7 +957,7 @@ contains
         WRITE(edifile,50) (Vs(I,4),I=nf,1,-1)
 
 
-      if(ltip) then
+      if(tipper_present) then
         write(edifile,*)' '
         write(edifile,*) '>!****TIPPER PARAMETERS****!'      
         WRITE(edifile,'(A13,I2)') '>TXR.EXP  //',nf

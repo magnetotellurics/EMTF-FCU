@@ -333,6 +333,13 @@ contains
 	call add_Site_header(UserInfo, Site)
  
 	call add_Location(Site%Location,Site%Declination)
+
+	call xml_NewElement(xmlfile, 'Orientation')
+    if (Site%Orientation .eq. 'orthogonal') then
+        call xml_AddAttribute(xmlfile, 'angle_to_geographic_north', Site%AngleToGeogrNorth, fmt="r3")
+    end if
+    call xml_AddCharacters(xmlfile, Site%Orientation)
+    call xml_EndElement(xmlfile, 'Orientation')
  
     call xml_NewElement(xmlfile, 'AcquiredBy')
     call xml_AddCharacters(xmlfile, trim(UserInfo%AcquiredBy))
