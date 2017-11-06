@@ -7,7 +7,7 @@ include $(FOX_LIB)/arch.make
 
 PROGS = z2edi xml2z z2xml xml2edi edi2xml z2z edi2edi xml2xml
 BIN_DIR = ~/Developer/bin #/home/data/bin.ubuntu #~/data/bin
-OBJS_EDI2EDI   = global.o rotation.o edi_read.o edi_write.o rotation.o utils.o
+OBJS_EDI2EDI   = global.o edi_read.o edi_write.o rotation.o utils.o
 OBJS_EDI2XML   = global.o parse_dom.o edi_read.o xml_write.o read_lists.o rotation.o utils.o config.o
 OBJS_EDI2Z   = global.o edi_read.o z_write.o rotation.o utils.o
 OBJS_XML2EDI = global.o parse_dom.o xml_read.o edi_write.o rotation.o utils.o
