@@ -7,9 +7,9 @@ include $(FOX_LIB)/arch.make
 
 PROGS = z2edi xml2z z2xml xml2edi edi2xml z2z edi2edi xml2xml
 BIN_DIR = ~/Developer/bin #/home/data/bin.ubuntu #~/data/bin
-OBJS_EDI2EDI   = global.o rotation.o edi_read.o edi_write.o spectra_utils.o rotation.o utils.o
-OBJS_EDI2XML   = global.o parse_dom.o edi_read.o xml_write.o read_lists.o spectra_utils.o rotation.o utils.o config.o
-OBJS_EDI2Z   = global.o edi_read.o z_write.o spectra_utils.o rotation.o utils.o
+OBJS_EDI2EDI   = global.o rotation.o edi_read.o edi_write.o rotation.o utils.o
+OBJS_EDI2XML   = global.o parse_dom.o edi_read.o xml_write.o read_lists.o rotation.o utils.o config.o
+OBJS_EDI2Z   = global.o edi_read.o z_write.o rotation.o utils.o
 OBJS_XML2EDI = global.o parse_dom.o xml_read.o edi_write.o rotation.o utils.o
 OBJS_XML2XML = global.o parse_dom.o xml_read.o xml_write.o rotation.o utils.o config.o
 OBJS_XML2Z   = global.o parse_dom.o xml_read.o z_write.o rotation.o utils.o
@@ -69,7 +69,7 @@ z_read.o: global.o utils.o
 
 xml_read.o: global.o parse_dom.o
 
-edi_read.o: global.o spectra_utils.o utils.o
+edi_read.o: global.o utils.o
 
 z_write.o: global.o
 
@@ -78,8 +78,6 @@ xml_write.o: global.o
 edi_write.o: global.o utils.o
 
 read_lists.o: global.o parse_dom.o
-
-spectra_utils.o: utils.o
 
 rotation.o: global.o utils.o
 
