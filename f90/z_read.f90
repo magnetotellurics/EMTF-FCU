@@ -78,10 +78,18 @@ contains
   	character(len=80), intent(out)   :: RunList
   	character(len=80)                :: info
 	character(len=20)                :: list, abbrev
-  	integer                          :: l, k, i
+  	integer                          :: l, k, i, ir
 
   	SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//toupper(sitename(3:3))//sitename(4:5)
         !SiteID = sitename(1:3)//sitename(4:6)  ! this is for CAFE_MT/CFNM_ZRR only!!! 
+        if(sitename(1:3).eq.'CAF')then
+          SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))// &
+                   toupper(sitename(3:3))//sitename(5:6)! this is for CAFE_MT/CFNM_ZRR only!!!
+         endif
+         if(sitename(1:3).eq.'pam')then
+           SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//sitename(4:6)! this is for Argentina only!!!
+         endif
+
 	RunList = ' '
 
     ! Find spaces in the sitename
@@ -94,6 +102,8 @@ contains
 
   	if (l>5) then
   		i = index(sitename,'_')
+                ir = index(sitename,'r')
+                list=' '
 		if (i==0) then ! Single Station - create the run list and exit
 			list = sitename(6:l)
 			abbrev = ' '
@@ -101,12 +111,19 @@ contains
 			list = sitename(6:i-1)
 			abbrev = sitename(i+1:l)
 		end if
+                if(sitename(1:3).eq.'pam')then ! remote referencing for Argentina
+                       list = sitename(6:ir-1)
+		       abbrev = sitename(ir+1:i-1)
+                endif
 		! In either case, make a list of run names, store them in a string
 		do k=1,len_trim(list)
-			RunList = trim(RunList)//' '//trim(SiteID)//list(k:k)
+                     if(sitename(1:3).ne.'CAF'.and.sitename(1:3).ne.'pam')then
+			RunList = trim(RunList)//' '//trim(SiteID)//list(k:k)                     
+                     else
+                        RunList = trim(RunList)//' '//trim(sitename)//' '
+                     endif
 		end do
 	end if
-
   	if (len_trim(abbrev)==0) then
   		RemoteSiteID = ' '
   	else if (len_trim(abbrev)==2) then
