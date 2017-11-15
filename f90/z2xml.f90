@@ -232,7 +232,8 @@ program z2xml
       zLocalSite%Orientation = trim(orthogonalORsitelayout)
       zLocalSite%AngleToGeogrNorth = azimuth
       do i=1,size(DataType)
-        write(*,'(a9,a20,a4,a10,a14,f9.6)') 'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
+        write(*,'(a9,a20,a4,a10,a14,f9.6)') &
+            'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
         select case (DataType(i)%Output)
         case ('H')
             call rotate_data(Data(i),InputMagnetic,OutputMagnetic,orthogonalORsitelayout,azimuth)

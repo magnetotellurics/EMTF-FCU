@@ -271,11 +271,13 @@ contains
         write(edifile,*) '>!****CHANNELS USING ORIGINAL SITE LAYOUT. FOR ROTATIONS SEE ZROT****!'
         j = 1
         do k=1,size(InputMagnetic)
-            WRITE (edifile,3000) sid(j),InputMagnetic(k)%ID,InputMagnetic(k)%X,InputMagnetic(k)%Y,InputMagnetic(k)%Z,InputMagnetic(k)%Orientation
+            WRITE (edifile,3000) sid(j),InputMagnetic(k)%ID, &
+                InputMagnetic(k)%X,InputMagnetic(k)%Y,InputMagnetic(k)%Z,InputMagnetic(k)%Orientation
             j = j+1
         end do
         do k=1,size(OutputMagnetic)
-            WRITE (edifile,3000) sid(j),OutputMagnetic(k)%ID,OutputMagnetic(k)%X,OutputMagnetic(k)%Y,OutputMagnetic(k)%Z,OutputMagnetic(k)%Orientation
+            WRITE (edifile,3000) sid(j),OutputMagnetic(k)%ID, &
+                OutputMagnetic(k)%X,OutputMagnetic(k)%Y,OutputMagnetic(k)%Z,OutputMagnetic(k)%Orientation
             j = j+1
         end do
 
