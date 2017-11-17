@@ -344,11 +344,14 @@ contains
     character(200), dimension(:), pointer :: Notes
     integer, intent(inout)                :: n
     ! local
-    character(len=200)                    :: line, var, value
+    character(len=200)                    :: line, var, value, tmp
+    character(len=4)                      :: year
+    character(len=2)                      :: month,date
+    character(len=8)                      :: time
     character(len=2)                      :: elevunits
     logical                               :: readlat,readlon,readelev
     logical                               :: readinfo
-    integer                               :: i1
+    integer                               :: i1,ii
 
     elevunits = 'M'
 
@@ -394,9 +397,30 @@ contains
 
         if (Info%ParseEDIinfo) then
 
-            if (index(to_upper(Info%ProcessedBy),'PHOENIX')>0) then
+            if (index(to_upper(Info%AcquiredBy),'PHOENIX')>0) then
 
                 ! parse special Phoenix info format - for now, do nothing
+                ! write(*,*) 'DEBUG PHOENIX: ',trim(line)
+
+                    ii = index(line,'START-UP')
+                    if (ii>0) then
+                        read(line(ii+10:ii+20),*) year
+                        read(line(ii+15:ii+20),*) month
+                        read(line(ii+18:ii+20),*) date
+                        read(line(ii+23:ii+32),*) time
+                        Site%Start = year//'-'//month//'-'//date//'T'//time
+                        write(*,*) 'Start time inferred from Phoenix INFO: ',Site%Start
+                    end if
+
+                    ii = index(line,'END-TIME')
+                    if (ii>0) then
+                        read(line(ii+10:ii+20),*) year
+                        read(line(ii+15:ii+20),*) month
+                        read(line(ii+18:ii+20),*) date
+                        read(line(ii+23:ii+32),*) time
+                        Site%End = year//'-'//month//'-'//date//'T'//time
+                        write(*,*) 'End time inferred from Phoenix INFO: ',Site%End
+                    end if
 
             else
 
