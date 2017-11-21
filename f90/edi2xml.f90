@@ -190,6 +190,7 @@ program edi2xml
   nchoutH = size(OutputMagnetic)
   nchoutE = size(OutputElectric)
   nchout = nchoutH + nchoutE
+  nch = nchin + nchout
 
   ! Read EDI data header and create generic Data variables
   call read_edi_data_header(nf,nch,is_spectra)

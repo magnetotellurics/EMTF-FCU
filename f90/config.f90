@@ -269,10 +269,16 @@ contains
         if (datatype_exists) then
             write(0,*) 'Reading from the data type definition file ',trim(datatype_file)
             call read_xml_data_type(datatype_file, DataType(i))
+            if (trim(DataType(i)%Tag) .eq. 'spectra') then
+                write(0,*) '''spectra'' is not a valid EMTF tag: we convert it to impedance,tipper'
+                write(0,*) 'or other primary data types. Use the tags for your final EMTF(s). Exiting...'
+                stop
+            end if
         else
             write(0,*) 'Unable to find the data type definition file ',trim(datatype_file)
             write(0,*) 'Please correct your tags or create a new data type definition.'
-            write(0,*) 'Cannot proceed with file conversion. Exiting...'
+            write(0,*) 'Note that ''spectra'' is not a valid EMTF tag: we convert it to impedance,tipper'
+            write(0,*) 'or other primary data types. Use the tags for your final EMTF(s). Exiting...'
             stop
         end if
     end do

@@ -45,9 +45,9 @@ foreach $input_fname(@take_files){
 	s/^(\S+)\.(\w+)$/$1\.xml/;
 	$output_fname = $_;
     if ($dry_run){
-        system("edi2xml $input_dir/$input_fname $output_dir/$output_fname silent dry\n");
+        system("edi2xml $input_dir/$input_fname $output_dir/$output_fname silent 0.0d0 dry\n");
     } else {
-        print "edi2xml $input_dir/$input_fname $output_dir/$output_fname\n";
-        system("edi2xml $input_dir/$input_fname $output_dir/$output_fname silent\n");
+        print "edi2xml $input_dir/$input_fname $output_dir/$output_fname silent 0.0d0\n";
+        system("edi2xml $input_dir/$input_fname $output_dir/$output_fname silent 0.0d0\n");
     }
 }
