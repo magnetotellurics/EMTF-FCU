@@ -480,10 +480,11 @@ contains
   end subroutine read_edi_info
 
 
-  subroutine parse_edi_channel(value, Channel, need_second_line)
+  subroutine parse_edi_channel(value, Channel, need_second_line, orientation_exists)
     character(len=*), intent(in)     :: value
     type(Channel_t), intent(inout)   :: Channel
     logical, intent(inout), optional :: need_second_line
+    logical, intent(inout), optional :: orientation_exists
     ! local
     character(len=200)               :: line, var
     character(len=1)                 :: edichar1, edichar2
@@ -499,6 +500,9 @@ contains
     j(:) = 0
     edichar1 = temp(1:1)
     Channel%Type = edichar1
+    if (present(orientation_exists)) then
+        orientation_exists = .false.
+    end if
 
     if (.not. silent) then
         write(*,*) 'Parsing EDI channel: ',trim(Channel%Type)
@@ -537,7 +541,12 @@ contains
         i1 = index(trim(temp),'AZM=')
         i2 = index(trim(temp),'AZM =')
         i = max(i1,i2+1)
-        read(temp(i+4:N),*,iostat=istat) Channel%Orientation
+        if (i>1) then
+            read(temp(i+4:N),*,iostat=istat) Channel%Orientation
+            if (present(orientation_exists)) then
+                orientation_exists = .true.
+            end if
+        end if
         ! read in the XYZ coordinates
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
@@ -616,7 +625,12 @@ contains
         i1 = index(trim(temp),'AZM=')
         i2 = index(trim(temp),'AZM =')
         i = max(i1,i2+1)
-        read(temp(i+4:N),*,iostat=istat) Channel%Orientation
+        if (i>1) then
+            read(temp(i+4:N),*,iostat=istat) Channel%Orientation
+            if (present(orientation_exists)) then
+                orientation_exists = .true.
+            end if
+        end if
         ! read in the XYZ coordinates
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
@@ -679,7 +693,7 @@ contains
     type(UserInfo_t), intent(in)                 :: UserInfo
     ! local
     type(Channel_t), dimension(:), pointer  :: Channel ! all channels
-    logical                          :: electric_channels_first,channel_on_two_lines
+    logical                          :: electric_channels_first,channel_on_two_lines,orientation_exists
     character(len=200)               :: line, var, value
     integer                          :: num,i,j,istat,nchin,nch,hch,ech
     real(8)                          :: xy(2,1),ll(2,1)
@@ -725,7 +739,7 @@ contains
                 end if
                 write(0,*) 'Warning: remote channel number ',num,' will not be copied to the new file format'
             else
-                call parse_edi_channel(value,Channel(num),channel_on_two_lines)
+                call parse_edi_channel(value,Channel(num),channel_on_two_lines,orientation_exists)
                 if (channel_on_two_lines) then
                     read (edifile,'(a200)',iostat=ios) line
                     value = trim(value)//trim(line)
@@ -735,8 +749,16 @@ contains
                     hch = hch+1
                     if (Channel(num)%ID(2:2) .eq. 'X') then
                         Hx = num
+                        if (.not. orientation_exists) then
+                            write(0,*) 'Missing orientation of ', trim(Channel(num)%ID),' set to : ',Channel(1)%Orientation
+                            Channel(num)%Orientation = Channel(1)%Orientation
+                        end if
                     elseif (Channel(num)%ID(2:2) .eq. 'Y') then
                         Hy = num
+                        if (.not. orientation_exists) then
+                            write(0,*) 'Missing orientation of ', trim(Channel(num)%ID),' set to : ',Channel(2)%Orientation
+                            Channel(num)%Orientation = Channel(2)%Orientation
+                        end if
                     elseif (Channel(num)%ID(2:2) .eq. 'Z') then
                         Hz = num
                     end if
@@ -744,8 +766,16 @@ contains
                     ech = ech+1
                     if (Channel(num)%ID(2:2) .eq. 'X') then
                         Ex = num
+                        if (.not. orientation_exists) then
+                            write(0,*) 'Missing orientation of ', trim(Channel(num)%ID),' set to : ',Channel(1)%Orientation
+                            Channel(num)%Orientation = Channel(1)%Orientation
+                        end if
                     elseif (Channel(num)%ID(2:2) .eq. 'Y') then
                         Ey = num
+                        if (.not. orientation_exists) then
+                            write(0,*) 'Missing orientation of ', trim(Channel(num)%ID),' set to : ',Channel(2)%Orientation
+                            Channel(num)%Orientation = Channel(2)%Orientation
+                        end if
                     end if
                 else
                     write(0,*) 'Warning: Unknown channel type ',Channel(num)%Type,' found for channel #',num
