@@ -261,8 +261,8 @@ contains
         end do
 !
 ! ----WRITE OUT THE MEASUREMENT IDS, STARTING WITH HX,HY,HZ
- 3000   FORMAT('>HMEAS ID=',F8.3,' CHTYPE=',A2,' X=',F5.1,' Y=',F5.1,' Z=',F5.1, &
-                 ' AZM=',F5.1)
+ 3000   FORMAT('>HMEAS ID=',F8.3,' CHTYPE=',A2,' X=',F7.1,' Y=',F7.1,' Z=',F7.1, &
+                 ' AZM=',F6.1)
 ! 3100   FORMAT('>HMEAS ID=',F8.3,' CHTYPE=HY',' X=',F3.1,' Y=',F3.1,' Z=',F3.1, &
 !               ' AZM=',F5.1)
 ! 3200   FORMAT('>HMEAS ID=',F8.3,' CHTYPE=HZ',' X=',F3.1,' Y=',F3.1,' Z=',F3.1, &
@@ -291,7 +291,7 @@ contains
 !                 ' X2=',I7,' Y2=',I7)
 !        WRITE (edifile,3300)sid(4),EX_X1,EX_Y1,EX_X2,EX_Y2
 !        WRITE (edifile,3400)sid(5),EY_X1,EY_Y1,EY_X2,EY_Y2
- 3300   FORMAT('>EMEAS ID=',F8.3,' CHTYPE=',A2,' X=',F5.1,' Y=',F5.1,' Z=',F5.1,' X2=',F5.1,' Y2=',F5.1,' AZM=',F5.1)
+ 3300   FORMAT('>EMEAS ID=',F8.3,' CHTYPE=',A2,' X=',F7.1,' Y=',F7.1,' Z=',F7.1,' X2=',F7.1,' Y2=',F7.1,' AZM=',F6.1)
 ! 3400   FORMAT('>EMEAS ID=',F8.3,' CHTYPE=EY',' X=',F3.1,' Y=',F3.1,' Z=',F3.1)
 
         do k=1,size(OutputElectric)
