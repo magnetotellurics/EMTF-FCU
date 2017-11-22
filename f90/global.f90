@@ -145,7 +145,7 @@ module global
     logical           :: ParseEDIInfo ! for EDI input/output
     logical           :: WriteEDIInfo ! for EDI input/output
     logical           :: MetadataOnly ! true to produce XML file with no data
-    integer           :: OrthogonalGeographic
+    logical           :: AddDeclToSiteLayout ! channel azimuths should be relative to geographic North
     character(len=80) :: Basename ! base name of the original file to be submitted
     character(len=10) :: Image ! extension of the image file, if present
     character(len=10) :: Original ! extension of the original file to be submitted
@@ -419,7 +419,7 @@ contains
         Info%ParseEDIInfo = .TRUE.
         Info%WriteEDIInfo = .TRUE.
         Info%MetadataOnly = .FALSE.
-        Info%OrthogonalGeographic = 0
+        Info%AddDeclToSiteLayout = .FALSE.
         Info%Basename = ' '
         Info%Image = ' '
         Info%Original = ' '

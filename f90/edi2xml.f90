@@ -156,8 +156,8 @@ program edi2xml
     write(0,*) 'a product in SPADE. They should not contain spaces.'
     write(0,*) 'DateFormat (e.g., MM/DD/YY) helps read EDI files.'
   	write(0,*) 'EDI files do not have enough information for rotation'
-    write(0,*) 'so output data will be in the same coordinate system'
-    write(0,*) 'as they are in the original EDI file. Use caution.'
+    write(0,*) 'unless they are SPECTRA EDI. But you still have the'
+    write(0,*) 'option to rotate them. Use caution.'
   	stop
   end if
 

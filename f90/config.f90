@@ -246,7 +246,7 @@ contains
     Info%AttachmentInfo = getString(doc,'AttachmentInfo')
     Info%Image = getString(doc,'Image')
     Info%Original = getString(doc,'Original')
-	Info%OrthogonalGeographic = getInteger(doc,"OrthogonalGeographic")
+	Info%AddDeclToSiteLayout = getInteger(doc,"AddDeclToSiteLayout")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")
 	Info%ChannelList = getString(doc,"ChannelList")

@@ -424,6 +424,11 @@ contains
 
             else
 
+                ! In the special case of "EDI file changed by program edi_dec",
+                ! whatever that program is... read the declination
+                if (trim(var) .eq. 'Declination for this location') then
+                    read(value,*) Site%Declination
+                end if
 
                 ! to parse the INFO block, first find an occurence of the site ID
                 ! then allow parsing of only one value of each type after site ID
@@ -438,7 +443,7 @@ contains
 
                 if (readinfo) then
                     select case (trim(var))
-                        case ('AZIMUTH')
+                        case ('AZIMUTH','Declination for this location')
                             !read(value,*) Site%Declination
                         case ('LATITUDE','SITE LATITUDE') ! assume it's decimal if found in INFO block
                             read(value,*) Site%Location%lat
@@ -475,6 +480,7 @@ contains
         write(*,*) 'Before exiting the INFO block, latitude  = ',Site%Location%lat
         write(*,*) 'Before exiting the INFO block, longitude = ',Site%Location%lon
         write(*,*) 'Before exiting the INFO block, elevation = ',Site%Location%elev
+        write(*,*) 'Before exiting the INFO block, declination = ',Site%Declination
     end if
 
   end subroutine read_edi_info
@@ -949,6 +955,17 @@ contains
         end if
     else
         write(0,*) 'By default, using recorded location. Change in XML configuration file'
+    end if
+    if (UserInfo%AddDeclToSiteLayout) then
+        if (.not.silent) then
+            write(*,*) 'Adding declination to site layout to indicate original geomagnetic'
+        end if
+        do i=1,2
+            Input(i)%Orientation = Input(i)%Orientation + Site%Declination
+        end do
+        do i=1,size(OutputE)
+            OutputE(i)%Orientation = OutputE(i)%Orientation + Site%Declination
+        end do
     end if
 
   end subroutine read_edi_channels

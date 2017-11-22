@@ -143,13 +143,9 @@ program z2xml
   	write(0,*)
   	write(0,*) 'Project and YearCollected (if present) help identify'
     write(0,*) 'a product in SPUD. They should not contain spaces.'
-  	write(0,*) 'The optional OrthogonalGeographic field, if true,'
-  	write(0,*) 'will rotate the data to orthogonal geographic coords.'
-  	write(0,*) 'Use with caution: information about the original '
-  	write(0,*) 'measurement coordinates might be lost in the process.'
-    write(0,*) 'Rotation only works if there are four or five channels.'
-  	write(0,*) 'Leave the RunList and SiteList elements out or empty'
+   	write(0,*) 'Leave the RunList and SiteList elements out or empty'
   	write(0,*) 'if you do not have XML lists for this experiment.'
+  	write(0,*) 'To rotate to an angle A, append this angle to command line.'
   	stop
   end if
 
