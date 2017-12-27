@@ -444,8 +444,8 @@ contains
 
                 if (readinfo) then
                     select case (trim(var))
-                        case ('AZIMUTH','Declination for this location')
-                            !read(value,*) Site%Declination
+                        case ('AZIMUTH')
+                            read(value,*) Site%Declination
                         case ('LATITUDE','SITE LATITUDE') ! assume it's decimal if found in INFO block
                             read(value,*) Site%Location%lat
                             readlat = .true.

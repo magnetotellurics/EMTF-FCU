@@ -231,6 +231,19 @@ program edi2xml
   !OutputElectric(1)%Orientation = Data(1)%Rot(1)
   !OutputElectric(2)%Orientation = Data(1)%Rot(1) + 90
 
+  ! A patch to correctly interpret rotation information when it's missing for tipper etc
+  if (UserInfo%UseImpedanceRotationForAll) then
+    k = find_data_type(Data,'Z')
+    do i=1,size(Data)
+        write(0,*) 'Original orientation for ',trim(Data(i)%Type%Tag),': ',Data(i)%Rot
+        if (i .ne. k) then
+            Data(i)%Rot = Data(k)%Rot
+            Data(i)%orthogonal = Data(k)%orthogonal
+        end if
+        write(0,*) 'Corrected orientation for ',trim(Data(i)%Type%Tag),': ',Data(i)%Rot
+    end do
+  end if
+
   if (rotate) then
       ediLocalSite%Orientation = trim(orthogonalORsitelayout)
       ediLocalSite%AngleToGeogrNorth = azimuth
@@ -256,6 +269,15 @@ program edi2xml
         case default
             ! do nothing
         end select
+      end do
+  else
+      ! if at least one of the data types is orthogonal, best guess set to Rot(1) for the XML
+      ! otherwise, will be set to 'sitelayout'
+      do i=1,size(DataType)
+        if(Data(i)%orthogonal) then
+            ediLocalSite%Orientation = 'orthogonal'
+            ediLocalSite%AngleToGeogrNorth = Data(i)%Rot(1)
+        end if
       end do
   end if
 

@@ -247,6 +247,7 @@ contains
     Info%Image = getString(doc,'Image')
     Info%Original = getString(doc,'Original')
 	Info%AddDeclToSiteLayout = getInteger(doc,"AddDeclToSiteLayout")
+	Info%UseImpedanceRotationForAll = getInteger(doc,"UseImpedanceRotationForAll")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")
 	Info%ChannelList = getString(doc,"ChannelList")

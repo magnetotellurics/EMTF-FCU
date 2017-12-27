@@ -146,6 +146,7 @@ module global
     logical           :: WriteEDIInfo ! for EDI input/output
     logical           :: MetadataOnly ! true to produce XML file with no data
     logical           :: AddDeclToSiteLayout ! channel azimuths should be relative to geographic North
+    logical           :: UseImpedanceRotationForAll ! set to true to default to ZROT for tipper
     character(len=80) :: Basename ! base name of the original file to be submitted
     character(len=10) :: Image ! extension of the image file, if present
     character(len=10) :: Original ! extension of the original file to be submitted
@@ -420,6 +421,7 @@ contains
         Info%WriteEDIInfo = .TRUE.
         Info%MetadataOnly = .FALSE.
         Info%AddDeclToSiteLayout = .FALSE.
+        Info%UseImpedanceRotationForAll = .FALSE.
         Info%Basename = ' '
         Info%Image = ' '
         Info%Original = ' '
