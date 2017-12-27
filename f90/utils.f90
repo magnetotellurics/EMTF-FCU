@@ -380,9 +380,8 @@ pure function matconjg(A) result(B)
 
     det = (A(1,1)*A(2,2) - A(1,2)*A(2,1))
 
-    if (abs(det) < 1.0e-16) then
-        write(0,*) 'Error in matinv2: zero determinant'
-        return
+    if (abs(det) < epsilon(det)) then
+        write(0,*) 'Error in rmatinv2: zero determinant'
     end if
 
     ! Calculate the inverse determinant of the matrix
@@ -406,9 +405,8 @@ pure function matconjg(A) result(B)
 
     det = (A(1,1)*A(2,2) - A(1,2)*A(2,1))
 
-    if (abs(det) < 1.0e-16) then
+    if (abs(det) < epsilon(dreal(det))) then
         write(0,*) 'Error in matinv2: zero determinant'
-        return
     end if
 
     ! Calculate the inverse determinant of the matrix
@@ -434,9 +432,8 @@ pure function matconjg(A) result(B)
               - A(1,2)*A(2,1)*A(3,3) + A(1,2)*A(2,3)*A(3,1)&
               + A(1,3)*A(2,1)*A(3,2) - A(1,3)*A(2,2)*A(3,1))
 
-    if (abs(det) < 1.0e-16) then
+    if (abs(det) < epsilon(dreal(det))) then
         write(0,*) 'Error in matinv3: zero determinant'
-        return
     end if
 
     ! Calculate the inverse determinant of the matrix
@@ -468,9 +465,8 @@ pure function matconjg(A) result(B)
        + A(1,3)*(A(2,1)*(A(3,2)*A(4,4)-A(3,4)*A(4,2))+A(2,2)*(A(3,4)*A(4,1)-A(3,1)*A(4,4))+A(2,4)*(A(3,1)*A(4,2)-A(3,2)*A(4,1)))&
        - A(1,4)*(A(2,1)*(A(3,2)*A(4,3)-A(3,3)*A(4,2))+A(2,2)*(A(3,3)*A(4,1)-A(3,1)*A(4,3))+A(2,3)*(A(3,1)*A(4,2)-A(3,2)*A(4,1))))
 
-    if (abs(det) < 1.0e-8) then
+    if (abs(det) < epsilon(dreal(det))) then
         write(0,*) 'Error in matinv4: zero determinant'
-        return
     end if
 
     ! Calculate the inverse determinant of the matrix

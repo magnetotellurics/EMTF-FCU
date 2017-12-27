@@ -141,6 +141,11 @@ program edi2edi
             write(0,*) '         but since you insist, we are doing it anyway'
       end if
       do i=1,size(DataType)
+        if (DataType(i)%derivedType) then
+            write(*,*) 'Rotation of derived types is presently not supported. ', &
+                'Data type ',trim(DataType(i)%Tag),' will NOT be rotated and may need to be recomputed.'
+            cycle
+        end if
         write(*,*) 'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
         select case (DataType(i)%Output)
         case ('H')

@@ -7,7 +7,7 @@ module edi_read
   private
 
   integer                        :: edifile
-  character(len=200)             :: temp, spectra_line
+  character(len=200)             :: temp, block_info_line, spectra_line
   logical                        :: new_block, new_section
   character(len=80)              :: this_block, this_section
   integer                        :: missing_value_count=0
@@ -21,7 +21,7 @@ module edi_read
   save   :: missing_value_count
   save   :: dummy_data_value
   save   :: maxblks
-  save   :: spectra_line
+  save   :: block_info_line, spectra_line
   save   :: Ex,Ey,Hx,Hy,Hz,Rx,Ry
 
   public :: initialize_edi_input
@@ -112,6 +112,7 @@ contains
             read (temp(2:N),*) this_block
             var = 'BLOCK'
             value = trim(adjustl(temp(2:N)))
+            block_info_line = value
             return
         end select
     end if
@@ -1132,7 +1133,8 @@ contains
     complex(8)			:: cvalue(nf) ! complex data values
     character(4)		:: type ! real/imag
     integer		  	    :: row,col ! row & column in a matrix
-    integer		  	    :: i,j,k,ind,istat
+    integer		  	    :: i,j,k,ind,istat,irot
+    real(8)             :: rotval ! scalar rotation value sometimes used in block header
     character(len=80)   :: TFcomp, TFname, info, stat
 
       do j=1,maxblks
@@ -1173,11 +1175,14 @@ contains
             end do
         case ('DUMMY')
             ! empty line
+        case ('')
+            ! encountered a statistical estimate that does not pertain to a specific TF, skip over for now
+            ! ... these are: COH,PREDCOH,EPREDCOH,HPREDCOH,SIGAMP,SIGNOISE
         case default
             ind = find_data_type(Data,TFname)
             if (ind == 0) then
-                write(0,*) 'Error: data type for TF name ',trim(TFname),' not allocated: please update your tags'
-                stop
+                write(0,*) 'Warning: data type for TF name ',trim(TFname),' not allocated, ignored. Please update your tags to fix this.'
+                cycle
             end if
             select case (trim(stat))
             case ('EXP','')
@@ -1186,6 +1191,16 @@ contains
                     Data(ind)%Matrix(:,1,1) = Data(ind)%Matrix(:,1,1) + cvalue
                 else
                     Data(ind)%Matrix(:,row,col) = Data(ind)%Matrix(:,row,col) + cvalue
+                end if
+                ! if a rotation value is specified in the block header, use that in place of rotation block
+                irot = index(block_info_line,'ROT=')
+                if (irot>0) then
+                    read(block_info_line(irot+4:len_trim(block_info_line)),*,iostat=istat) rotval
+                    if (istat==0) then
+                        write(0,*) 'Overwriting the rotation value for data type ',trim(TFname),' with ',rotval
+                        Data(ind)%Rot(:) = rotval
+                        Data(ind)%orthogonal = .true.
+                    end if
                 end if
             case ('ROT')
                 Data(ind)%Rot(:) = dreal(cvalue)
@@ -1196,7 +1211,7 @@ contains
                 Data(ind)%Var(:,row,col) = dreal(cvalue)**2
             case default
                 ! but there might be something else that requires parsing
-                write(0,*) 'Warning: data component ',trim(TFcomp),' not recognized; ignored'
+                write(0,*) 'Warning: data component ',trim(this_block),' not recognized; ignored'
             end select
         end select
       end do
@@ -1211,8 +1226,9 @@ contains
   ! VAR, ERR
   ! We also intent to support (but haven't parsed yet):
   ! COH, EPREDCOH, HPREDCOH, SIGAMP, SIGNOISE
+  ! (Note: SPECTRA are supported through read_edi_spectra)
   ! Exceptions that are not supported:
-  ! SPECTRA, RES1D, DEP1D
+  ! RES1D, DEP1D
   ! & COV statistic (which doesn't make sense unless it's pairwise between TF components)
   subroutine parse_edi_data_block_name(blockdef,TFname,row,col,type,stat)
     character(*), intent(in)    :: blockdef ! full name of data block
@@ -1220,9 +1236,9 @@ contains
     integer, intent(out)        :: row,col ! row & column in a matrix
     character(4),  intent(out)  :: type ! real/imag
     character(80), intent(out)  :: stat ! VAR, ERR, etc
-    character(len=200)          :: line, var, value, data_block
+    character(len=200)          :: line, var, data_block
     character(len=80)           :: TFcomp,info,str,str1,str2
-    integer                     :: i,j,lenstr,len1,len2,idot
+    integer                     :: i,j,lenstr,len1,len2,idot,irot
     logical                     :: isComplex
 
     str = adjustl(blockdef)
@@ -1320,9 +1336,25 @@ contains
         TFname = trim(str1(1:len1))
     end if
 
+    ! deal with a special case: coherences (COH,PREDCOH,EPREDCOH,HPREDCOH)
+    i = index(str1,'COH')
+    if (i>0) then
+        stat = trim(str1)
+        TFname = ''
+    end if
+
+    ! deal with a special case: signal amplitude and noise (SIGAMP,SIGNOISE)
+    i = index(str1,'SIG')
+    if (i>0) then
+        stat = trim(str1)
+        TFname = ''
+    end if
+
     if (.not.silent) then
-        if (len_trim(stat)>0) then
+        if (len_trim(stat)>0 .and. len_trim(TFname)>0) then
             write(*,*) 'Reading ',trim(stat),' for variable ',trim(TFname),' from block ',trim(TFcomp)
+        elseif (len_trim(stat)>0) then
+            write(*,*) 'Reading statistic ',trim(stat),': parsing not implemented yet, will be ignored'
         else
             write(*,*) 'Reading variable ',trim(TFname),' from block ',trim(TFcomp)
         end if
@@ -1350,7 +1382,7 @@ contains
     case ('ZSTRIKE','ZSKEW','ZELLIP')
     case ('TSTRIKE','TSKEW','TELLIP')
     case ('INDMAGR.EXP','INDMAGI.EXP','INDANGR.EXP','INDANGI.EXP')
-    case ('COH','EPREDCOH','HPREDCOH','SIGAMP','SIGNOISE')
+    case ('COH','PREDCOH','EPREDCOH','HPREDCOH','SIGAMP','SIGNOISE')
     case ('RES1D','DEP1D')
     case ('SPECTRA')
     case ('DUMMY')
@@ -1575,6 +1607,9 @@ contains
         end if
 
         ! calculate impedances:
+        if (abs(RhH(1,1)*RhH(2,2) - RhH(1,2)*RhH(2,1)) < epsilon(dreal(RhH))) then
+            write(0,'(a50,i3,a30)') 'Warning: matrix determinant too small for period #',k,'. Results could be inaccurate.'
+        end if
         Zh = matmul(matinv2(RhH), RhE)
         Z = matconjg(Zh)
 
