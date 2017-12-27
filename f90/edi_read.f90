@@ -1181,7 +1181,8 @@ contains
         case default
             ind = find_data_type(Data,TFname)
             if (ind == 0) then
-                write(0,*) 'Warning: data type for TF name ',trim(TFname),' not allocated, ignored. Please update your tags to fix this.'
+                write(0,*) 'Warning: data type for TF name ',trim(TFname), &
+        ' not allocated, ignored. Please update your tags to fix this.'
                 cycle
             end if
             select case (trim(stat))
