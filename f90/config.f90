@@ -61,7 +61,8 @@ contains
     Info%Copyright%SurveyDOI = getString(copyright,"SurveyDOI")
     Info%Copyright%PAPERS = getString(doc,"PAPERS")
     Info%Copyright%THANKS = getString(doc,"THANKS")
-	Info%Copyright%ReleaseStatus = getString(doc,"ReleaseStatus")
+    Info%Copyright%ReleaseStatus = getString(doc,"ReleaseStatus")
+	Info%Copyright%RotationInfo = getString(doc,"RotationInfo")
     Info%Copyright%README = getString(doc,"README")
 	
 	call init_homedir

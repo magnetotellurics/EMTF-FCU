@@ -313,6 +313,12 @@ contains
         call xml_EndElement(xmlfile, 'ConditionsOfUse')
     end if
 
+    if (.not. isempty(UserInfo%Copyright%RotationInfo)) then
+        call xml_NewElement(xmlfile, 'RotationInfo')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%RotationInfo))
+        call xml_EndElement(xmlfile, 'RotationInfo')
+    end if
+
     if (.not. isempty(UserInfo%Copyright%AdditionalInfo(1))) then
         call xml_NewElement(xmlfile, 'AdditionalInfo')
         call xml_AddCharacters(xmlfile, trim(UserInfo%Copyright%AdditionalInfo(1)))
@@ -411,6 +417,7 @@ contains
                 end if
     		    call xml_NewElement(xmlfile, 'Comments')
 				call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%ProcessedBy))
+				call xml_AddCharacters(xmlfile, achar(ascii_cr))
     		    call xml_AddCharacters(xmlfile, trim(Notes(1)))
     		    if (.not. silent) then
     		        write(*,*) trim(Notes(1))

@@ -102,6 +102,7 @@ module global
     character(len=80) :: ReleaseStatus ! string; determines which fixed conditions of use to apply
     character(len=800):: ConditionsOfUse(100)
     character(len=80) :: README ! additional info file name
+    character(len=800):: RotationInfo ! string; here we supply rotation comments for archiving
     character(len=800):: AdditionalInfo(100)
   end type Copyright_t
 
@@ -375,6 +376,7 @@ contains
 		    Info%ConditionsOfUse = ''
 		end do
         Info%README = ''
+        Info%RotationInfo = ''
         do i=1,size(Info%AdditionalInfo)
             Info%AdditionalInfo = ''
         end do
