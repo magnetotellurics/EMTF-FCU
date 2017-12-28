@@ -1479,7 +1479,7 @@ contains
     complex(8)   :: RhH(2,2), RhE(2,nch-4), HhE(2,nch-4), RhR(2,2), EhE(nch-4,nch-4), HhH(2,2)
     complex(8)   :: czero
     real(8)      :: delta
-    logical      :: rew
+    logical      :: rew,orthogonal
     !character(len=12), dimension(7,2) :: chID
 
     czero = dcmplx(0.0d0,0.0d0)
@@ -1489,6 +1489,7 @@ contains
     ResidCov = czero
     InvSigCov = czero
     TFVar = 0.0d0
+    orthogonal = .false.
 
     imp = find_data_type(Data,'Z')
     if (imp == 0) then
@@ -1514,8 +1515,9 @@ contains
             end if
             return
         end if
+        ! minor shortcut: if ROTSPEC is present for the last period, data are orthogonal
         temp = spectra_line
-        call parse_edi_spectra_block_name(temp,freq,rotspec,bw,avgt)
+        call parse_edi_spectra_block_name(temp,freq,rotspec,bw,avgt,orthogonal)
         call init_freq_info(F(k))
         F(k)%value = 1.0d0/freq
         if (.not.silent) then
@@ -1634,12 +1636,14 @@ contains
             Data(tip)%Var(k,:,:) = TFVar(1:1,:)
             Data(tip)%InvSigCov(k,:,:) = InvSigCov
             Data(tip)%ResidCov(k,:,:) = ResidCov(1:1,1:1)
+            Data(tip)%orthogonal = orthogonal
             Data(tip)%fullcov = .true.
             Data(imp)%Rot(k) = rotspec
             Data(imp)%Matrix(k,:,:) = Z(2:nch-4,:)
             Data(imp)%Var(k,:,:) = TFVar(2:nch-4,:)
             Data(imp)%InvSigCov(k,:,:) = InvSigCov
             Data(imp)%ResidCov(k,:,:) = ResidCov(2:nch-4,2:nch-4)
+            Data(imp)%orthogonal = orthogonal
             Data(imp)%fullcov = .true.
         else
             Data(imp)%Rot(k) = rotspec
@@ -1647,6 +1651,7 @@ contains
             Data(imp)%Var(k,:,:) = TFVar
             Data(imp)%InvSigCov(k,:,:) = InvSigCov
             Data(imp)%ResidCov(k,:,:) = ResidCov
+            Data(imp)%orthogonal = orthogonal
             Data(imp)%fullcov = .true.
         end if
 
@@ -1674,9 +1679,10 @@ contains
 
 ! Example line to parse:
 !>SPECTRA  FREQ=3.200E+02 ROTSPEC=0 BW=8.0000E+01 AVGT=9.1888E+03 // 49
-  subroutine parse_edi_spectra_block_name(value, freq, rotspec, bw, avgt)
+  subroutine parse_edi_spectra_block_name(value, freq, rotspec, bw, avgt, orthogonal)
     character(len=*), intent(in)     :: value
     real(8), intent(out)             :: freq, rotspec, bw, avgt
+    logical, intent(out)             :: orthogonal
     ! local
     integer                          :: i, i1, i2, N=200, istat
 
@@ -1689,6 +1695,7 @@ contains
     rotspec = 0.0d0
     bw = 0.0d0
     avgt = 0.0d0
+    orthogonal = .false.
 
     if (.not. silent) then
         write(*,*) 'Parsing SPECTRA block: ',value
@@ -1711,6 +1718,9 @@ contains
     i2 = index(trim(temp),'ROTSPEC =')
     i = max(i1,i2+1)
     read(temp(i+8:N),*,iostat=istat) rotspec
+    if (istat == 0) then
+        orthogonal = .true.
+    end if
     ! read in bw and avgt
     i1 = index(trim(temp),'BW=')
     i2 = index(trim(temp),'BW =')
