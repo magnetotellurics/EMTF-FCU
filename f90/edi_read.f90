@@ -1474,13 +1474,25 @@ contains
     character(len=80)   :: TFcomp, TFname, info, stat
     ! ... extend the definition of "E" to all output channels, incl. Hz
     ! nch-4 stands for all channels minus 2 input minus 2 remote
-    real(8)      :: TFVar(nch-4,2)
-    complex(8)   :: Z(nch-4,2), Zh(2,nch-4), ResidCov(nch-4,nch-4), InvSigCov(2,2)
-    complex(8)   :: RhH(2,2), RhE(2,nch-4), HhE(2,nch-4), RhR(2,2), EhE(nch-4,nch-4), HhH(2,2)
+    !real(8)      :: TFVar(nch-4,2)
+    !complex(8)   :: Z(nch-4,2), Zh(2,nch-4), ResidCov(nch-4,nch-4), InvSigCov(2,2)
+    !complex(8)   :: RhH(2,2), RhE(2,nch-4), HhE(2,nch-4), RhR(2,2), EhE(nch-4,nch-4), HhH(2,2)
+    real(8), allocatable, dimension(:,:)      :: TFVar
+    complex(8), allocatable, dimension(:,:)   :: Z, Zh, ResidCov, InvSigCov
+    complex(8), allocatable, dimension(:,:)   :: RhH, RhE, HhE, RhR, EhE, HhH
     complex(8)   :: czero
     real(8)      :: delta
     logical      :: rew,orthogonal
     !character(len=12), dimension(7,2) :: chID
+
+    ! try to accommodate a single station SPECTRA although 5 channels could also mean tipper remote reference...
+    if (nch==5) then
+        allocate(TFVar(nch-2,2), Z(nch-2,2), Zh(2,nch-2), ResidCov(nch-2,nch-2), InvSigCov(2,2), stat=istat)
+        allocate(RhH(2,2), RhE(2,nch-2), HhE(2,nch-2), RhR(2,2), EhE(nch-2,nch-2), HhH(2,2), stat=istat)
+    else
+        allocate(TFVar(nch-4,2), Z(nch-4,2), Zh(2,nch-4), ResidCov(nch-4,nch-4), InvSigCov(2,2), stat=istat)
+        allocate(RhH(2,2), RhE(2,nch-4), HhE(2,nch-4), RhR(2,2), EhE(nch-4,nch-4), HhH(2,2), stat=istat)
+    end if
 
     czero = dcmplx(0.0d0,0.0d0)
     delta = 0e0
@@ -1662,6 +1674,10 @@ contains
         end if
 
     end do
+
+    deallocate(TFVar, Z, Zh, ResidCov, InvSigCov, stat=istat)
+    deallocate(RhH, RhE, HhE, RhR, EhE, HhH, stat=istat)
+
 
     ! Find the order in which the different EM channels are:
     !call findchannels(edifile, ch, chID, rew = .TRUE.)
