@@ -1486,7 +1486,7 @@ contains
     !character(len=12), dimension(7,2) :: chID
 
     ! try to accommodate a single station SPECTRA although 5 channels could also mean tipper remote reference...
-    if (nch==5) then
+    if ((nch==5) .and. (Ex.ne.0) .and. (Ey.ne.0)) then
         allocate(TFVar(nch-2,2), Z(nch-2,2), Zh(2,nch-2), ResidCov(nch-2,nch-2), InvSigCov(2,2), stat=istat)
         allocate(RhH(2,2), RhE(2,nch-2), HhE(2,nch-2), RhR(2,2), EhE(nch-2,nch-2), HhH(2,2), stat=istat)
     else
@@ -1553,7 +1553,7 @@ contains
         end do
 
         ! a provision for single station analysis
-        if (nch==5) then
+        if ((nch==5) .and. (Ex.ne.0) .and. (Ey.ne.0)) then
             Rx = Hx
             Ry = Hy
         end if
