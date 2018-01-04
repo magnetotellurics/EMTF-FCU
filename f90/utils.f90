@@ -186,8 +186,9 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
 
   character(len=*), intent(in) :: time1,format1,format2
   ! local
-  character(len=2)             :: month, day, hour, minute, second
+  character(len=2)             :: month, day, hour, minute, second, year2
   character(len=4)             :: year
+  integer                      :: k(2), n, value
 
   select case (trim(format1))
   case ('YYYY-MM-DDThh:mm:ss','YYYY-MM-DD','XML') ! XML date and time format
@@ -224,28 +225,58 @@ character(len=80) function datestr(time1,format1,format2) result (time2)
     minute = '00'
     second = '00'
   case ('MM/DD/YY') ! USA EDI format
+    ! we want to also accommodate sloppy M/D/YY format
+    ! but keeping the simple syntax as default
+    n = len_trim(time1)
+    if (n<8) then
+        k(1) = index(time1,'/')
+        k(2) = k(1)+index(time1(k(1)+1:n),'/')
+        read(time1(1:k(1)-1),*) value
+        write(month,'(i0.2)') value
+        read(time1(k(1)+1:k(2)-1),*) value
+        write(day,'(i0.2)') value
+        read(time1(k(2)+1:n),*) value
+        write(year2,'(i0.2)') value
+    else
+        month = time1(1:2)
+        day = time1(4:5)
+        year2 = time1(7:8)
+    end if
     ! allow for years 2000's, 2010's and 2020's;
     ! assume 20th century for everything else
-    if (iachar(time1(7:7)) <= ascii_2) then
-        year = '20'//time1(7:8)
+    if (iachar(year2(1:1)) <= ascii_2) then
+        year = '20'//year2
     else
-        year = '19'//time1(7:8)
+        year = '19'//year2
     end if
-    month = time1(1:2)
-    day = time1(4:5)
     hour = '00'
     minute = '00'
     second = '00'
   case ('DD/MM/YY') ! European EDI format
+    ! we want to also accommodate sloppy D/M/YY format
+    ! but keeping the simple syntax as default
+    n = len_trim(time1)
+    if (n<8) then
+        k(1) = index(time1,'/')
+        k(2) = k(1)+index(time1(k(1)+1:n),'/')
+        read(time1(1:k(1)-1),*) value
+        write(day,'(i0.2)') value
+        read(time1(k(1)+1:k(2)-1),*) value
+        write(month,'(i0.2)') value
+        read(time1(k(2)+1:n),*) value
+        write(year2,'(i0.2)') value
+    else
+        day = time1(1:2)
+        month = time1(4:5)
+        year2 = time1(7:8)
+    end if
     ! allow for years 2000's, 2010's and 2020's;
     ! assume 20th century for everything else
-    if (iachar(time1(7:7)) <= ascii_2) then
-        year = '20'//time1(7:8)
+    if (iachar(year2(1:1)) <= ascii_2) then
+        year = '20'//year2
     else
-        year = '19'//time1(7:8)
+        year = '19'//year2
     end if
-    month = time1(4:5)
-    day = time1(1:2)
     hour = '00'
     minute = '00'
     second = '00'
