@@ -353,8 +353,8 @@ program z2xml
   deallocate(Run)
   if (associated(RemoteRun)) deallocate(RemoteRun)
   if (associated(Notes)) deallocate(Notes)
-  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
-  deallocate(F, TF, TFVar, InvSigCov, ResidCov)
+  deallocate(InputMagnetic, OutputMagnetic, OutputElectric, stat=istat)
+  deallocate(F, TF, TFVar, InvSigCov, ResidCov, stat=istat)
   do i = 1,size(DataType)
     call deall_data(Data(i))
   end do
