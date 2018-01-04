@@ -1540,6 +1540,12 @@ contains
             end do
         end do
 
+        ! a provision for single station analysis
+        if (nch==5) then
+            Rx = Hx
+            Ry = Hy
+        end if
+
         ! initialize all cross-spectra matrices
         ! R* H
         RhH(1,1) = cavg(Rx,Hx)
