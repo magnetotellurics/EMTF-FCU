@@ -535,16 +535,19 @@ contains
 	integer                               :: nline
 
 	read (zfile,'(i8)',iostat=ios) nline
-	if (ios/=0) then
+	if (ios/=0 .or. nline==0) then
 		if (associated(Notes)) deallocate(Notes)
 		return
 	end if
 
 	if (associated(Notes)) deallocate(Notes)
 
+	write(0,*) 'Reading ',nline,' lines of notes at the end of Z-file...'
+
 	allocate(Notes(nline))
 
 	do i=1,nline
+	    Notes(i) = ''
 		read (zfile,'(a100)',iostat=ios) Notes(i)
 	end do
 

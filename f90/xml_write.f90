@@ -418,15 +418,19 @@ contains
     		    call xml_NewElement(xmlfile, 'Comments')
 				call xml_AddAttribute(xmlfile, 'author', trim(UserInfo%ProcessedBy))
 				call xml_AddCharacters(xmlfile, achar(ascii_cr))
-    		    call xml_AddCharacters(xmlfile, trim(Notes(1)))
     		    if (.not. silent) then
-    		        write(*,*) trim(Notes(1))
+    		        write(*,*) trim(Notes(1)),' (length: ',len_trim(Notes(1)),')'
+    		    end if
+				if (len_trim(Notes(1))>0) then
+    		        call xml_AddCharacters(xmlfile, trim(Notes(1)))
     		    end if
     		    do i=2,N
     				call xml_AddCharacters(xmlfile, achar(ascii_cr))
-    				call xml_AddCharacters(xmlfile, trim(Notes(i)))
     				if (.not. silent) then
-    				    write(*,*) trim(Notes(i))
+    				    write(*,*) trim(Notes(i)),' (length: ',len_trim(Notes(i)),')'
+    				end if
+    				if (len_trim(Notes(i))>0) then
+    				    call xml_AddCharacters(xmlfile, trim(Notes(i)))
     				end if
     			end do
     			call xml_EndElement(xmlfile, 'Comments')
