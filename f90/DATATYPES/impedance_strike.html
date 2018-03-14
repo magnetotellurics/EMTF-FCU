@@ -3,25 +3,29 @@
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
 </head>
 <body>
+<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h2>MT Impedance Strike: ZSTRIKE</h2>
 <p>&nbsp;</p>
 <p>
-For tensor MT the surface impedance tensor has four components: Zxx, Zxy, 
-Zyx and Zyy, which satisfy the impedance relations:
+The impedance principal direction or "strike" can be defined in many
+ways. For example it can be defined as the angle which:
 </p>
-<p>&nbsp;</p>
+<div lang="latex">\\
+\text{1) Maximizes }|Z'_{xy}+Z'_{yx}|^2,\\
+\text{2) Maximizes }|Z'_{xy}|^2+|Z'_{yx}|^2,\\
+\text{3) Minimizes }|Z'_{xy}|^2+|Z'_{yx}|^2,\text{ or}\\
+\text{4) Minimizes }|Z'_{xy}+Z'_{yx}|^2;\\
+</div>
+<p>
+where Z'xx , Z'xy , Z'yx , and Z'yy are the <a href="impedance.html">impedances</a> rotated to the impedance strike angle. The principal direction, A, may be determined by incrementally rotating the impedance tensor, or alternatively it
+may be calculated analytically from the maximization of (Z'xy+Z'yx)<sup>2</sup> (Sims and Bostick, 1969) as:
+</p>
 <div lang="latex">
-\begin{pmatrix} 
-E_x\\
-E_y 
-\end{pmatrix}= 
-\begin{bmatrix} 
-Z_{xx} & Z_{xy}\\ 
-Z_{yx} & Z_{yy} 
-\end{bmatrix} 
-\begin{pmatrix} 
-H_x\\ 
-H_y 
-\end{pmatrix}</div>
+A=\frac{1}{4}tan^{-1}\bigg( \frac{2R_1*R_2+I_1*I-2}{R_1^2+I_1^2-R_2^2-I_2^2} \bigg)
+</div>
+<p>
+
+</p>
 </body>
 </html>
 

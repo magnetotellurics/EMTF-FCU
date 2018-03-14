@@ -3,26 +3,24 @@
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
 </head>
 <body>
-<h1>MT Impedance: Z</h1>
+<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h2>MT Impedance Determinant: DET</h2>
 <p>&nbsp;</p>
 <p>
-For tensor MT the surface impedance tensor has four components: Zxx, Zxy, 
-Zyx and Zyy, which satisfy the impedance relations:
+Determinant of MT impedance is invariant under rotation:
 </p>
 <p>&nbsp;</p>
 <div lang="latex">
-\begin{pmatrix} 
-E_x\\
-E_y 
-\end{pmatrix}= 
-\begin{bmatrix} 
+DET=
+|\begin{bmatrix} 
 Z_{xx} & Z_{xy}\\ 
 Z_{yx} & Z_{yy} 
 \end{bmatrix} 
-\begin{pmatrix} 
-H_x\\ 
-H_y 
-\end{pmatrix}</div>
+|=Z_{xx}*Z_{yy}-Z_{yx}*Z_{xy}
+</div>
+<p>
+where Zxx , Zxy , Zyx , Zyy are 4 components of MT <a href="impedance.html"> impedance</a> tenzor.  
+</p>
 </body>
 </html>
 
