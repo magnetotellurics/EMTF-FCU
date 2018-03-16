@@ -21,11 +21,13 @@ where Z'xx , Z'xy , Z'yx , and Z'yy are the <a href="impedance.html">impedances<
 may be calculated analytically from the maximization of (Z'xy+Z'yx)<sup>2</sup> (Sims and Bostick, 1969) as:
 </p>
 <div lang="latex">
-A=\frac{1}{4}tan^{-1}\bigg( \frac{2R_1*R_2+I_1*I-2}{R_1^2+I_1^2-R_2^2-I_2^2} \bigg)
+A=\frac{1}{4}tan^{-1}\bigg( \frac{2R_1*R_2+I_1*I-2}{R_1^2+I_1^2-R_2^2-I_2^2} \bigg)\\
+\text{where}\\
+R_1 = Re \big( Z_{xx} - Z_{yy} \big),\\
+I_1 = Im \big( Z_{xx} - Z_{xy} \big),\\
+R_2 = Re \big( Z_{xy} + Z_{yx} \big),\\
+I_2 = Im \big( Z_{xy} + Z_{yx} \big).\\ 
 </div>
-<p>
-
-</p>
 </body>
 </html>
 

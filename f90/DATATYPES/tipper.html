@@ -3,16 +3,18 @@
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
 </head>
 <body>
-<h1>Vertical Field Transfer Functions (Tipper): T</h1>
+<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h2>MT Tipper: T</h2>
 <p>&nbsp;</p>
 <p>
-Vertical Field Transfer Functions (Tipper) relate the local vertical magnetic field
-component to the two local horizontal magnetic field components.
-
-Detailed definition follows...
+Vertical Field Transfer Functions (Tipper) relate the local vertical magnetic field component Hz to the two local horizontal magnetic field components Hx, Hy. The complex tipper components, Tx and Ty, satisfy the tipper relation:
 </p>
-<p>&nbsp;</p>
-<div lang="latex"></div>
+<div lang="latex">
+H_z = T_x H_x + T_y H_y
+</div>
+<p>
+The tipper relation above may be solved for Tx and Ty using either local or remote reference fields, Rx and Ry, as in the <a href="impedance.html">impedance</a> case. Thus, the computation of the tipper parameters, Tx and Ty (in a leastsquares sense) can be described by specifying 5 measurements: Hx, Hy, Hz, Rx, and Ry, where Rx and Ry may be coincident with Hx and Hy (local reference) or may be other measurements (remote reference).
+</p>
 </body>
 </html>
 
