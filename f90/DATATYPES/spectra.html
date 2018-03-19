@@ -1,0 +1,17 @@
+<html>
+<head>
+<script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+</head>
+<body>
+<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h2>Power Spectra: SPECTRA</h2>
+<p>
+<br>
+Average power spectra estimates are often used to represent "raw" MT or EMAP data. Because most processing is done in the frequency domain, they are a convenient representation, and are much more compact than time series.<br>
+Power spectra are to be expressed in terms of standard units. Auto and cross power spectra for two electric field measurements are to be in units of (mV/km)<sup>2</sup>/Hz . Auto and cross power spectra for two magnetic field measurements are to be in units of nT<sup>2</sup>/Hz . Cross power spectra for mixed measurements are to be in units of nT*(mV/km)/Hz.
+All spectra are to be normalized for system response and number of samples. Unless specified otherwise by the ROT option, they are assumed to correspond to the measurement directions as defined in the >DEFINEMEAS section.<br>
+A >SPECTRA data block contains estimates of all the auto and cross power spectra for a set of measurements for a given frequency and bandwidth. These average spectra estimates are the result of averaging a number of independent spectra estimates. They may be independent in time (e.g. cascade decimation), or in frequency (e.g. FFT), or a combination. These data blocks usually represent the final averages, although the SEGNUM option allows delivery of smaller segments also.
+</p>
+</body>
+</html>
+

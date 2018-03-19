@@ -3,25 +3,34 @@
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
 </head>
 <body>
+<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h2>MT Tipper Strike: TSTRIKE</h2>
 <p>&nbsp;</p>
 <p>
-For tensor MT the surface impedance tensor has four components: Zxx, Zxy, 
-Zyx and Zyy, which satisfy the impedance relations:
+The tipper principal direction or "strike" can be defined as the angle which:
 </p>
-<p>&nbsp;</p>
+<div lang="latex">\\
+\text{1) Minimizes }|T'_{x}|^2,\\
+\text{2) Maximizes }|T'_{y}|^2,\text{ or}\\
+\text{3) Maximizes }|T'_{x}|^2+|T'_{y}|^2\\
+</div>
+<p>
+where T 'x and T 'y are the <a href="tipper.html">tipper</a> components rotated to the tipper strike angle. However, this method
+has the same 90 degree ambiguity as the <a href="impedance_strike.html">impedance principal direction</a>. An alternative, preferred method for defining the tipper principal direction, B, is given by Jupp and Vozoff, 1976:
+</p>
 <div lang="latex">
-\begin{pmatrix} 
-E_x\\
-E_y 
-\end{pmatrix}= 
-\begin{bmatrix} 
-Z_{xx} & Z_{xy}\\ 
-Z_{yx} & Z_{yy} 
-\end{bmatrix} 
-\begin{pmatrix} 
-H_x\\ 
-H_y 
-\end{pmatrix}</div>
+B=\frac{(TxR^2 + TyR^2)*tan^{-1} \bigg( \frac{TyR}{TxR} \bigg) + (TxI^2 + TyI^2)*tan^{-1} \bigg( \frac{TyI}{TxI} \bigg)+90^o}
+{|Tx|^2+|Ty|^2}\\
+</div>
+<p>
+where TxR, TxI, TyR, and TyI represent the real and imaginary parts of Tx and Ty respectively, and B is
+measured clockwise from true north in the defined azimuthal coordinate system. This is the angle which
+maximizes the <a href="coherence.html">coherency</a> between the vertical and horizontal magnetic field. It has an inherent ambiguity
+of plus or minus 180 degrees. However, one can choose the principal direction for which the phase of
+COH(H'z,H'x) (the coherency between the vertical magnetic field, Hz, and the horizontal field component,
+Hx, rotated to the chosen principal direction) falls between +90 degrees and -90 degrees from the real
+axis in the complex plane.
+</p>
 </body>
 </html>
 

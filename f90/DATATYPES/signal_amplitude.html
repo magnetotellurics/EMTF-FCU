@@ -1,0 +1,32 @@
+<html>
+<head>
+<script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+</head>
+<body>
+<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h2>Signal Amplitude: SIGAMP</h2>
+<p>
+<br>
+The signal amplitude and <a href="coherence.html"> coherencies</a> are used in evaluating data quality, and identifying the source(s) of noise in the data. For identifying the source(s) of noise in the data it is most useful to have these
+parameters in the direction of the acquisition sensors, and for evaluating data quality it is most useful to have these parameters in the direction of the <a href="apparent_resistivity.html">apparent resistivities</a>. 
+<br>
+The orientation of these parameters can be specified using the ROT option. This option may be ROT=NONE, meaning that the parameters
+correspond to the measurement directions, ROT=RHOROT, meaning that the parameters correspond to
+the rotation angles given in the >RHOROT block, or RHO=NORTH, meaning that the parameters have
+been rotated to true north. The default is ROT=NONE.
+<br>
+The signal amplitude or power spectral density for any measurement can be delivered using a SIGAMP
+data block. The signal level may be useful in diagnosing poor data. The default for SIGAMP data is
+amplitude spectra. However, the option AMPPWR=PWR can be used to provide auto-power spectra
+instead. The units are the same as those for <a href="spectra.html">>SPECTRA</a> data blocks, except, of
+course, for the appropriate amplitude/power conversion. The EUNITS or HUNITS option (as appropriate)
+may be used to specify the units if other than the default.
+<br>
+The signal amplitude (or power spectral density) can either be calculated from the total field (including the
+noise amplitude) or estimated using a remote field to eliminate the noise amplitude (Gambel, 1978). The
+default for the signal amplitude is the total field; however, the option TYPE=SIGNAL or TYPE=NOISE can
+be used to deliver the estimated signal or estimated noise.
+</p>
+</body>
+</html>
+

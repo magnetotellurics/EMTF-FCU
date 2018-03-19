@@ -1,0 +1,17 @@
+<html>
+<head>
+<script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+</head>
+<body>
+<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h2>Continuous 1-D Inversion</h2>
+<p>&nbsp;</p>
+Continuous, one-dimensional inversions can be computed from <a href="apparent_resistivity.html">apparent resistivity</a> data sets. <br>
+The Bostick inverse is the most common. A continuous inverse consists of two data sets. One record must contain a set of values representing depths which are strictly increasing. The units for the depths are meters unless the UNITS option specifies UNITS=FT. The second record contains a set of resistivity values which correspond one-to-one with the depth values. It is always in units of W-meters.<br>
+Any continuous inversion data blocks in a data section are assumed to be derived from the preceding <a href="apparent_resistivity.html">apparent resistivity</a> data blocks. If this is not true, it should be clearly indicated in the >INFO section. Unless specified otherwise by the ROT option, the inversions are assumed to be computed for the measurements in the measurement directions as defined in the >DEFINEMEAS section.<br>
+For tensor MT data, continuous inversions may be delivered for up to four apparent resistivities, although inversions for only RHOXY and RHOYX are usually included. 
+The TYPE option should clearly indicate the technique used for inversion. If additional explanation is indicated, it should be in the >INFO section. For Bostick inversion, the type should indicate whether the apparent resistivity amplitudes (TYPE=BOSTICK-AMP) or Hilbert transform of the phase (TYPE=BOSTICK-PHS) data was used for estimating the slopes used in the inversion.
+<p>&nbsp;</p>
+</body>
+</html>
+
