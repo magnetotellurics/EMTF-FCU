@@ -258,6 +258,7 @@ module global
 	integer           :: num_points
 	character(len=10) :: units
 	integer           :: dec_level
+	logical           :: skip_freq = .false.
   end type FreqInfo_t
 
 
@@ -775,6 +776,23 @@ contains
          end do
 
     end function find_data_type
+
+
+    function count_freq(F) result (N)
+        type(FreqInfo_t), intent(in)   :: F(:)
+        integer                        :: N
+        ! local
+        integer i
+
+        N = 0
+
+        do i = 1,size(F)
+            if (.not. F(i)%skip_freq) then
+                N = N+1
+            end if
+        end do
+
+    end function count_freq
 
 
     function TF_name(DataType,InputChannel,OutputChannel) result (tfname)

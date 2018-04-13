@@ -348,9 +348,13 @@ program edi2xml
 
   ! Read and write frequency blocks: transfer functions, variance, covariance
   if (.not. UserInfo%MetadataOnly) then
-  call initialize_xml_freq_block_output(nf)
+  call initialize_xml_freq_block_output(count_freq(F))
 
   do k=1,nf
+
+      if (F(k)%skip_freq) then
+        cycle
+      end if
 
       call new_data_block('Period',F(k))
 

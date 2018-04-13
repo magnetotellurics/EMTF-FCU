@@ -39,6 +39,6 @@ foreach $input_fname(@take_files){
 	$_ = $input_fname;
 	s/^(\w+)\.(\w+)$/$1\.xml/;
 	$output_fname = $_;
-	print "z2xml $input_dir/$input_fname $output_dir/$output_fname\n";
-	system("z2xml $input_dir/$input_fname $output_dir/$output_fname silent\n");
+	print "z2xml $input_dir/$input_fname $output_dir/$output_fname silent 0.0\n";
+	system("z2xml $input_dir/$input_fname $output_dir/$output_fname silent 0.0\n");
 }

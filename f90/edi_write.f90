@@ -449,10 +449,12 @@ contains
         fs = freq(idx)
         zs = z(idx,:)
         vs = v(idx,:)
-        ts = t(idx,:)
-        vts = vt(idx,:)
         rs = r(idx)
-        rts = rt(idx)
+        if (tipper_present) then
+            ts = t(idx,:)
+            vts = vt(idx,:)
+            rts = rt(idx)
+        end if
 
 !=======================================================================
 !

@@ -11,6 +11,7 @@ module edi_read
   logical                        :: new_block, new_section
   character(len=80)              :: this_block, this_section
   integer                        :: missing_value_count=0
+  integer                        :: missing_freq_count=0
   character(len=80)              :: dummy_data_value
   integer                        :: ios,i,j,k,maxblks=0
   integer                        :: Ex=0,Ey=0,Hx=0,Hy=0,Hz=0,Rx=0,Ry=0
@@ -19,6 +20,7 @@ module edi_read
   save   :: new_block, new_section
   save   :: this_block, this_section
   save   :: missing_value_count
+  save   :: missing_freq_count
   save   :: dummy_data_value
   save   :: maxblks
   save   :: block_info_line, spectra_line
@@ -1397,15 +1399,18 @@ contains
   end subroutine parse_edi_data_block_name
 
 
-  subroutine read_edi_spectra_block(nch,data)
+  subroutine read_edi_spectra_block(nch,data,dummy)
     integer, intent(in)         :: nch ! number of channels incl remote; read nch^2
     real(8), intent(out)        :: data(nch,nch) ! real data values
+    integer, intent(out)        :: dummy(nch,nch) ! equals 1 for dummy values
     character(len=200)          :: line, var, value, data_block
     character(len=20000)        :: datalist
     integer                     :: i
+    character(len=16), pointer  :: data_str(:)
 
     data_block = this_block
     datalist = ''
+    dummy(1:nch,1:nch) = 0
 
     do
         read (edifile,'(a200)',iostat=ios) line
@@ -1425,15 +1430,17 @@ contains
         end if
     end do
 
-    ! if we find a missing value, provide a warning (for now)
-    ! will implement replacing these with NaNs if needed
-    !  - this will require a little book keeping
-    i=index(datalist,dummy_data_value)
-    if (i>0) then
-        write(*,*) 'Warning: found a missing value ',trim(dummy_data_value)
-        write(*,*) 'Warning: replacing with NaN not currently implemented'
-        missing_value_count = missing_value_count + 1
-    end if
+    call parse_str(datalist,' ',data_str)
+    do i = 1,nch*nch
+        if (trim(data_str(i)) .eq. dummy_data_value) then
+            ! if we find a missing value, provide a warning (for now)
+            ! will implement replacing these with NaNs if needed
+            ! note that this will only work if the chars in EMPTY match missing values!
+            !write(*,*) 'Warning: found a missing value ',trim(dummy_data_value)
+            missing_value_count = missing_value_count + 1
+            dummy((i-1)/nch+1,mod(i-1,nch)+1) = 1
+        end if
+    end do
 
     read (datalist, *, iostat=ios) data
     if (ios /= 0) then
@@ -1468,6 +1475,7 @@ contains
     real(8)             :: rotspec,bw,avgt
     real(8)             :: value(nch,nch) ! real data values
     complex(8)          :: cavg(nch,nch) ! complex data values
+    integer             :: dummy(nch,nch) ! dummy value indicator
     character(4)        :: type ! real/imag
     integer             :: row,col ! row & column in a matrix
     integer             :: i,j,k,n,ind,istat,imp,tip
@@ -1518,7 +1526,10 @@ contains
 
     do k=1,nf
         if ((ios /= 0) .or. (trim(this_block) .eq. 'END')) then
-            if (missing_value_count>0) then
+            if(missing_freq_count>0) then
+                write(*,*) 'Found ',missing_freq_count,' missing frequencies. Will skip these entirely.'
+            end if
+            if(missing_value_count>0) then
                 write(*,*) 'Found ',missing_value_count,' data type components with missing values'
                 write(*,*) 'Warning: these are not dealt with correctly yet; need to replace with NaNs'
                 write(*,*) 'Warning: the necessary book keeping has not yet been implemented'
@@ -1535,7 +1546,14 @@ contains
         if (.not.silent) then
             write(*,'(a25,a10,a2,i4,a7,es14.3)') 'Reading DATA from block ',trim(this_block),' #',k,': FREQ=',freq
         end if
-        call read_edi_spectra_block(nch,value)
+        call read_edi_spectra_block(nch,value,dummy)
+        if (sum(dummy)==nch*nch) then
+            write(*,*) 'Skipping frequency #',k,': it has no valid data'
+            missing_value_count = missing_value_count - nch*nch
+            missing_freq_count = missing_freq_count + 1
+            F(k)%skip_freq = .true.
+            cycle
+        end if
         !rspectra(j,:,:) = value
         ! unpack spectra matrix but do not rotate - set delta to zero
         ! (we may rotate later using the covariance matrices)

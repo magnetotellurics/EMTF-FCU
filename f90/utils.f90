@@ -15,6 +15,7 @@ real(8), parameter    :: R2D = 180.d0/PI
 real(8), parameter    :: EPS = 1.0e-8
 real(8), parameter    :: EarthRad = 6378.137; ! km
 real(8), parameter    :: EarthEcc2 = 0.00669437999014 ! eccentricity squared
+integer, parameter    :: max_str_len = 20000 ! maximum string length
 
 
 ! **********************************************************************
@@ -640,33 +641,52 @@ end function
 ! Note that the declaration
 ! character(len=len(str1)) function fix_spaces(str1) result (str2)
 ! causes Intel compiler to choke; thus replaced with len=800 [AK, 2015]
+! Edit 13 April 2018: Also remove duplicate spaces, except trailing.
 
-character(len=800) function fix_spaces(str1) result (str2)
+character(len=max_str_len) function fix_spaces(str1) result (str2)
 
      character(len=*), intent(in) :: str1
+     character(len=max_str_len)   :: strtmp
      ! local
-     integer i
+     integer i,j,count_space
 
-     str2 = str1
-     do i=1,len(str2)
-        select case (ichar(str2(i:i)))
+     strtmp = str1
+     do i=1,len(strtmp)
+        select case (ichar(strtmp(i:i)))
             case (ascii_lf)
                 ! new line
-                str2(i:i) = achar(ascii_sp)
+                strtmp(i:i) = achar(ascii_sp)
             case (ascii_cr)
                 ! carriage return
-                str2(i:i) = achar(ascii_sp)
+                strtmp(i:i) = achar(ascii_sp)
             case (ascii_ht)
                 ! horizontal tab
-                str2(i:i) = achar(ascii_sp)
+                strtmp(i:i) = achar(ascii_sp)
             case (ascii_vt)
                 ! vertical tab
-                str2(i:i) = achar(ascii_sp)
+                strtmp(i:i) = achar(ascii_sp)
             case (ascii_sp)
                 ! space
             case default
                 ! otherwise, do nothing
         end select
+     end do
+
+     count_space = 0
+     i = 1
+     str2(1:len(str2)) = ' '
+     do j=1,len(strtmp)
+        if (ichar(strtmp(j:j)) .eq. ascii_sp) then
+            count_space = count_space+1
+        else
+            count_space = 0
+        end if
+        if (count_space <= 1) then
+            str2(i:i) = strtmp(j:j)
+            i = i+1
+        else
+            cycle
+        end if
      end do
 
 end function fix_spaces
@@ -676,7 +696,8 @@ end function fix_spaces
 ! up into segments using a one-char delimiter.
 ! For efficiency, uses a hardcoded max number of strings = 100.
 ! Written by: Anna Kelbert, 11 March 2013
-! Last edited on 16 Aug 2013 to remove trailing tabs & new lines.
+! Last edited on 13 Apr 2018 to remove duplicate and leading spaces,
+! trailing tabs & new lines.
 ! This subroutine is distributed under the terms of
 ! the GNU Lesser General Public License.
 
@@ -686,20 +707,21 @@ subroutine parse_str(str,delim,strarray,num)
      character(len=*), pointer    :: strarray(:)
      integer, intent(out), optional :: num
      ! local
-     character(len=len(str)) :: strtail,temp
+     character(len=len(str)) :: adjstr,strtail,temp
      integer                 :: i1,i2,istat,L,N,i,j(100)
 
      L = len(str)
-     strtail = str
+     adjstr = adjustl(fix_spaces(str))
+     strtail = adjstr
      i1 = 1
      N = 1
      j(N) = i1 ! start index for delim-separated string
      do ! marking and counting
         i2 = i1 + index(strtail,delim) - 1
-        !write(*,*) 'DEBUG: ',i1,delim,i2,strtail
+        !write(*,*) 'DEBUG: ',i1,delim,i2,trim(strtail)
         if (i2>i1) then
-            temp = str(i1:i2-1)
-            strtail = trim(str(i2+1:L))
+            temp = adjstr(i1:i2-1)
+            strtail = trim(adjstr(i2+1:L))
             i1 = i2 + 1
             N = N + 1
             j(N) = i1
@@ -714,10 +736,10 @@ subroutine parse_str(str,delim,strarray,num)
      end if
      allocate(strarray(N), stat=istat)
      do i = 1,N-1
-        strarray(i) = trim(adjustl(fix_spaces(str(j(i):j(i+1)-2))))
+        strarray(i) = trim(adjustl(fix_spaces(adjstr(j(i):j(i+1)-2))))
         !write(*,*) 'DEBUG: ',j(i),j(i+1),L,strarray(i)
      end do
-     strarray(N) = trim(adjustl(fix_spaces(str(j(N):L))))
+     strarray(N) = trim(adjustl(fix_spaces(adjstr(j(N):L))))
 
      if (present(num)) then
         num = N
