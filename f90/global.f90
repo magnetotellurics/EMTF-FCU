@@ -148,6 +148,7 @@ module global
     logical           :: MetadataOnly ! true to produce XML file with no data
     logical           :: AddDeclToSiteLayout ! channel azimuths should be relative to geographic North
     logical           :: UseImpedanceRotationForAll ! set to true to default to ZROT for tipper
+    logical           :: ChannelsOnTwoLines ! set to false to default
     character(len=80) :: Basename ! base name of the original file to be submitted
     character(len=10) :: Image ! extension of the image file, if present
     character(len=10) :: Original ! extension of the original file to be submitted
@@ -249,6 +250,7 @@ module global
     character(len=80)  :: Gain
     character(len=19)  :: MeasuredDate
     integer            :: OrderInFile
+    logical            :: NeedTwoLines = .false.
   end type Channel_t
 
 
@@ -291,6 +293,7 @@ module global
     ! note that scalar data types are supported by setting nchin & nchout to 1.
     type(DataType_t)        :: Type
     integer                 :: nf, nchin, nchout ! number of input and output channels
+    integer,   dimension(:,:,:), pointer :: Empty ! (nf,nchout,nchin) 1 for empty data
     real(8),   dimension(:),     pointer :: Rot  ! rotation angles (FOR ALL FREQUENCIES!)
     complex(8),dimension(:,:,:), pointer :: Matrix ! (nf,nchout,nchin)
     real(8),   dimension(:,:,:), pointer :: Var ! (nf,nchout,nchin)
@@ -425,6 +428,7 @@ contains
         Info%MetadataOnly = .FALSE.
         Info%AddDeclToSiteLayout = .FALSE.
         Info%UseImpedanceRotationForAll = .FALSE.
+        Info%ChannelsOnTwoLines = .FALSE.
         Info%Basename = ' '
         Info%Image = ' '
         Info%Original = ' '
@@ -608,6 +612,7 @@ contains
         Data%nchout = nchout
 
         allocate(Data%Rot(nf), stat=istat)
+        allocate(Data%Empty(nf,nchout,nchin), stat=istat)
         allocate(Data%Matrix(nf,nchout,nchin), stat=istat)
         allocate(Data%Var(nf,nchout,nchin), stat=istat)
         allocate(Data%Cov(nf,nchin*nchout,nchin*nchout), stat=istat)
@@ -630,6 +635,7 @@ contains
         ! so data have to be initialized to zero (non NaNs);
         ! instead, use NaNs to replace the missing data
         Data%Rot = 0.0d0
+        Data%Empty = 0
         Data%Matrix = dcmplx(0.0d0,0.0d0)
         Data%Var = 0.0d0
         Data%Cov = dcmplx(0.0d0,0.0d0)
@@ -661,6 +667,7 @@ contains
 
         if (Data%allocated) then
             deallocate(Data%Rot, stat=istat)
+            deallocate(Data%Empty, stat=istat)
             deallocate(Data%Matrix, stat=istat)
             deallocate(Data%Var, stat=istat)
             deallocate(Data%Cov, stat=istat)

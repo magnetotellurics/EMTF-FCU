@@ -969,7 +969,8 @@ contains
 
     do i=1,Data%nchout
        do j=1,Data%nchin
-          if (isnan(dreal(Data%Matrix(iPer,i,j))) .or. isnan(dimag(Data%Matrix(iPer,i,j)))) then
+          !if (isnan(dreal(Data%Matrix(iPer,i,j))) .or. isnan(dimag(Data%Matrix(iPer,i,j)))) then
+          if (Data%Empty(iPer,i,j)==1) then
             if (Data%Type%isScalar) then
                 write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type)),' period ',iPer
             else

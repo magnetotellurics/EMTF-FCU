@@ -10,18 +10,18 @@ module edi_read
   character(len=200)             :: temp, block_info_line, spectra_line
   logical                        :: new_block, new_section
   character(len=80)              :: this_block, this_section
+  character(len=16)              :: dummy_data_value
   integer                        :: missing_value_count=0
   integer                        :: missing_freq_count=0
-  character(len=80)              :: dummy_data_value
   integer                        :: ios,i,j,k,maxblks=0
   integer                        :: Ex=0,Ey=0,Hx=0,Hy=0,Hz=0,Rx=0,Ry=0
 
   save   :: edifile
   save   :: new_block, new_section
   save   :: this_block, this_section
+  save   :: dummy_data_value
   save   :: missing_value_count
   save   :: missing_freq_count
-  save   :: dummy_data_value
   save   :: maxblks
   save   :: block_info_line, spectra_line
   save   :: Ex,Ey,Hx,Hy,Hz,Rx,Ry
@@ -273,8 +273,10 @@ contains
             ! ignore for now; may revisit if needed
             write(0,*) 'Warning: BINDATA value ',value,' ignored'
         case ('EMPTY') ! represents 'no data'
-            Info%DummyDataValue = value
-            dummy_data_value = value
+            if (trim(Info%DummyDataValue) .eq. '') then
+                Info%DummyDataValue = value
+            end if
+            dummy_data_value = Info%DummyDataValue
         case ('DUMMY')
             ! empty line
         case default
@@ -489,11 +491,11 @@ contains
   end subroutine read_edi_info
 
 
-  subroutine parse_edi_channel(value, Channel, need_second_line, orientation_exists)
+  subroutine parse_edi_channel(value, Channel, orientation_exists, need_second_line)
     character(len=*), intent(in)     :: value
     type(Channel_t), intent(inout)   :: Channel
-    logical, intent(inout), optional :: need_second_line
     logical, intent(inout), optional :: orientation_exists
+    logical, intent(inout), optional :: need_second_line
     ! local
     character(len=200)               :: line, var
     character(len=1)                 :: edichar1, edichar2
@@ -509,6 +511,7 @@ contains
     j(:) = 0
     edichar1 = temp(1:1)
     Channel%Type = edichar1
+    ! For 2-line channels, concatenate the two lines for second reading...
     if (present(orientation_exists)) then
         orientation_exists = .false.
     end if
@@ -545,12 +548,14 @@ contains
         i1 = index(trim(temp),'ID=')
         i2 = index(trim(temp),'ID =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*,iostat=istat) Channel%NumericID
+        if (i > 1) then
+            read(temp(i+3:N),*,iostat=istat) Channel%NumericID
+        end if
         ! read in channel azimuth
         i1 = index(trim(temp),'AZM=')
         i2 = index(trim(temp),'AZM =')
         i = max(i1,i2+1)
-        if (i>1) then
+        if (i > 1) then
             read(temp(i+4:N),*,iostat=istat) Channel%Orientation
             if (present(orientation_exists)) then
                 orientation_exists = .true.
@@ -560,11 +565,15 @@ contains
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*,iostat=istat) Channel%X
+        if (i > 1) then
+            read(temp(i+2:N),*,iostat=istat) Channel%X
+        end if
         i1 = index(trim(temp),'Y=')
         i2 = index(trim(temp),'Y =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*,iostat=istat) Channel%Y
+        if (i > 1) then
+            read(temp(i+2:N),*,iostat=istat) Channel%Y
+        end if
         i1 = index(trim(temp),'Z=')
         i2 = index(trim(temp),'Z =')
         i = max(i1,i2+1)
@@ -574,11 +583,15 @@ contains
         i1 = index(trim(temp),'X2=')
         i2 = index(trim(temp),'X2 =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*,iostat=istat) Channel%X2
+        if (i > 1) then
+            read(temp(i+3:N),*,iostat=istat) Channel%X2
+        end if
         i1 = index(trim(temp),'Y2=')
         i2 = index(trim(temp),'Y2 =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*,iostat=istat) Channel%Y2
+        if (i > 1) then
+            read(temp(i+3:N),*,iostat=istat) Channel%Y2
+        end if
         i1 = index(trim(temp),'Z2=')
         i2 = index(trim(temp),'Z2 =')
         i = max(i1,i2+1)
@@ -629,12 +642,14 @@ contains
         i1 = index(trim(temp),'ID=')
         i2 = index(trim(temp),'ID =')
         i = max(i1,i2+1)
-        read(temp(i+3:N),*,iostat=istat) Channel%NumericID
+        if (i > 1) then
+            read(temp(i+3:N),*,iostat=istat) Channel%NumericID
+        end if
         ! read in channel azimuth
         i1 = index(trim(temp),'AZM=')
         i2 = index(trim(temp),'AZM =')
         i = max(i1,i2+1)
-        if (i>1) then
+        if (i > 1) then
             read(temp(i+4:N),*,iostat=istat) Channel%Orientation
             if (present(orientation_exists)) then
                 orientation_exists = .true.
@@ -644,11 +659,15 @@ contains
         i1 = index(trim(temp),'X=')
         i2 = index(trim(temp),'X =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*,iostat=istat) Channel%X
+        if (i > 1) then
+            read(temp(i+2:N),*,iostat=istat) Channel%X
+        end if
         i1 = index(trim(temp),'Y=')
         i2 = index(trim(temp),'Y =')
         i = max(i1,i2+1)
-        read(temp(i+2:N),*,iostat=istat) Channel%Y
+        if (i > 1) then
+            read(temp(i+2:N),*,iostat=istat) Channel%Y
+        end if
         i1 = index(trim(temp),'Z=')
         i2 = index(trim(temp),'Z =')
         i = max(i1,i2+1)
@@ -709,6 +728,11 @@ contains
 
     nch = 5 ! default total number of channels that are really used
     allocate(Channel(nch), stat=istat)
+    if (UserInfo%ChannelsOnTwoLines) then
+        do i = 1,nch
+            Channel(i)%NeedTwoLines = .true.
+        end do
+    end if
 
     hch = 0 ! start counting magnetic channels
     ech = 0 ! start counting electric channels
@@ -748,11 +772,12 @@ contains
                 end if
                 write(0,*) 'Warning: remote channel number ',num,' will not be copied to the new file format'
             else
-                call parse_edi_channel(value,Channel(num),channel_on_two_lines,orientation_exists)
-                if (channel_on_two_lines) then
+                call parse_edi_channel(value,Channel(num),orientation_exists,channel_on_two_lines)
+                if (channel_on_two_lines .or. Channel(num)%NeedTwoLines) then
                     read (edifile,'(a200)',iostat=ios) line
                     value = trim(value)//trim(line)
-                    call parse_edi_channel(value,Channel(num))
+                    call parse_edi_channel(value,Channel(num),orientation_exists)
+                    write(*,*) 'Parsed the channel ',trim(Channel(num)%ID),' from two lines...'
                 end if
                 if (trim(Channel(num)%Type) .eq. 'H') then
                     hch = hch+1
@@ -1083,15 +1108,18 @@ contains
   end subroutine read_edi_data_header
 
 
-  subroutine read_edi_data_block(nf,data)
+  subroutine read_edi_data_block(nf,data,dummy)
     integer, intent(in)         :: nf ! number of freq to read
     real(8), intent(out)        :: data(nf) ! real data values
+    integer, intent(out)        :: dummy(nf) ! equals 1 for dummy values
     character(len=200)          :: line, var, value, data_block
     character(len=20000)        :: datalist
     integer                     :: i
+    character(len=16), pointer  :: data_str(:)
 
     data_block = this_block
     datalist = ''
+    dummy(1:nf) = 0
 
     do
         read (edifile,'(a200)',iostat=ios) line
@@ -1110,15 +1138,27 @@ contains
         end if
     end do
 
-    ! if we find a missing value, provide a warning (for now)
+    call parse_str(datalist,' ',data_str)
+    do i = 1,nf
+        if ((trim(data_str(i)) .eq. trim(dummy_data_value)) .or. (trim(data_str(i)) .eq. '-'//trim(dummy_data_value))) then
+            ! if we find a missing value, provide a warning (for now)
+            ! will implement replacing these with NaNs if needed
+            ! note that this will only work if the chars in EMPTY match missing values!
+            !write(*,*) 'Warning: found a missing value ',trim(Info%DummyDataValue)
+            missing_value_count = missing_value_count + 1
+            dummy(i) = 1
+        end if
+    end do
+
+        ! if we find a missing value, provide a warning (for now)
     ! will implement replacing these with NaNs if needed
     !  - this will require a little book keeping
-    i=index(datalist,dummy_data_value)
-    if (i>0) then
-        write(*,*) 'Warning: found a missing value ',trim(dummy_data_value)
-        write(*,*) 'Warning: replacing with NaN not currently implemented'
-        missing_value_count = missing_value_count + 1
-    end if
+    !i=index(datalist,dummy_data_value)
+    !if (i>0) then
+    !    write(*,*) 'Warning: found a missing value ',trim(dummy_data_value)
+    !    write(*,*) 'Warning: replacing with NaN not currently implemented'
+    !    missing_value_count = missing_value_count + 1
+    !end if
 
     read (datalist, *, iostat=ios) data
     if (ios /= 0) then
@@ -1133,6 +1173,7 @@ contains
     integer, intent(in)         :: nf ! number of freq to read
     real(8)        		:: value(nf) ! real data values
     complex(8)			:: cvalue(nf) ! complex data values
+    integer             :: dummy(nf) ! 1 for dummy data
     character(4)		:: type ! real/imag
     integer		  	    :: row,col ! row & column in a matrix
     integer		  	    :: i,j,k,ind,istat,irot
@@ -1160,7 +1201,7 @@ contains
         stat = ''
         value = 0.0d0
         call parse_edi_data_block_name(this_block,TFname,row,col,type,stat)
-        call read_edi_data_block(nf,value)
+        call read_edi_data_block(nf,value,dummy)
         if (type .eq. 'imag') then
             cvalue = dcmplx(0.0d0,value)
         else
@@ -1192,8 +1233,10 @@ contains
                 ! initialize data to zero (not NaN!) to make this work
                 if (Data(ind)%Type%isScalar) then
                     Data(ind)%Matrix(:,1,1) = Data(ind)%Matrix(:,1,1) + cvalue
+                    Data(ind)%Empty(:,1,1) = dummy
                 else
                     Data(ind)%Matrix(:,row,col) = Data(ind)%Matrix(:,row,col) + cvalue
+                    Data(ind)%Empty(:,row,col) = dummy
                 end if
                 ! if a rotation value is specified in the block header, use that in place of rotation block
                 irot = index(block_info_line,'ROT=')
@@ -1432,7 +1475,7 @@ contains
 
     call parse_str(datalist,' ',data_str)
     do i = 1,nch*nch
-        if (trim(data_str(i)) .eq. dummy_data_value) then
+        if ((trim(data_str(i)) .eq. trim(dummy_data_value)) .or. (trim(data_str(i)) .eq. '-'//trim(dummy_data_value))) then
             ! if we find a missing value, provide a warning (for now)
             ! will implement replacing these with NaNs if needed
             ! note that this will only work if the chars in EMPTY match missing values!

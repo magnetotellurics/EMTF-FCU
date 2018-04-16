@@ -215,6 +215,7 @@ contains
     Info%DefaultDataQuality = getInteger(doc,"DefaultDataQuality")
     Info%DataQualityComment = getString(doc,"DataQualityComment")
     Info%DateFormat = getString(doc,"DateFormat")
+    Info%DummyDataValue = getString(doc,"DummyDataValue")
     computesitecoords = -1
     computesitecoords = getInteger(doc,"ComputeSiteCoords")
     if (computesitecoords==1) then
@@ -249,6 +250,7 @@ contains
     Info%Original = getString(doc,'Original')
 	Info%AddDeclToSiteLayout = getInteger(doc,"AddDeclToSiteLayout")
 	Info%UseImpedanceRotationForAll = getInteger(doc,"UseImpedanceRotationForAll")
+    Info%ChannelsOnTwoLines = getInteger(doc,"ChannelsOnTwoLines")
 	Info%RunList = getString(doc,"RunList")
 	Info%SiteList = getString(doc,"SiteList")
 	Info%ChannelList = getString(doc,"ChannelList")
