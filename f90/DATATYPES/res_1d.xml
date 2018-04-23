@@ -1,0 +1,7 @@
+<Estimate name="RES1D" type="complex">
+	<Description>True resistivity (W-m) computed from RHO using 1-D continuous inverse
+</Description>
+	<Intention>estimate</Intention>
+	<Tag>res_1d</Tag>
+        <SeeAlso>apparent resistivity</SeeAlso>                         
+</Estimate>

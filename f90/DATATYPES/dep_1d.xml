@@ -1,0 +1,6 @@
+<Estimate name="DEP1D" type="complex">
+	<Description>Depth computed from RHO using 1-D continuous inverse</Description>
+	<Intention>estimate</Intention>
+	<Tag>dep_1d</Tag>
+        <SeeAlso>1D inversion</SeeAlso>                         
+</Estimate>
