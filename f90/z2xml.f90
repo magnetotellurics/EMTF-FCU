@@ -286,6 +286,7 @@ program z2xml
   	call add_ProcessingInfo(UserInfo)
   end if
 
+  if (.not. UserInfo%MetadataOnly) then
   call new_element('StatisticalEstimates')
   do i=1,size(Estimate)
     call add_Estimate(Estimate(i))
@@ -297,6 +298,7 @@ program z2xml
     call add_DataType(DataType(i))
   end do
   call end_element('DataTypes')
+  end if
 
   call new_element('SiteLayout')
   call new_channel_block('InputChannels')

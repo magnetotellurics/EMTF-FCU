@@ -315,6 +315,7 @@ program edi2xml
   	call add_ProcessingInfo(UserInfo)
   end if
 
+  if (.not. UserInfo%MetadataOnly) then
   call new_element('StatisticalEstimates')
   do i=1,size(Estimate)
     call add_Estimate(Estimate(i))
@@ -326,6 +327,7 @@ program edi2xml
     call add_DataType(DataType(i))
   end do
   call end_element('DataTypes')
+  end if
 
   call add_GridOrigin(ediLocalSite)
 
