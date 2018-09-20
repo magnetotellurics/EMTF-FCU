@@ -31,6 +31,7 @@ module edi_write
   integer                         :: ldataid,lacqby,lyname
   integer                         :: lcdate,lclat,lclong,lcelev,lsectid
   character(16), save             :: clat,clong,celev
+  character(16), save             :: refclat,refclong,refcelev
   integer                         :: ios,i,j,k,ii,jj,kk,ns
   integer                         :: nf,nch,nchin,nchout,nchoutH,nchoutE
   real                            :: c1,s1,rot,a
@@ -204,8 +205,10 @@ contains
     type(Channel_t), dimension(:), intent(in)      :: OutputElectric
     type(Site_t), intent(in)                       :: Site
     ! local variables
+      real(8)                                      :: lat, long, elev
       integer ex_x1,ex_x2,ex_y1,ex_y2,ey_x1,ey_x2,ey_y1,ey_y2
       real site_x, site_y, site_z
+      logical empty
 
     nchin = size(InputMagnetic)
     nchoutH = size(OutputMagnetic)
@@ -230,9 +233,25 @@ contains
       write(edifile,*) 'UNITS=M'
       write(edifile,*) 'REFTYPE=CART'
 
-      write(edifile,*) 'REFLAT=', clat(1:lclat)
-      write(edifile,*) 'REFLONG=', clong(1:lclong)
-      write(edifile,*) 'REFELEV=', celev(1:lcelev)
+      lat = Site%Coords%Origin%lat
+      long = Site%Coords%Origin%lon
+      elev = Site%Coords%Origin%elev
+
+      refclat=deg2dms(lat)
+      refclong=deg2dms(long)
+      write(refcelev,'(i4)') int(elev)
+
+      lclat=16
+      lclong=16
+      lcelev=16
+      call trmstr( refclat,  lclat,  empty)
+      call trmstr( refclong, lclong, empty)
+      call trmstr( refcelev, lcelev, empty)
+
+
+      write(edifile,*) 'REFLAT=', refclat(1:lclat)
+      write(edifile,*) 'REFLONG=', refclong(1:lclong)
+      write(edifile,*) 'REFELEV=', refcelev(1:lcelev)
 
 !-----------------------------------------------------------------------
 !     EMEAS & HMEAS blocks for each site

@@ -176,6 +176,15 @@ contains
 	end if
 	UserInfo%ProcessingTag = id
 
+    infoNode => item(getElementsByTagName(doc, "GridOrigin"),0)
+    if (hasContent(infoNode,"Location")) then
+        Site%Coords%Origin%lat = getReal(infoNode,"Latitude")
+        Site%Coords%Origin%lon = getReal(infoNode,"Longitude")
+        Site%Coords%Origin%elev = getReal(infoNode,"Elevation")
+    else
+        Site%Coords%Origin = Site%Location
+    end if
+
 	infoNode => item(getElementsByTagName(doc, "Copyright"),0)
 	UserInfo%Copyright%ReleaseStatus = getString(infoNode,"ReleaseStatus")
     if (hasContent(infoNode,"ConditionsOfUse")) then
