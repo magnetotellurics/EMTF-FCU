@@ -1241,6 +1241,18 @@ contains
                 ! if a rotation value is specified in the block header, use that in place of rotation block
                 irot = index(block_info_line,'ROT=')
                 if (irot>0) then
+                    i = index(block_info_line,'NONE')
+                    if (i>0) then
+                        ! do nothing
+                        cycle
+                    end if
+                    i = index(block_info_line,'NORTH')
+                    if (i>0) then
+                        write(0,*) 'Overwriting the rotation for data type ',trim(TFname),' with NORTH'
+                        Data(ind)%Rot(:) = 0.0d0
+                        Data(ind)%orthogonal = .true.
+                        cycle
+                    end if
                     read(block_info_line(irot+4:len_trim(block_info_line)),*,iostat=istat) rotval
                     if (istat==0) then
                         write(0,*) 'Overwriting the rotation value for data type ',trim(TFname),' with ',rotval

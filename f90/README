@@ -5,7 +5,7 @@
 1. Install a g95 or similar Fortran 95 compiler.
 
 2. Download the newest version of FoX library,
-   http://uszla.me.uk/space/software/FoX/
+   https://github.com/andreww/fox
    and unpack it to a directory (call it $FOX_DIR).
 
 3. Compile FoX package
@@ -29,8 +29,19 @@ The following standalone programs are available:
    edi2xml
    z2xml
    xml2z
-   xml2edi (limited functionality)
+   xml2edi
    z2edi
+
+Additionally, these standalone codes may be used for quick
+coordinate rotation:
+
+   xml2xml
+   edi2edi
+   z2z
+
+Note that, other than for the XML files, there is no guarantee 
+that the metadata will be preserved in the same exact format
+upon a coordinate rotation, or that no information will be lost.
 
 For the above conversion codes, Perl script counterparts
 are available to perform batch processing.
@@ -47,16 +58,19 @@ are available to perform batch processing.
         the sense that they will only work correctly
         with those XML files that contain the right data
         types and statistical estimates for this type
-        of storage; moreover, xml2edi is further restricted
-        by it's output routine (needs to be updated)
+        of storage
 
     z2edi:
 
         standalone code that requires no additional inputs
 
-NB: z2xml has an additional capability to rotate transfer
-    functions to geographic coordinates for input (this
-    choice can be made in config.xml).
+All conversion codes have an additional capability to rotate the
+transfer functions to an arbitrary coordinate system. This 
+capability ought to be executed with great care for EDI files,
+which are inherently limited in that they do not store full
+covariance matrices. Rotation, therefore, invalidates the error
+bars in the files. While we try to do something reasonable in this
+case, rotation without a covariance matrix is mathematically invalid.
 
 +-----------------------+
 |  Creating XML files   |
@@ -91,55 +105,206 @@ NB: If you have the lists, use them by first running
     z2xml, then xml2edi. Note that the program z2edi
     does not require FoX library to be installed, and
     it does not use the additional XML information.
-   
+ 
++--------------------------+
+|  Example program calls   |
++--------------------------+
+
+Use Case A: Convert EDI to XML, while rotating to geographic coordinates.
+
+1. First, create a config.xml file and place it in the same directory 
+   as the original EDI file.
+
+2. Make sure that the code is able to locate f90/DATATYPES and f90/COPYRIGHT.
+   This is done by either copying them to your local directory, or by
+   setting the "homedir" variable in global.f90 to your f90 folder.
+
+3. Run
+
+./edi2xml filename.edi filename.xml [verbose|silent] 0.0
+
+Setting the third input variable to "silent" will suppress most output.
+
+The forth input variable is any number (for an orthogonal coordinate system),
+or "sitelayout" to revert back to the original site orientations.
+
+Rotation will be lossless is the original EDI file is an EDI SPECTRA.
+Otherwise, rotation will still be attempted but the output error bars 
+may not be physically interpreted, since the original EDI does not have
+sufficient information for an unambiguous coordinate rotation.
+
+
+Use Case B: Rotate EMTF XML to original site orientation.
+
+Since the complete original site layout is now stored in the XML channels
+details, rotations of XML files are fully reversible.
+
+./xml2xml geographic.xml original.xml [verbose|silent] sitelayout
+
+
+Use Case C: Convert XML to Z-file without additional rotation.
+
+./xml2z filename.xml filename.zrr
+
++----------------------------+
+|  Code update 18 Sep 2018   |
++----------------------------+
+
+Bug fixes:
+
+This release includes two major bug fixes. 
+
+1. z2xml & z2edi. 
+
+In devising the XML schema, we have attempted to maintain compatibility with the 
+historical Society of Exploration Geophysicists (SEG) Data Interchange Standard 1987, 
+also known as EDI, to the extent possible. This includes maintaining consistency in 
+the element names (e.g., Z, T, etc) and the statistical estimates, where relevant. 
+However, the definition of variances in the EDI files, as we surmised after reading 
+the manual extra carefully, deviates from the definition that we've been using for 
+computation of variances from the covariance matrices in Z-files, by a factor of 2. 
+Specifically, variances in EDI files are given for a complex number, not for the real 
+or imaginary part, and are therefore twice those that we computed from Z-files. 
+This inconsistency resulted in different definitions of Z.VAR and T.VAR between 
+the data originally converted from Z-files, and data that came from the historic EDIs.
+
+This update eliminates this inconsistency. From now on, all XML files include the variance 
+as defined by the historic EDI format, i.e., the variance of the complex transfer function 
+component. To compute the standard error of a real or imaginary part, e.g., for plotting, 
+one would divide the variance by 2, then take square root (i.e. $Std = \sqrt{Var/2}$). 
+To plot the error bars for a real or imaginary part, one would then multiply that number by 2.
+
+2. edi2xml & xml2edi.
+
+A second major bug fix involves correctly interpreting the rotations in EDI files. 
+The old database had a warning to the effect that EDI files were not rotated. In the 
+previous release of this database, we were trying to be careful about the error bars 
+which can be corrupted if an EDI file is rotated in the absence of the full error 
+covariance matrices. Unfortunately, this resulted in some occasions of file archiving 
+where the data were not rotated to geographic, while the rotation information (ZROT) 
+was not preserved in the archive. This is now corrected, and all data can now be rotated 
+to geographic with a caveat that the error bars are not to be trusted on these occasions.
+
+This fix also involves the rotation of tipper data in EDI files. Specifically, in the case 
+of an EDI file that only has ZROT information (i.e., impedance rotation) but no indication 
+as to how the tipper are rotated (e.g., no TROT), the code defaulted to assuming that the 
+tippers are oriented according to the channels orientations. However, it is much more 
+typical for people who omit TROT information to mean that the tippers are oriented the 
+same way as the impedance. So we have now changed the code's behavior to default to ZROT 
+information for the tippers, if TROT or any other indication of tipper rotations is missing.
+
+
+Conceptual and schema changes:
+
+We have updated the XML schema to include unambiguous rotation information. 
+TF orientation is now stored in <Orientation> tag. Original site layout is
+always preserved in the <Channels> block.
+
+
+Code improvements:
+
+The updated EMTF FCU v4.0 code includes numerous improvements to correctly 
+parse and rotate many variants of EDI files. Among the major improvements 
+are the ability to correctly read EDI SPECTRA files and compute the full 
+error covariances from such files. This allows for arbitrary rotations of 
+the transfer functions without loss of information, even after conversion 
+to the XML. 
+
+We have also now implemented frequency-by-frequency rotations that allow 
+conversion to XML of data that went through a principal axis rotation algorithm. 
+This can now be undone for EDI files that include variable ZROT values, even 
+though the resultant error estimates may suffer. 
+
+Finally, we have implemented a general rotation algorithm that allows for 
+rotation from an arbitrary (not necessarily orthogonal) set of channel 
+orientations, to an arbitrary orthogonal coordinate system, or back. 
+All of these improvements have allowed us to archive a large number 
+of historic MT TFs that were previously unaccessible for archiving. 
+  
  Enjoy!
  
- Anna Kelbert
- 11 Nov 2007  
- 
+ Anna Kelbert, USGS
+
+ Release Date: 11 Nov 2007  
+  Last Update: 18 Sep 2018
+
+
 -------------------------------------------------------------------
-Example config.xml as of 9 Sep 2013:
+Example config.xml as of 18 Sep 2018:
 
 <Configuration>
-    <TimeSeriesArchived>1</TimeSeriesArchived>
-    <Network>EM</Network>
-    <Project>USArray</Project>
-    <Survey>Transportable Array</Survey>
-    <YearCollected>2007</YearCollected>
-    <Country>USA</Country>
-    <Tags>impedance,tipper</Tags> 
-    <Citation>
-      <Title>USArray TA Magnetotelluric Transfer Functions</Title>
-      <Authors>Adam Schultz, Gary D. Egbert, Anna Kelbert</Authors>
-      <Year>2007</Year>
-      <DOI></DOI>
-    </Citation>
-    <ReleaseStatus>Unrestricted Release</ReleaseStatus>
-	<AcquiredBy>GSY-USA, Inc.</AcquiredBy>
-	<Creator>
-		<Name>Gary Egbert and Prasanta Patro</Name>
-		<Email>egbert@coas.oregonstate.edu</Email>
-		<Org>Oregon State University</Org>
-		<OrgUrl>http://oregonstate.edu</OrgUrl>
-	</Creator>
-	<Submitter>
-		<Name>Anna Kelbert</Name>
-		<Email>anya@coas.oregonstate.edu</Email>
-		<Org>Oregon State University</Org>
-		<OrgUrl>http://oregonstate.edu</OrgUrl>		
-	</Submitter>
-	<ProcessedBy>Gary Egbert and Prasanta Patro</ProcessedBy>
-	<ProcessingSoftware>
-		<Name>EMTF</Name>
-		<LastMod>1998-03-24</LastMod>
-		<Author>Gary Egbert</Author>
-	</ProcessingSoftware>
-	<OrthogonalGeographic>1</OrthogonalGeographic>
-	<Image>png</Image>
-	<Original>zrr</Original>
-	<RunList>Runs.xml</RunList>
-	<SiteList>Sites.xml</SiteList>
-	<ChannelList>Channels.xml</ChannelList>
+  <!-- set this to zero or omit if the time series are not archived at IRIS DMC -->
+  <TimeSeriesArchived>0</TimeSeriesArchived>
+  <Network>EM</Network>
+  <!-- optionally, specify an external URL for the data or metadata -->
+  <ExternalUrl></ExternalUrl>
+  <ExternalUrlInfo></ExternalUrlInfo>
+  <!-- Project / Survey combination used to allocate survey DOI; Project should contain no spaces -->
+  <Project>EMSOC</Project>
+  <Survey>Sant Andreas Fault</Survey>
+  <!-- Project.SiteID.YearCollected used to create a unique data ID in SPUD -->
+  <YearCollected>2005-2006</YearCollected>
+  <Country>USA</Country>
+  <!-- required, comma-separated list of data types. See list of possible types -->
+  <Tags>
+  impedance,tipper
+  </Tags>
+  <!-- data citation -->
+  <Citation>
+    <Title>Magnetotelluric transfer functions in the San Andreas Fault zone, CA, USA</Title>
+    <Authors>Becken, M., Ritter, O., Park, S. K., Bedrosian, P. A., Weckmann, U. and Weber, M.</Authors>
+    <Year>1999-2010</Year>
+    <SurveyDOI>doi:10.17611/DP/EMTF/EMSOC/SAF</SurveyDOI>
+  </Citation>
+        <THANKS>THANKS.txt</THANKS>
+        <PAPERS>PAPERS.txt</PAPERS>
+  <!-- optional additional copyright information --> 
+  <README>readme.txt</README>
+  <!-- supported options: Unrestricted Release / Academic Use Only / Conditions Apply -->
+  <ReleaseStatus>Paper Citation Required</ReleaseStatus>
+  <!-- allows to supplement missing provenance and processing information from files -->
+  <AcquiredBy>Stephen K. Park</AcquiredBy>
+  <Creator>
+    <Name>Stephen K. Park</Name>
+    <Email>magneto@ucrmt.ucr.edu</Email>
+    <Org>University of California Riverside</Org>
+    <OrgUrl>http://www.ucr.edu/</OrgUrl>
+  </Creator>
+  <Submitter>
+    <Name>Lana Erofeeva</Name>
+    <Email>serofeev@coas.oregonstate.edu</Email>
+    <Org>Oregon State University</Org>
+    <OrgUrl>http://oregonstate.edu</OrgUrl>
+  </Submitter>
+  <ProcessedBy>Stephen K. Park</ProcessedBy>
+  <ProcessingSoftware>
+    <Name>Jimmy Larsen's robust processing code (using negative conjugate of output)</Name>
+    <LastMod>01/21/06</LastMod>
+    <Author></Author>
+  </ProcessingSoftware>
+  <SignConvention>exp(+ i\omega t)</SignConvention>
+  <!-- tells the conversion codes how to parse the EDI and whether to write the INFO block to XML -->
+  <ComputeSiteCoords>0</ComputeSiteCoords>
+  <DateFormat>MM/DD/YY</DateFormat>
+  <DummyDataValue>.10000000E+33</DummyDataValue>
+  <ChannelsOnTwoLines>1</ChannelsOnTwoLines>
+  <UseImpedanceRotationForAll>1</UseImpedanceRotationForAll>
+  <ParseEDIInfo>0</ParseEDIInfo>
+  <WriteEDIInfo>0</WriteEDIInfo>
+  <IgnoreSiteNameInFile>1</IgnoreSiteNameInFile>
+  <DefaultSiteName>Parkfield, CA, USA</DefaultSiteName>
+  <DefaultStartTime>2006-06-01T00:00:00</DefaultStartTime>
+  <DefaultEndTime>2006-06-01T00:00:00</DefaultEndTime>
+  <DefaultDataQuality>5</DefaultDataQuality>
+  <DataQualityComment>Default data quality assigned to the survey at archiving</DataQualityComment>
+ <!-- this option is for those who only wish to upload the metadata -->
+  <MetadataOnly>0</MetadataOnly>
+  <!-- if these extensions are present, the corresponding files are also submitted to SPUD, and displayed -->
+  <Image>png</Image>
+  <Original>edi</Original>
+  <!-- optional attachment - full name required -->
+  <Attachment></Attachment>
+  <AttachmentInfo></AttachmentInfo>
 </Configuration>
 
 -------------------------------------------------------------------

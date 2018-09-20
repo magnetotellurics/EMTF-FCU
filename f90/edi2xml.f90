@@ -8,11 +8,11 @@ program edi2xml
   use read_lists
   implicit none
 
-  character(len=80) :: input_dir='./'
-  character(len=80) :: edi_file=''
-  character(len=80) :: xml_file=''
-  character(len=80) :: config_file = 'config.xml'
-  character(len=80) :: edisitename, basename, verbose='', action='',rotinfo=''
+  character(len=800) :: input_dir='./'
+  character(len=800) :: edi_file=''
+  character(len=800) :: xml_file=''
+  character(len=800) :: config_file = 'config.xml'
+  character(len=800) :: edisitename, basename, verbose='', action='',rotinfo=''
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: ediLocalSite, ediRemoteSite, xmlLocalSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
