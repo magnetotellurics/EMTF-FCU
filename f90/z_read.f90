@@ -232,6 +232,8 @@ contains
 		Site%Location%lon = Site%Location%lon - 360.0d0
 	end if
 
+	Site%Coords%Origin = Site%Location
+
     read (zfile,'(a120)',iostat=ios) temp
     i = index(temp,'channels')
     j = index(temp,'frequencies')

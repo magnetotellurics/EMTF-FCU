@@ -1,6 +1,7 @@
 program z2edi
 
   use global
+  use rotation
   use z_read
   use edi_write
   implicit none
@@ -15,6 +16,7 @@ program z2edi
   type(Site_t)                                 :: zLocalSite
   type(Run_t), dimension(:), allocatable       :: Run
   type(FreqInfo_t), dimension(:), allocatable  :: F
+  character(100), dimension(:), pointer        :: Notes
   type(Channel_t), dimension(:), pointer       :: InputMagnetic
   type(Channel_t), dimension(:), pointer       :: OutputMagnetic
   type(Channel_t), dimension(:), pointer       :: OutputElectric
@@ -94,68 +96,91 @@ program z2edi
   allocate(InvSigCov(nf,nchin,nchin), ResidCov(nf,nchout,nchout), stat=istat)
   allocate(U(nchin,nchin), V(nchout,nchout), stat=istat)
 
-  ! Initialize rotation to a different azimuth on output (zero indicates orthogonal geographic)
-  !  - note that rotations will only work with two input and two output electric channels at present
-  if (rotate) then
-     call rotate_z_channels(InputMagnetic, OutputElectric, U, V, azimuth)
-  end if
-
   do k=1,nf
 
      !write (*,*) 'Reading period number ', k
      call read_z_period(F(k), TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
 
-     ! rotate to new azimuth (generality limited to 4 or 5 channels)
-     if (rotate) then
-        call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
-     end if
+     ! rotate to orthogonal geographic coordinates (generality limited to 4 or 5 channels)
+     !if (UserInfo%OrthogonalGeographic > 0) then
+     !  call rotate_z_period(U, V, TF(k,:,:), TFVar(k,:,:), InvSigCov(k,:,:), ResidCov(k,:,:))
+     !end if
 
   end do
 
   ! Save into Data structure
-  allocate(DataType(2), Data(2), stat=istat)
+  allocate(DataType(2), stat=istat)
+  call init_data_type(DataType(1),'tipper')
+  call init_data_type(DataType(2),'impedance')
 
-  if (nchoutH > 0) then
-      call init_data_type(DataType(1),'tipper')
-      call init_data(Data(1), DataType(1), nf, nchin, nchoutH)
-      do i = 1,nchoutH
-        do j = 1,nchin
-            Data(1)%Matrix(:,i,j) = TF(:,i,j) !T
-            Data(1)%Var(:,i,j) = TFVar(:,i,j)
-        end do
+  ! Create generic Data variables
+  write(*,*) 'Allocating data structure for ',size(DataType),' data types'
+  allocate(Data(size(DataType)), stat=istat)
+  do i=1,size(DataType)
+    select case (DataType(i)%Output)
+    case ('H')
+        call init_data(Data(i),DataType(i),nf,nchin,nchoutH)
+        Data(i)%Matrix = TF(:,1:nchoutH,:)
+        Data(i)%Var = TFVar(:,1:nchoutH,:)
+        Data(i)%InvSigCov = InvSigCov(:,:,:)
+        Data(i)%ResidCov = ResidCov(:,1:nchoutH,1:nchoutH)
+        Data(i)%fullcov = .true.
+        Data(i)%orthogonal = .false.
+    case ('E')
+        call init_data(Data(i),DataType(i),nf,nchin,nchoutE)
+        Data(i)%Matrix = TF(:,nchoutH+1:nchout,:)
+        Data(i)%Var = TFVar(:,nchoutH+1:nchout,:)
+        Data(i)%InvSigCov = InvSigCov(:,:,:)
+        Data(i)%ResidCov = ResidCov(:,nchoutH+1:nchout,nchoutH+1:nchout)
+        Data(i)%fullcov = .true.
+        Data(i)%orthogonal = .false.
+    case default
+        write(0,*) 'Error: unable to initialize the data variable #',i
+    end select
+  end do
+
+  call read_z_notes(Notes)
+
+  ! Finished reading Z-file
+
+
+  if (rotate) then
+      zLocalSite%Orientation = trim(orthogonalORsitelayout)
+      zLocalSite%AngleToGeogrNorth = azimuth
+      write(0,*) 'WARNING: by writing to EDI file, full error covariances are LOST'
+      write(0,*) '         but first, we are using them to rotate'
+      do i=1,size(DataType)
+        if (DataType(i)%derivedType) then
+            write(*,*) 'Rotation of derived types is presently not supported. ', &
+                'Data type ',trim(DataType(i)%Tag),' will NOT be rotated and may need to be recomputed.'
+            cycle
+        end if
+        write(*,'(a10,a20,a4,a10,a14,f9.6)') &
+            'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
+        select case (DataType(i)%Output)
+        case ('H')
+            call rotate_data(Data(i),InputMagnetic,OutputMagnetic,orthogonalORsitelayout,azimuth)
+        case ('E')
+            call rotate_data(Data(i),InputMagnetic,OutputElectric,orthogonalORsitelayout,azimuth)
+        case default
+            ! do nothing
+        end select
       end do
-  else
-      call init_data_type(DataType(1))
-      call init_data(Data(1), DataType(1), nf, nchin, nchoutH)
   end if
 
-  if (nchoutE > 0) then
-      call init_data_type(DataType(2),'impedance')
-      call init_data(Data(2), DataType(2), nf, nchin, nchoutE)
-      do i = 1,nchoutE
-        do j = 1,nchin
-            Data(2)%Matrix(:,i,j) = TF(:,i+nchoutH,j) !Z
-            Data(2)%Var(:,i,j) = TFVar(:,i+nchoutH,j)
-        end do
-      end do
-  else
-      call init_data_type(DataType(2))
-      call init_data(Data(2), DataType(2), nf, nchin, nchoutH)
-  end if
 
   call date_and_time(date)
 
   edi_date = date(5:6)//'/'//date(7:8)//'/'//date(3:4)
 
-  call write_edi_file(edi_file,edi_date,zsitename,zLocalSite, &
-						InputMagnetic,OutputMagnetic,OutputElectric,F,Data,Info)
-
-! Correct workflow to implement:
-! call initialize_edi_output(edi_file)
-! call write_edi_header(edi_date, zsitename, xmlLocalSite, UserInfo)
-! call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, xmlLocalSite)
-! call write_edi_data(F, Data)
-! call end_edi_output()
+  ! Implemented correct EDI output workflow that can accommodate any rotations and metadata;
+  ! currently writing out impedances and tippers, if present
+  call initialize_edi_output(edi_file)
+  call write_edi_header(edi_date, zsitename, zLocalSite, Info)
+  call write_edi_info(zLocalSite, Info)
+  call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, zLocalSite)
+  call write_edi_data(zsitename, F, Data)
+  call end_edi_output()
 
   ! Exit nicely
   deallocate(InputMagnetic, OutputMagnetic, OutputElectric, stat=istat)
