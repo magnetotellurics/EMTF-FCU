@@ -2,7 +2,7 @@
 ! EMTF File Conversion Utilities (FCU) is a set of routines written in Fortran 90 !
 ! that is intended to allow conversion between the commonly used electromagnetic  !
 ! transfer function file formats: Gary Egbert's Z-files, Society of Exploration   !
-! Geophysicists MT/EMAP Data Interchange Standard (EDI) and SPUD XML.             !
+! Geophysicists MT/EMAP Data Interchange Standard (EDI) and EMTF XML.             !
 !                                                                                 !
 ! EMTF FCU are intended to complement Gary Egbert's EMTF electromagnetic data     !
 ! processing and plotting software.                                               !
@@ -12,20 +12,26 @@
 ! by the Free Software Foundation.                                                !
 !                                                                                 !
 ! This software is distributed in the hope that it will be useful, but WITHOUT    !
-! ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   ! 
+! ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   !
 ! FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.  !
 !                                                                                 !
-! Copyright (C) Anna Kelbert, 2007-2013                                           !
-!               College of Oceanic and Atmospheric Sciences                       !
+! Copyright (C) Anna Kelbert, 2007-2015                                           !
+!               College of Earth, Ocean and Atmospheric Sciences                  !
 !               Oregon State University                                           !
-!               104 COAS Administration Building                                  !
+!               104 CEOAS Administration Building                                 !
 !               Corvallis, OR 97331-5503                                          !
 !                                                                                 !
-! Please contact the author with questions, comments or corrections               !
-!                              at the e-mail address:  anya@coas.oregonstate.edu  !
-!                                        or by phone: +1-541-737-3964             !
+! Copyright (C) Anna Kelbert, 2015-2018                                           !
+!               Geomagnetism Program                                              !
+!               U.S. Geological Survey                                            !
+!               1711 Illinois St                                                  !
+!               Golden, CO 80401                                                  !
 !                                                                                 !
-! EMTF FCU uses Fortran XML library (FoX),(C) 2005-2013 Toby White, Andrew Walker !
+! Please contact the author with questions, comments or corrections               !
+!                              at the e-mail address:  akelbert@usgs.gov          !
+!                                        or by phone: +1-303-273-8448             !
+!                                                                                 !
+! EMTF FCU uses Fortran XML library (FoX),(C) 2005-2018 Toby White, Andrew Walker !
 ! This library is freely available under a 3-clause BSD license; which is         !
 ! to say that it may be used freely by any and all users; redistributed in        !
 ! source or binary form; provided that the copyright notices are maintained.      !
@@ -36,5 +42,9 @@
 ! (C) 2002-2005 J. K. Dewhurst, S. Sharma and C. Ambrosch-Draxl (LGPL),           !
 ! (C) 2003 Purple Sage Computing Solutions, Inc. (GPLv2 or above).                !
 ! Module write_edi.f90 is an adaptation of a modified version of wrt_edi.f,       !
-! originally written by Randie Mackie.                                            !
-!---------------------------------------------------------------------------------!
+! originally written by Randie Mackie. In the latest version, EDI write           !
+! routines have been generalized and rewritten from scratch. The author           !
+! would like to thank Xavier Garcia for kindly sharing his EDI SPECTRA            !
+! reading and rotation code with the author. This code has not been incorporated  !
+! in EMTF XML code base, but has served as an invaluable point of reference.      !
+!---------------------------------------------------------------------------------! 
