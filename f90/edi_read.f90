@@ -203,12 +203,16 @@ contains
                 Info%ProcessedBy = trim(value)
             end if
         case ('ACQDATE') ! date of (start of) data acquisition
-            Site%Start = datestr(value,Info%DateFormat,'XML')
+            if (len_trim(value) > 0) then ! deal with the empty string problem
+                Site%Start = datestr(value,Info%DateFormat,'XML')
+            end if
             if (.not. silent) then
                 write(*,*) 'Acquired date in XML format: ',trim(Site%Start)
             end if
         case ('ENDDATE')
-            Site%End = datestr(value,Info%DateFormat,'XML')
+            if (len_trim(value) > 0) then ! deal with the empty string problem
+                Site%End = datestr(value,Info%DateFormat,'XML')
+            end if
         case ('FILEDATE')
             if (.not. Info%IgnoreProcessDateInFile) then
                 Info%ProcessDate = datestr(value,Info%DateFormat,'YYYY-MM-DD')
@@ -394,6 +398,11 @@ contains
         if (.not.silent) then
             write(*,*) 'Reading ',trim(var),' line: ',trim(value)
         end if
+        ! some formatting (e.g. BIRRP output) records location blocks here, but we're still in INFO
+        if ((trim(this_block) == 'LATITUDE') .or. (trim(this_block) == 'LONGITUDE') &
+            .or. (trim(this_block) == 'ELEVATION') .or. (trim(this_block) == 'AZIMUTH')) then
+            this_block = 'INFO'
+        end if
         ! ... or if the new section DEFINEMEAS is encountered
         if (new_section) then
             n = i-1
@@ -446,7 +455,7 @@ contains
                     end if
                 end if
 
-                if (readinfo) then
+                if (readinfo .and. (len_trim(value) > 0)) then ! deal with the empty string problem
                     select case (trim(var))
                         case ('AZIMUTH')
                             read(value,*) Site%Declination
