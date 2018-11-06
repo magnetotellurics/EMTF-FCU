@@ -26,7 +26,7 @@ contains
     ! local
     character(len=200) copyright_file, datatype_file, readme_file, acknowledgements_file, selectedpubs_file, config_path
     logical copyright_exists, datatype_exists, readme_exists, acknowledgements_exist, selectedpubs_exist
-    integer i,ios,istat,fileid,ediparse,ediwrite,computesitecoords,metadataonly,tsinfo,ntags,ignoresitename
+    integer i,ios,istat,fileid,ediparse,ediwrite,computesitecoords,metadataonly,tsinfo,ntags,ignoresitename,ignoredate
 
   	call init_user_info(Info)
 
@@ -211,6 +211,20 @@ contains
         Info%IgnoreSiteNameInFile = .TRUE.
     elseif (ignoresitename==0) then
         Info%IgnoreSiteNameInFile = .FALSE.
+    end if
+    ignoredate = -1
+    ignoredate = getInteger(doc,"IgnoreAcquiredDateInFile")
+    if (ignoredate==1) then
+        Info%IgnoreAcquiredDateInFile = .TRUE.
+    elseif (ignoredate==0) then
+        Info%IgnoreAcquiredDateInFile = .FALSE.
+    end if
+    ignoredate = -1
+    ignoredate = getInteger(doc,"IgnoreProcessDateInFile")
+    if (ignoredate==1) then
+        Info%IgnoreProcessDateInFile = .TRUE.
+    elseif (ignoredate==0) then
+        Info%IgnoreProcessDateInFile = .FALSE.
     end if
     Info%DefaultDataQuality = getInteger(doc,"DefaultDataQuality")
     Info%DataQualityComment = getString(doc,"DataQualityComment")

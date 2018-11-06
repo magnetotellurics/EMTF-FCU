@@ -128,7 +128,8 @@ module global
     character(len=nid):: RemoteSiteID
     character(len=80) :: ProcessedBy
     character(len=80) :: ProcessDate
-    logical           :: IgnoreProcessDateInFile ! for EDI input to use when FILEDATA is meaningless
+    logical           :: IgnoreAcquiredDateInFile ! for EDI input to use when ACQDATE is meaningless
+    logical           :: IgnoreProcessDateInFile ! for EDI input to use when FILEDATE is meaningless
     character(len=80) :: ProcessingSoftware
     character(len=80) :: ProcessingSoftwareLastMod
     character(len=80) :: ProcessingSoftwareAuthor
@@ -411,6 +412,7 @@ contains
         Info%RemoteSiteID = ' '
         Info%ProcessedBy = ' '
         Info%ProcessDate = ' '
+        Info%IgnoreAcquiredDateInFile = .FALSE.
         Info%IgnoreProcessDateInFile = .FALSE.
         Info%ProcessingSoftware = ' '
         Info%ProcessingSoftwareLastMod = ' '

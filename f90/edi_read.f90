@@ -203,11 +203,13 @@ contains
                 Info%ProcessedBy = trim(value)
             end if
         case ('ACQDATE') ! date of (start of) data acquisition
-            if (len_trim(value) > 0) then ! deal with the empty string problem
-                Site%Start = datestr(value,Info%DateFormat,'XML')
-            end if
-            if (.not. silent) then
-                write(*,*) 'Acquired date in XML format: ',trim(Site%Start)
+            if (.not. Info%IgnoreAcquiredDateInFile) then
+                if (len_trim(value) > 0) then ! deal with the empty string problem
+                    Site%Start = datestr(value,Info%DateFormat,'XML')
+                end if
+                if (.not. silent) then
+                    write(*,*) 'Acquired date in XML format: ',trim(Site%Start)
+                end if
             end if
         case ('ENDDATE')
             if (len_trim(value) > 0) then ! deal with the empty string problem
