@@ -2,24 +2,38 @@
 |    Compilation     |
 +--------------------+
 
+EMTF FCU is written in Fortran 90 and may be compiled with any
+command-line or visual modern Fortran compiler. However, this
+EMTF FCU compilation guide assumes a command-line environment.
+This is straightforward under Linux or on a Mac: just open any
+shell terminal. On Windows, command-line environment is most
+easily achieved by installing the Cygwin package.
+
 1. Install a g95 or similar Fortran 95 compiler.
 
 2. Download the newest version of FoX library,
    https://github.com/andreww/fox
-   and unpack it to a directory (call it $FOX_DIR).
+   and unpack it to a directory (call it $FOX_LIB).
 
 3. Compile FoX package
 
-   cd $FOX_DIR
+   cd $FOX_LIB
    ./configure
    make
 
-NB: if you move FoX in the file system, reconfigure 
+NB: if you move FoX in the file system, reconfigure
 
 4. Go back to the EMTF FCU directory. Change the
-   $FOX_DIR variable in the Makefile to your FoX path.
-   Compile EMTF FCU by typing 'make'.
-   
+   $FOX_LIB variable in the Makefile to your FoX path.
+   Change $BIN_DIR variable in the Makefile to an existing
+   directory where you wish your executables to reside.
+
+5. Optional: to create XML files, set "homedir" variable
+   in the header of global.f90 to the directory where
+   DATATYPES and COPYRIGHT folder reside (usually, same as code).
+
+6. Compile EMTF FCU by typing 'make'.
+
 +--------------------+
 |  Program usage     |
 +--------------------+
@@ -39,7 +53,7 @@ coordinate rotation:
    edi2edi
    z2z
 
-Note that, other than for the XML files, there is no guarantee 
+Note that, other than for the XML files, there is no guarantee
 that the metadata will be preserved in the same exact format
 upon a coordinate rotation, or that no information will be lost.
 
@@ -65,7 +79,7 @@ are available to perform batch processing.
         standalone code that requires no additional inputs
 
 All conversion codes have an additional capability to rotate the
-transfer functions to an arbitrary coordinate system. This 
+transfer functions to an arbitrary coordinate system. This
 capability ought to be executed with great care for EDI files,
 which are inherently limited in that they do not store full
 covariance matrices. Rotation, therefore, invalidates the error
@@ -76,43 +90,43 @@ case, rotation without a covariance matrix is mathematically invalid.
 |  Creating XML files   |
 +-----------------------+
 
-   This comment only applies if you would like to 
+   This comment only applies if you would like to
    use the software to create XML files for archiving
    or self-describing data storage, using z2xml or edi2xml.
 
    In this case, you need to create an XML configuration
    file called config.xml and place it in the same
    directory as your input data. Example file pasted below.
-   
+
    This is where any user-defined information about
-   the experiment is stored. You could also use the 
-   configuration file to specify one or all XML lists 
-   with additional metadata: Sites.xml, Runs.xml, Channels.xml. 
+   the experiment is stored. You could also use the
+   configuration file to specify one or all XML lists
+   with additional metadata: Sites.xml, Runs.xml, Channels.xml.
    The lists, if specified, should contain experiment metadata
-   information about runs and the sites, as described in 
+   information about runs and the sites, as described in
    module read_lists.f90. Examples below.
 
 NB: For the XML lists, the attributes are optional;
     they are automatically inserted for easier reading
     with Matlab. All elements are also optional.
-   
+
    The program looks for the configuration file and the
-   optional XML lists in the same directory where the 
+   optional XML lists in the same directory where the
    input file is located. If the lists are not found,
    the programs run without the additional information.
-   
+
 NB: If you have the lists, use them by first running
     z2xml, then xml2edi. Note that the program z2edi
     does not require FoX library to be installed, and
     it does not use the additional XML information.
- 
+
 +--------------------------+
 |  Example program calls   |
 +--------------------------+
 
 Use Case A: Convert EDI to XML, while rotating to geographic coordinates.
 
-1. First, create a config.xml file and place it in the same directory 
+1. First, create a config.xml file and place it in the same directory
    as the original EDI file.
 
 2. Make sure that the code is able to locate f90/DATATYPES and f90/COPYRIGHT.
@@ -129,7 +143,7 @@ The forth input variable is any number (for an orthogonal coordinate system),
 or "sitelayout" to revert back to the original site orientations.
 
 Rotation will be lossless is the original EDI file is an EDI SPECTRA.
-Otherwise, rotation will still be attempted but the output error bars 
+Otherwise, rotation will still be attempted but the output error bars
 may not be physically interpreted, since the original EDI does not have
 sufficient information for an unambiguous coordinate rotation.
 
@@ -152,80 +166,80 @@ Use Case C: Convert XML to Z-file without additional rotation.
 
 Bug fixes:
 
-This release includes two major bug fixes. 
+This release includes two major bug fixes.
 
-1. z2xml & z2edi. 
+1. z2xml & z2edi.
 
-In devising the XML schema, we have attempted to maintain compatibility with the 
-historical Society of Exploration Geophysicists (SEG) Data Interchange Standard 1987, 
-also known as EDI, to the extent possible. This includes maintaining consistency in 
-the element names (e.g., Z, T, etc) and the statistical estimates, where relevant. 
-However, the definition of variances in the EDI files, as we surmised after reading 
-the manual extra carefully, deviates from the definition that we've been using for 
-computation of variances from the covariance matrices in Z-files, by a factor of 2. 
-Specifically, variances in EDI files are given for a complex number, not for the real 
-or imaginary part, and are therefore twice those that we computed from Z-files. 
-This inconsistency resulted in different definitions of Z.VAR and T.VAR between 
+In devising the XML schema, we have attempted to maintain compatibility with the
+historical Society of Exploration Geophysicists (SEG) Data Interchange Standard 1987,
+also known as EDI, to the extent possible. This includes maintaining consistency in
+the element names (e.g., Z, T, etc) and the statistical estimates, where relevant.
+However, the definition of variances in the EDI files, as we surmised after reading
+the manual extra carefully, deviates from the definition that we've been using for
+computation of variances from the covariance matrices in Z-files, by a factor of 2.
+Specifically, variances in EDI files are given for a complex number, not for the real
+or imaginary part, and are therefore twice those that we computed from Z-files.
+This inconsistency resulted in different definitions of Z.VAR and T.VAR between
 the data originally converted from Z-files, and data that came from the historic EDIs.
 
-This update eliminates this inconsistency. From now on, all XML files include the variance 
-as defined by the historic EDI format, i.e., the variance of the complex transfer function 
-component. To compute the standard error of a real or imaginary part, e.g., for plotting, 
-one would divide the variance by 2, then take square root (i.e. $Std = \sqrt{Var/2}$). 
+This update eliminates this inconsistency. From now on, all XML files include the variance
+as defined by the historic EDI format, i.e., the variance of the complex transfer function
+component. To compute the standard error of a real or imaginary part, e.g., for plotting,
+one would divide the variance by 2, then take square root (i.e. $Std = \sqrt{Var/2}$).
 To plot the error bars for a real or imaginary part, one would then multiply that number by 2.
 
 2. edi2xml & xml2edi.
 
-A second major bug fix involves correctly interpreting the rotations in EDI files. 
-The old database had a warning to the effect that EDI files were not rotated. In the 
-previous release of this database, we were trying to be careful about the error bars 
-which can be corrupted if an EDI file is rotated in the absence of the full error 
-covariance matrices. Unfortunately, this resulted in some occasions of file archiving 
-where the data were not rotated to geographic, while the rotation information (ZROT) 
-was not preserved in the archive. This is now corrected, and all data can now be rotated 
+A second major bug fix involves correctly interpreting the rotations in EDI files.
+The old database had a warning to the effect that EDI files were not rotated. In the
+previous release of this database, we were trying to be careful about the error bars
+which can be corrupted if an EDI file is rotated in the absence of the full error
+covariance matrices. Unfortunately, this resulted in some occasions of file archiving
+where the data were not rotated to geographic, while the rotation information (ZROT)
+was not preserved in the archive. This is now corrected, and all data can now be rotated
 to geographic with a caveat that the error bars are not to be trusted on these occasions.
 
-This fix also involves the rotation of tipper data in EDI files. Specifically, in the case 
-of an EDI file that only has ZROT information (i.e., impedance rotation) but no indication 
-as to how the tipper are rotated (e.g., no TROT), the code defaulted to assuming that the 
-tippers are oriented according to the channels orientations. However, it is much more 
-typical for people who omit TROT information to mean that the tippers are oriented the 
-same way as the impedance. So we have now changed the code's behavior to default to ZROT 
+This fix also involves the rotation of tipper data in EDI files. Specifically, in the case
+of an EDI file that only has ZROT information (i.e., impedance rotation) but no indication
+as to how the tipper are rotated (e.g., no TROT), the code defaulted to assuming that the
+tippers are oriented according to the channels orientations. However, it is much more
+typical for people who omit TROT information to mean that the tippers are oriented the
+same way as the impedance. So we have now changed the code's behavior to default to ZROT
 information for the tippers, if TROT or any other indication of tipper rotations is missing.
 
 
 Conceptual and schema changes:
 
-We have updated the XML schema to include unambiguous rotation information. 
+We have updated the XML schema to include unambiguous rotation information.
 TF orientation is now stored in <Orientation> tag. Original site layout is
 always preserved in the <Channels> block.
 
 
 Code improvements:
 
-The updated EMTF FCU v4.0 code includes numerous improvements to correctly 
-parse and rotate many variants of EDI files. Among the major improvements 
-are the ability to correctly read EDI SPECTRA files and compute the full 
-error covariances from such files. This allows for arbitrary rotations of 
-the transfer functions without loss of information, even after conversion 
-to the XML. 
+The updated EMTF FCU v4.0 code includes numerous improvements to correctly
+parse and rotate many variants of EDI files. Among the major improvements
+are the ability to correctly read EDI SPECTRA files and compute the full
+error covariances from such files. This allows for arbitrary rotations of
+the transfer functions without loss of information, even after conversion
+to the XML.
 
-We have also now implemented frequency-by-frequency rotations that allow 
-conversion to XML of data that went through a principal axis rotation algorithm. 
-This can now be undone for EDI files that include variable ZROT values, even 
-though the resultant error estimates may suffer. 
+We have also now implemented frequency-by-frequency rotations that allow
+conversion to XML of data that went through a principal axis rotation algorithm.
+This can now be undone for EDI files that include variable ZROT values, even
+though the resultant error estimates may suffer.
 
-Finally, we have implemented a general rotation algorithm that allows for 
-rotation from an arbitrary (not necessarily orthogonal) set of channel 
-orientations, to an arbitrary orthogonal coordinate system, or back. 
-All of these improvements have allowed us to archive a large number 
-of historic MT TFs that were previously unaccessible for archiving. 
-  
+Finally, we have implemented a general rotation algorithm that allows for
+rotation from an arbitrary (not necessarily orthogonal) set of channel
+orientations, to an arbitrary orthogonal coordinate system, or back.
+All of these improvements have allowed us to archive a large number
+of historic MT TFs that were previously unaccessible for archiving.
+
  Enjoy!
- 
+
  Anna Kelbert, USGS
 
- Release Date: 11 Nov 2007  
+ Release Date: 11 Nov 2007
   Last Update: 18 Sep 2018
 
 
@@ -258,7 +272,7 @@ Example config.xml as of 18 Sep 2018:
   </Citation>
         <THANKS>THANKS.txt</THANKS>
         <PAPERS>PAPERS.txt</PAPERS>
-  <!-- optional additional copyright information --> 
+  <!-- optional additional copyright information -->
   <README>readme.txt</README>
   <!-- supported options: Unrestricted Release / Academic Use Only / Conditions Apply -->
   <ReleaseStatus>Paper Citation Required</ReleaseStatus>
@@ -358,11 +372,11 @@ Example run list element as of 9 Sep 2013:
     <NewEpoch idx="1" type="double" size="1 1">1</NewEpoch>
     <Count idx="1" type="double" size="1 1">1</Count>
     <NChannels idx="1" type="double" size="1 1">5</NChannels>
-    <SiteInstalledBy idx="1" type="char" size="0 0"/> 
-    <FieldComments idx="1" type="char" size="0 0"/> 
-    <MetaDataCheckedBy idx="1" type="char" size="0 0"/> 
-    <Comments idx="1" type="char" size="0 0"/> 
-    <Errors idx="1" type="char" size="0 0"/> 
+    <SiteInstalledBy idx="1" type="char" size="0 0"/>
+    <FieldComments idx="1" type="char" size="0 0"/>
+    <MetaDataCheckedBy idx="1" type="char" size="0 0"/>
+    <Comments idx="1" type="char" size="0 0"/>
+    <Errors idx="1" type="char" size="0 0"/>
   </Run>
 
 -------------------------------------------------------------------
@@ -378,7 +392,7 @@ Example channel list element as of 9 Sep 2013:
     <Manufacturer idx="1" type="char" size="1 11">Barry Narod</Manufacturer>
     <InstrumentName idx="1" type="char" size="1 4">NIMS</InstrumentName>
     <InstrumentID idx="1" type="char" size="1 7">2612-04</InstrumentID>
-    <InstrumentConfig idx="1" type="char" size="0 0"/> 
+    <InstrumentConfig idx="1" type="char" size="0 0"/>
     <TimePeriod idx="1" type="struct" size="1 1">
       <Start idx="1" type="char" size="1 19">2007-08-31T21:51:38</Start>
       <End idx="1" type="char" size="1 19">2007-08-31T22:52:15</End>

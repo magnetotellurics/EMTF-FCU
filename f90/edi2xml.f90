@@ -1,3 +1,35 @@
+! **********************************************************************
+! edi2xml reads in electromagnetic tranfer functions (EMTFs) in the EDI
+! format; rotates to chosen coordinate system; writes out an EMTF XML file.
+!
+! Example usage:
+! >  ./edi2xml filename.edi
+! converts to filename.xml by default; if ROT information is present in
+! the EDI, this uses these values for orientation; otherwise, assumes a
+! assumes 'sitelayout' orientation of data blocks. Does not rotate.
+! >  ./edi2xml filename.edi filename.xml [verbose|silent] 0.0
+! to rotate to geographic North.
+! >  ./edi2xml filename.edi filename.xml [verbose|silent] sitelayout
+! to rotate to original site layout as saved in the channels block.
+!
+! Requires a local config.xml file with metadata that's missing from
+! the EDI file. The config.xml file supplies survey-specific metadata;
+! only one is needed for each survey. Note that 'SurveyDOI' sets a
+! unique data object identifier for the survey, which will then get
+! minted at IRIS upon submission to IRIS EMTF database. Do not make one
+! unless you plan to submit to IRIS. Finally, note that the 'Tags'
+! element is critical for file parsing, so make sure that you have the
+! right data types there. Type ./edi2xml to print an example config.xml.
+!
+! Optional 'SiteList', 'RunList' and 'ChannelList' files may be supplied
+! through config.xml for additional metadata. See documentation.
+!
+! Warning: Rotation of EDI files (mathematically) invalidates the error
+! bars since EDI files do not contain the data covariance matrices.
+!
+! Component of EMTF File Conversion Utilities 2018 (c) A. Kelbert
+! **********************************************************************
+
 program edi2xml
 
   use global

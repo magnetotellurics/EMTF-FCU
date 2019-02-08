@@ -1,3 +1,17 @@
+! **********************************************************************
+! z2z reads in electromagnetic tranfer functions (EMTFs) in the Egbert
+! Z-file format; rotates to chosen coordinate system; write out a Z-file.
+!
+! Example usage:
+! >  ./z2z filename.zrr filename_out.zrr [verbose|silent] 0.0
+! to rotate to geographic North. Any azimuth may be used for rotation.
+!
+! Note: Rotation of Z-files is mathematically valid since the full
+! error covariances are present in this file format.
+!
+! Component of EMTF File Conversion Utilities 2018 (c) A. Kelbert
+! **********************************************************************
+
 program z2z
 
   use global

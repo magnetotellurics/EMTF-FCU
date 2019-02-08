@@ -1,3 +1,23 @@
+! **********************************************************************
+! xml2z reads in electromagnetic tranfer functions (EMTFs) in the XML
+! format; rotates to chosen coordinate system; writes out an Egbert Z-file.
+!
+! Example usage:
+! >  ./xml2z filename.xml
+! converts to filename.zrr by default; uses data orientation as specified
+! in the XML file ('sitelayout', or 'orthogonal' with given azimuth).
+! >  ./xml2z filename.xml filename.edi [verbose|silent] 0.0
+! to rotate to geographic North.
+! >  ./xml2z filename.xml filename.edi [verbose|silent] sitelayout
+! to rotate to original site layout as saved in the channels metadata.
+!
+! Warning: Rotation of XML files is only (mathematically) valid if the
+! full error covariances are present in the file. Otherwise, rotation
+! invalidates error bar estimates.
+!
+! Component of EMTF File Conversion Utilities 2018 (c) A. Kelbert
+! **********************************************************************
+
 program xml2z
 
   use global

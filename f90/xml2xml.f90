@@ -1,3 +1,20 @@
+! **********************************************************************
+! xml2xml reads in electromagnetic tranfer functions (EMTFs) in the XML
+! format; rotates to chosen coordinate system; writes back out.
+!
+! Example usage:
+! >  ./xml2xml filename.xml filename_out.xml [verbose|silent] 0.0
+! to rotate to geographic North.
+! >  ./xml2xml filename.xml filename_out.xml [verbose|silent] sitelayout
+! to rotate to original site layout as saved in the channels metadata.
+!
+! Warning: Rotation of XML files is only (mathematically) valid if the
+! full error covariances are present in the file. Otherwise, rotation
+! invalidates error bar estimates.
+!
+! Component of EMTF File Conversion Utilities 2018 (c) A. Kelbert
+! **********************************************************************
+
 program xml2xml
 
   use global

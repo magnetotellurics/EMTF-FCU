@@ -1,15 +1,20 @@
 ! *****************************************************************************
 module edi_write
   !--------------------------------------------------------------------------!
-  ! Randie Mackie's wrt_edi.f, substantially modified and converted into F90 !
-  ! by Anna Kelbert. Note that integers nf and nch are defined in the module !
+  ! This module writes out Electrical Data Interchange (EDI) files.          !
+  ! Note that integers nf and nch are defined in the module                  !
   ! global.f90, that is used by this code. In its present form, the module   !
   ! will only work when there are 3 output channels in the input, in the     !
   ! order Hy, Ex, Ey. If more output channels are present, the corresponding !
   ! transfer functions will not be written into the EDI file. All special    !
   ! cases could be easily incorporated into the code, but at the moment it   !
   ! only works for the typical ZXX, ZXY, ZYX, ZYY, TX, TY set of TFs.        !
-  ! Date: 1 Nov 2007 @ Anna Kelbert, OSU                                     !
+  !--------------------------------------------------------------------------!
+  ! COPYRIGHT NOTICE: Initial version of this code used EDI file formatting  !
+  ! consistent within Randie Mackie's wrt_edi.f, which served as a useful    !
+  ! point of reference. While we gratefully acknowledge this influence,      !
+  ! this F90 version of the code is written from scratch by Anna Kelbert     !
+  ! and as such, is not subject to any copyright infringement concerns.      !                                        !
   !--------------------------------------------------------------------------!
   ! Implementing the correct workflow to allow for flexible data rotations:  !
   ! call initialize_edi_output(edi_file_out)                                 !
@@ -18,7 +23,8 @@ module edi_write
   ! call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite)
   ! call write_edi_data(sectid, F, Data)                                     !
   ! call end_edi_output()                                                    !
-  ! Date: 6 Oct 2017 @ Anna Kelbert, USGS                                    !
+  ! Creation Date: 1 Nov 2007 @ Anna Kelbert, OSU                            !
+  ! Last Modified: 6 Oct 2017 @ Anna Kelbert, USGS                           !
   !--------------------------------------------------------------------------!
 
   use global
@@ -751,7 +757,7 @@ contains
 !    sort data into ascending frequency order
 !
 	    call sortidx(nf,freq,idx)
-	     
+
 	    fs = freq(idx)
 	    zs = z(idx,:)
 	    vs = v(idx,:)
@@ -771,7 +777,7 @@ contains
 !      open (edifile,file=fname)
 
       open (unit=edifile,file=fname,iostat=ios)
-     
+
       if(ios/=0) then
          write(0,*) 'Error opening file:', fname
       endif
@@ -809,7 +815,7 @@ contains
       call trmstr( clat,  lclat,  empty)
       call trmstr( clong, lclong, empty)
       call trmstr( celev, lcelev, empty)
-      
+
       write(edifile,*) 'LAT=', clat(1:lclat)
       write(edifile,*) 'LONG=', clong(1:lclong)
       write(edifile,*) 'ELEV=', celev(1:lcelev)
@@ -823,14 +829,14 @@ contains
       write(edifile,*) 'MAXSECT=999'
 !-EMPTY
       write(edifile,*) 'EMPTY=1.0e+32'
-	      
+
 !-----------------------------------------------------------------------
 !     INFO block
 
       write(edifile,*)' '
       write(edifile,*) '>=INFO'
       write(edifile,*) 'MAXINFO=999'
-      
+
       do j=1,size(info)
 		write(edifile,*) info(j)
 	  end do
@@ -898,7 +904,7 @@ contains
 !        WRITE (edifile,3400)sid(5),EY_X1,EY_Y1,EY_X2,EY_Y2
  3300   FORMAT('>EMEAS ID=',F8.3,' CHTYPE=Ex',' X=',F3.1,' Y=',F3.1,' Z=',F3.1)
  3400   FORMAT('>EMEAS ID=',F8.3,' CHTYPE=Ey',' X=',F3.1,' Y=',F3.1,' Z=',F3.1)
-                 
+
         WRITE (edifile,3300)sid(4),site_X,site_Y,site_Z
         WRITE (edifile,3400)sid(5),site_X,site_Y,site_Z
 !
@@ -982,7 +988,7 @@ contains
 
       if(tipper_present) then
         write(edifile,*)' '
-        write(edifile,*) '>!****TIPPER PARAMETERS****!'      
+        write(edifile,*) '>!****TIPPER PARAMETERS****!'
         WRITE(edifile,'(A13,I2)') '>TXR.EXP  //',nf
         WRITE(edifile,50) (REAL(Ts(I,1)),I = nf,1,-1)
         write (edifile,*) ' '
@@ -1105,12 +1111,12 @@ contains
   END SUBROUTINE TRMSTR
 
 ! **********************************************************************
-! Sort frequencies, and impedances or tippers with variances according 
+! Sort frequencies, and impedances or tippers with variances according
 ! to the decreasing frequency order. Written in its original form by
-! Randie Mackie, converted to F90 assumed-shape array approach 
+! Randie Mackie, converted to F90 assumed-shape array approach
 ! and generalized by Anna Kelbert.
 !
-! m = 4 if the inputs are impedances; m = 2 if the inputs are tippers. 
+! m = 4 if the inputs are impedances; m = 2 if the inputs are tippers.
 !
 ! Date: 2 Nov 2007
 
@@ -1145,7 +1151,7 @@ contains
 	      ze(i+1,k)=be(k)
 	    end do
 	    	     write(*,*) 'ok ...',j
-	    
+
       end do
 
       return

@@ -1,3 +1,19 @@
+! **********************************************************************
+! edi2edi reads in electromagnetic tranfer functions (EMTFs) in the EDI
+! format; rotates to chosen coordinate system; write out an EDI file.
+!
+! Example usage:
+! >  ./edi2edi filename.edi filename_out.edi [verbose|silent] 0.0
+! to rotate to geographic North.
+! >  ./edi2edi filename.edi filename_out.edi [verbose|silent] sitelayout
+! to rotate to original site layout as saved in the channels block.
+!
+! Warning: Rotation of EDI files (mathematically) invalidates the error
+! bars since EDI files do not contain the data covariance matrices.
+!
+! Component of EMTF File Conversion Utilities 2018 (c) A. Kelbert
+! **********************************************************************
+
 program edi2edi
 
   use global

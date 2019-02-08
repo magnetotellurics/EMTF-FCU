@@ -1,3 +1,34 @@
+! **********************************************************************
+! z2xml reads in electromagnetic tranfer functions (EMTFs) in the Egbert
+! Z-file format; rotates to chosen coordinate system; writes an XML file.
+!
+! Example usage:
+! >  ./z2xml filename.zrr
+! converts to filename.xml by default. Does not rotate.
+! >  ./z2xml filename.zrr filename.xml [verbose|silent] 0.0
+! to rotate to geographic North.
+! >  ./z2xml filename.zrr filename.xml [verbose|silent] sitelayout
+! to rotate to original site layout as saved in the channels block.
+!
+! Requires a local config.xml file with metadata that's missing from
+! the Z-file. The config.xml file supplies survey-specific metadata;
+! only one is needed for each survey. Note that 'SurveyDOI' sets a
+! unique data object identifier for the survey, which will then get
+! minted at IRIS upon submission to IRIS EMTF database. Do not make one
+! unless you plan to submit to IRIS. Finally, note that the 'Tags'
+! element is critical for file parsing, so make sure that you have the
+! right data types there. Type ./z2xml to print an example config.xml.
+!
+! Optional 'SiteList', 'RunList' and 'ChannelList' files may be supplied
+! through config.xml for additional metadata. See documentation.
+!
+! Note: Rotation of Z-files is mathematically valid since the full
+! error covariances are present in this file format. This information
+! also gets propagated to EMTF XML.
+!
+! Component of EMTF File Conversion Utilities 2018 (c) A. Kelbert
+! **********************************************************************
+
 program z2xml
 
   use global

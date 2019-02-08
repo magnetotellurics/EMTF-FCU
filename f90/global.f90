@@ -22,7 +22,7 @@ module global
   ! from a directory that contains DATATYPES and COPYRIGHT
   ! folders, homedir is overwritten with the current directory
   !character(len=80)     :: homedir='/home/mho/lana/EMTF-XML/f90/'
-  character(len=80)     :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
+  character(len=200)    :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
   !*********************************************************
   ! IRIS requires site ID to have no more than 5 chars
   ! respectively, run ID has no more than 6 chars
@@ -118,7 +118,7 @@ module global
     character(len=80) :: Project
     character(len=400):: Survey
     character(len=80) :: Country
-    character(len=80) :: YearCollected    
+    character(len=80) :: YearCollected
     character(len=400):: AcquiredBy
     type(Person_t)	  :: Creator
     type(Person_t)	  :: Submitter
@@ -731,7 +731,7 @@ contains
          end if
 
     end subroutine init_channel_units
-    
+
 
     function channel_type(id) result (type)
          character(*), intent(in)   :: id
