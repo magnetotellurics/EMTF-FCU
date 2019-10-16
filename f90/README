@@ -7,9 +7,12 @@ command-line or visual modern Fortran compiler. However, this
 EMTF FCU compilation guide assumes a command-line environment.
 This is straightforward under Linux or on a Mac: just open any
 shell terminal. On Windows, command-line environment is most
-easily achieved by installing the Cygwin package.
+easily achieved by installing the Cygwin package from
+Https://www.cygwin.com. Windows 10 and later versions have an
+inbuilt Linux shell option:
+https://docs.microsoft.com/en-us/windows/wsl/install-win10
 
-1. Install a g95 or similar Fortran 95 compiler.
+1. Install gfortran or similar Fortran 95 compiler.
 
 2. Download the newest version of FoX library,
    https://github.com/andreww/fox
@@ -31,6 +34,14 @@ NB: if you move FoX in the file system, reconfigure
 5. Optional: to create XML files, set "homedir" variable
    in the header of global.f90 to the directory where
    DATATYPES and COPYRIGHT folder reside (usually, same as code).
+
+   If you intend to only run the codes from the file directory
+   Where source codes reside, "homedir" is not needed.
+
+NB: if you set "homedir" to a directory name that is longer than
+    80 chars, can encounter compile problems with fortran. In that
+    case, add the -ffree-line-length-none option to the compile flags.
+    Other compilers such as Intel should not encounter this problem.
 
 6. Compile EMTF FCU by typing 'make'.
 

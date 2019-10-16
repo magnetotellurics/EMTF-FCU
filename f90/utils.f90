@@ -731,10 +731,10 @@ subroutine parse_str(str,delim,strarray,num)
         end if
      end do
 
-     if (associated(strarray)) then
-        deallocate(strarray, stat=istat)
+     ! strarray should already have non-zero size on input but checking here
+     if (.not. associated(strarray)) then 
+        allocate(strarray(N), stat=istat)
      end if
-     allocate(strarray(N), stat=istat)
      do i = 1,N-1
         strarray(i) = trim(adjustl(fix_spaces(adjstr(j(i):j(i+1)-2))))
         !write(*,*) 'DEBUG: ',j(i),j(i+1),L,strarray(i)

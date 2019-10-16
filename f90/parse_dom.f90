@@ -184,7 +184,7 @@ contains
 
     ! Make sure the pointer is associated
     if (.not.(associated(domNode))) then
-        write(0,*) 'Error: pointer not associated in isElement'
+        write(0,*) 'Error: pointer not associated in isElement for node ',trim(xmlName)
         return
     end if
 

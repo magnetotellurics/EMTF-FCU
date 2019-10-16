@@ -133,7 +133,9 @@ contains
 	UserInfo%Country = getString(doc,"Country")
 	UserInfo%AcquiredBy = getString(doc,"AcquiredBy")
 	UserInfo%ProcessedBy = getString(doc,"ProcessedBy")
-	UserInfo%ProcessDate = getString(doc,"ProcessDate")
+	if (hasContent(doc,"ProcessDate")) then
+	    UserInfo%ProcessDate = getString(doc,"ProcessDate")
+	end if
 
 	infoNode => item(getElementsByTagName(doc, "ProcessingSoftware"),0)
 	UserInfo%ProcessingSoftware = getString(infoNode,"Name")
@@ -177,12 +179,13 @@ contains
 	UserInfo%ProcessingTag = id
 
     infoNode => item(getElementsByTagName(doc, "GridOrigin"),0)
-    if (hasContent(infoNode,"Location")) then
-        Site%Coords%Origin%lat = getReal(infoNode,"Latitude")
-        Site%Coords%Origin%lon = getReal(infoNode,"Longitude")
-        Site%Coords%Origin%elev = getReal(infoNode,"Elevation")
-    else
-        Site%Coords%Origin = Site%Location
+    Site%Coords%Origin = Site%Location
+    if (associated(infoNode)) then
+        if (hasContent(infoNode,"Location")) then
+            Site%Coords%Origin%lat = getReal(infoNode,"Latitude")
+            Site%Coords%Origin%lon = getReal(infoNode,"Longitude")
+            Site%Coords%Origin%elev = getReal(infoNode,"Elevation")
+        end if
     end if
 
 	infoNode => item(getElementsByTagName(doc, "Copyright"),0)
