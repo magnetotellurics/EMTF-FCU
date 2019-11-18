@@ -1,6 +1,9 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+    LatexIT.add('p',true);
+</script>
 </head>
 <body>
 <h1>Statistical estimates and definitions for MT Transfer Functions</h1>
@@ -11,6 +14,11 @@ Average power spectra estimates are often used to represent "raw" MT or EMAP dat
 Power spectra are to be expressed in terms of standard units. Auto and cross power spectra for two electric field measurements are to be in units of (mV/km)<sup>2</sup>/Hz . Auto and cross power spectra for two magnetic field measurements are to be in units of nT<sup>2</sup>/Hz . Cross power spectra for mixed measurements are to be in units of nT*(mV/km)/Hz.
 All spectra are to be normalized for system response and number of samples. Unless specified otherwise by the ROT option, they are assumed to correspond to the measurement directions as defined in the >DEFINEMEAS section.<br>
 A >SPECTRA data block contains estimates of all the auto and cross power spectra for a set of measurements for a given frequency and bandwidth. These average spectra estimates are the result of averaging a number of independent spectra estimates. They may be independent in time (e.g. cascade decimation), or in frequency (e.g. FFT), or a combination. These data blocks usually represent the final averages, although the SEGNUM option allows delivery of smaller segments also.
+</p>
+<h2>References</h2>
+<p>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+    Wight, D.E., 1987. Society of Exploration Geophysicists MT/EMAP Data Interchange Standard.
 </p>
 </body>
 </html>

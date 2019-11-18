@@ -1,17 +1,18 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+LatexIT.add('p',true);
+</script>
 </head>
 <body>
-<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
-<h2>MT Impedance: Z</h2>
+<h1>Definitions for MT Transfer Functions and Derived Quantities</h1>
+<h2>MT impedance / response tensor: Z</h2>
 <p>&nbsp;</p>
 <p>
-MT impedance is a characteristic measure of the EM properties of the sub surface medium, and constitutes the basic MT Transfer function.
-The surface impedance tensor has four components: Zxx, Zxy, 
-Zyx and Zyy, which satisfy the impedance relations:
+<b>MT impedance</b> is a characteristic measure of the EM properties of the subsurface medium, and constitutes the basic MT Transfer Function (MT TF). MT impedance is a frequency-dependent tensor. In the discussion below, dependence on frequency is implicit.
+At each frequency, the surface impedance tensor has four components: Zxx, Zxy, Zyx and Zyy, which satisfy the impedance relations
 </p>
-<p>&nbsp;</p>
 <div lang="latex">
 \begin{pmatrix} 
 E_x\\
@@ -26,7 +27,39 @@ H_x\\
 H_y 
 \end{pmatrix}</div>
 <p>
-Impedance units are [mV/km]/[nT]. 
+Here, $E_x$ stands for the Northward component of the electric field, and $E_y$ stands for the Eastward component of the electric field (in V/m).
+Similarly, $H_x$ stands for the Northward component of the magnetic field strength, and $H_y$ stands for the Eastward component of the magnetic field strength (in A/m). MT impedance as defined above is measured in the units of Ohm.
+</p>
+<p>
+However, in practical magnetotellurics, it is more common to use a quantity that is formally known as the <b>MT response tensor</b>, but is also colloqually refered to as the MT impedance. The MT response tensor is defined by
+</p>
+<div lang="latex">
+\begin{pmatrix} 
+E_x\\
+E_y 
+\end{pmatrix}= 
+\begin{bmatrix} 
+Z_{xx} & Z_{xy}\\ 
+Z_{yx} & Z_{yy} 
+\end{bmatrix} 
+\begin{pmatrix} 
+B_x\\ 
+B_y 
+\end{pmatrix}</div>
+<p>
+Here, $B_x$ stands for the Northward component of the magnetic flux density, and $B_y$ stands for the Eastward component of the magnetic flux density (measured in Tesla). In magnetotellurics, magnetic flux density is colloquially known as the magnetic field, and is measured in the practical units of nT. If $Z$ is defined as the MT response tensor, the MT impedance is then defined by $\mu_0 Z$, where $\mu_0$ is the magnetic permeability of vacuum.
+</p>
+<p>
+<b>In practical magnetotellurics, the MT response tensor is colloqually known as the "MT impedance". Magnetotellurics employs the practical units for the MT response tensor, [mV/km]/[nT].
+</b> 
+</p>
+<p>
+    See also <a href="tipper.html">MT tipper</a> and <a href="interstation_impedance.html">interstation MT impedance</a>.
+</p>
+<h2>References</h2>
+<p>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+    Wight, D.E., 1987. Society of Exploration Geophysicists MT/EMAP Data Interchange Standard.
 </p>
 </body>
 </html>

@@ -1,15 +1,35 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+LatexIT.add('p',true);
+</script>
 </head>
 <body>
-<h1>Interstation Transfer Functions: ITF</h1>
+<h1>Definitions for MT Transfer Functions and Derived Quantities</h1>
+<h2>Inter-station magnetic field transfer functions: P</h2>
 <p>&nbsp;</p>
 <p>
-Definition follows...
+Vertical Field Transfer Functions (Tipper) relate the local vertical magnetic field component Hz to the two local horizontal magnetic field components Hx, Hy. The complex tipper components, Tx and Ty, satisfy the tipper relation:
 </p>
-<p>&nbsp;</p>
-<div lang="latex"></div>
+<div lang="latex">
+    H_z = T_x H_x + T_y H_y
+</div>
+<p>
+An inter-station MT tipper is a variant of the MT tipper, where the magnetic field $H_x$ and $H_y$ is obtained at a remote site,
+</p>
+<div lang="latex">
+    H_z_1 = P_x H_x_2 + P_y H_y_2
+</div>
+<p>where indices 1 and 2 indicate two different site locations.</p>
+<p>
+    See also <a href="tipper.html">MT tipper</a> and <a href="interstation_impedance.html">interstation MT impedance</a>.
+</p>
+<h2>References</h2>
+<p>
+    Egbert, G.D., 1997. Robust multiple-station magnetotelluric data processing. Geophysical Journal International, 130(2), pp.475-496.<br/>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+</p>
 </body>
 </html>
 

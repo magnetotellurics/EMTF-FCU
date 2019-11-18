@@ -1,16 +1,55 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+    LatexIT.add('p',true);
+</script>
 </head>
 <body>
-<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
-<h2>Inverse Signal Covariance: InvCOV</h2>
+<h1>Statistical estimates for MT Transfer Functions</h1>
+<h2>Inverse signal covariance: INVSIGCOV</h2>
 <p>&nbsp;</p>
 <p>
-Definition follows...
+The inverse signal covariance $\mathbf{S}$, as defined in Eisel & Egbert (2001), 
+is one of the two building block matrices of the impedance <a href="covariance.html">covariance</a>.
+It can be derived from first principles by setting up the estimation of the impedance as a linear regression problem.
+Consider the output channels $\mathbf{E}$ as the response variable, $\mathbf{H}$ as the input variable, 
+and the impedance $\mathbf{Z}$ as the unknown parameter matrix, resulting in 
 </p>
-<p>&nbsp;</p>
-<div lang="latex"></div>
+<div lang="latex">
+    \mathbf{E} = \mathbf{H} \mathbf{Z}^T + \epsilon,
+</div>
+<p>
+where $\mathbf{E}$ and $\mathbf{H}$ are defined, for simplicity of notation, as <em>horizontal</em>, rather than vertical, vectors. 
+If we were to transpose both sides of the equation, we would arrive at the more traditional definition of the impedance. 
+To further generalize the analysis, we note that the same expression may be used for a variety of output channels, 
+so that the definition of $\mathbf{E}$ may include the vertical magnetic field component, as well as, or instead 
+of the electric field output channels, and the same analysis would apply.
+</p>
+<p>
+Then, for the single-station magnetotelluric processing, the inverse signal power matrix may be computed as 
+</p>
+<div lang="latex">
+    \mathbf{S} = (\mathbf{H}^* \mathbf{H})^{-1},
+ </div>
+<p>
+and for the remote-reference magnetotelluric processing, 
+</p>
+<div lang="latex">
+    \mathbf{S} = (\mathbf{R}^* \mathbf{H})^{-1} (\mathbf{R}^* \mathbf{R}) (\mathbf{H}^* \mathbf{R})^{-1},
+</div>
+<p>
+where $\mathbf{R}$ is the horizontal magnetic field at the remote site, and $\mathbf{H}$ is the local horizontal magnetic field.
+</p>
+<p>
+    See also <a href="impedance.html">impedance</a>, <a href="covariance.html">covariance</a> and <a href="residual_covariance.html">residual covariance</a>.
+</p>
+<h2>References</h2>
+<p>
+    Eisel, M. and Egbert, G.D., 2001. On the stability of magnetotelluric transfer function estimates and the reliability of their variances. Geophysical Journal International, 144(1), pp.65-82.<br/>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+    Kelbert, A., 2019. EMTF XML: New Data Interchange Format and Conversion Tools for Electromagnetic Transfer Functions. Geophysics, 85(1), pp.1-69.
+</p>
 </body>
 </html>
 

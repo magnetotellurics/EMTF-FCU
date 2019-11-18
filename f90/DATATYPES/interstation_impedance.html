@@ -1,15 +1,18 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+LatexIT.add('p',true);
+</script>
 </head>
 <body>
-<h1>MT Impedance: Z</h1>
+<h1>Definitions for MT Transfer Functions and Derived Quantities</h1>
+<h2>Inter-station MT impedance: Q</h2>
 <p>&nbsp;</p>
 <p>
-For tensor MT the surface impedance tensor has four components: Zxx, Zxy, 
+The MT surface impedance tensor has four components: Zxx, Zxy, 
 Zyx and Zyy, which satisfy the impedance relations:
 </p>
-<p>&nbsp;</p>
 <div lang="latex">
 \begin{pmatrix} 
 E_x\\
@@ -22,7 +25,34 @@ Z_{yx} & Z_{yy}
 \begin{pmatrix} 
 H_x\\ 
 H_y 
-\end{pmatrix}</div>
+\end{pmatrix}
+</div>
+<p>
+An inter-station MT impedance is a variant of the MT impedance, where the magnetic field $H_x$ and $H_y$ is obtained at a remote site,
+</p>
+<div lang="latex">
+    \begin{pmatrix} 
+        E_x_1\\
+        E_y_1 
+    \end{pmatrix}= 
+    \begin{bmatrix} 
+        Q_{xx} & Q_{xy}\\ 
+        Q_{yx} & Q_{yy} 
+    \end{bmatrix} 
+    \begin{pmatrix} 
+        H_x_2\\ 
+        H_y_2 
+    \end{pmatrix}
+</div>
+<p>where indices 1 and 2 indicate two different site locations.</p>
+<p>
+    See also <a href="impedance.html">MT impedance</a> and <a href="interstation_transfer_functions.html">interstation magnetic field transfer functions</a>.
+</p>
+<h2>References</h2>
+<p>
+    Egbert, G.D., 1997. Robust multiple-station magnetotelluric data processing. Geophysical Journal International, 130(2), pp.475-496.<br/>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+</p>
 </body>
 </html>
 

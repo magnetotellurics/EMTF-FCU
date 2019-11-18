@@ -1,23 +1,37 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+  LatexIT.add('p',true);
+</script>
 </head>
 <body>
-<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
-<h2>Apparent resistivity: RHO</h2>
+    <h1>Definitions for MT Transfer Functions and Derived Quantities</h1>
+    <h2>Apparent resistivity: RHO</h2>
 <p>&nbsp;</p>
-<p style="font-size:110%">
-Apparent resistivity is computed from MT impedance as:
+<p>
+Apparent resistivity is computed from the MT response tensor (colloquially referred to as the MT impedance) using
 </p>
 <div lang="latex">
-  \rho_i_j= \frac{|Z_i_j|^2}{\omega\mu} \hspace{1cm}     i,j=x,y \\
-  \text {where } \mu \text { is the permeability of free space, }
-  \omega \text { is the frequency in radians. }
+  \rho_i_j= \frac{\mu_0}{\omega}|Z_i_j|^2 = \frac{T}{5} |Z_i_j|^2
 </div>
-<p style="font-size:110%">
-  Zxy are components of surface <a href="impedance.html">impedance</a> tensor.
-  <br>
-  Apparent resistivity units are [Ohm m].
+<p>where $\mu_0$ is the permeability of free space, $\omega$ is the angular frequency in radians, and $T$ is period is seconds.</p>
+<p>
+  $Z_{ij}$ are the components of the <a href="impedance.html">MT response tensor</a>.
+</p>
+<p>
+  Note that written in terms of the MT impedance $\mu_0 Z$, the formula for apparent resistivity is $\rho_i_j = |Z_i_j|^2 / (\omega\mu_0)$.
+</p>
+<p>
+  The units for apparent resistivity are [Ohm m].
+</p>
+<p>
+  See also <a href="impedance_phase.html">MT impedance phase</a>.
+</p>
+<h2>References</h2>
+<p>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+    Wight, D.E., 1987. Society of Exploration Geophysicists MT/EMAP Data Interchange Standard.
 </p>
 </body>
 </html>

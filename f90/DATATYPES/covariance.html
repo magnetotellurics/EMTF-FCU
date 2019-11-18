@@ -1,18 +1,68 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+    LatexIT.add('p',true);
+</script>
 </head>
 <body>
-<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h1>Statistical estimates for MT Transfer Functions</h1>
 <h2>Covariance: COV</h2>
 <p>&nbsp;</p>
+<p>
 The covariance between two random variables X and Y is defined as the expected product of their deviations from their individual expected values:
-<p>&nbsp;</p>
+</p>
 <div lang="latex">
-cov(X,Y)=E[(X-E[X])(Y-E[Y])}
+    \mathbf{Cov}(X,Y)=E[(X-E[X])(Y-E[Y])}
 </div>
 <br>
 where E[X] is the expected value of X, also known as the mean of X.
+</p>
+<p>In magnetotellurics, the full error covariance is necessary to allow rotation of the error bars associated with the MT transfer functions (see Kelbert (2019) for a detailed discussion).</p>
+<p>
+If the full error covariance is available, it is usually supplied in the form of two matrices: 
+the inverse signal power $\mathbf{S}$ and the residual covariance matrix $\mathbf{N}$ (Eisel & Egbert, 2001). 
+The full covariance is the Kronecker delta product of the two,
+</p>
+<div lang="latex">
+    \mathbf{Cov}[\mathbf{Z}] = \mathbf{N} \otimes \mathbf{S},
+</div>
+<p>so that</p>
+<div lang="latex">
+\mathbf{Cov}[Z_{ij} Z_{i' j'}] = N_{i i'} S_{j j'}, \;\;\; j,j' = 1,2 \;\;\;\mathtt{ and }\;\;\; i,i' = 1,\ldots,N,
+</div>
+<p>
+where $N$ is the number of output channels. To compute the variance,
+</p>
+<div lang="latex">
+\sigma^2_{ij} = \mathbf{Var}[Z_{ij}] = \mathbf{Cov}[Z_{ij} Z_{ij}] = N_{i i} S_{j j}, \;\;\; j = 1,2 \;\;\;\mathtt{ and }\;\;\; i = 1,\ldots,N.
+</div>
+<p>
+Upon rotation,
+</p>
+<div lang="latex">
+\mathbf{Cov}[\mathbf{Z}'] = \mathbf{N'} \otimes \mathbf{S'} = [\mathbf{V} \otimes \mathbf{U}] [\mathbf{N} \otimes \mathbf{S}] [\mathbf{V} \otimes \mathbf{U}]^T,
+</div>
+<p>
+    where matrices $\mathbf{U}$ and $\mathbf{V}$ are rotation matrices as described in detail in Kelbert (2109). Then,
+</p>
+<div lang="latex">
+\sigma'^2_{ij} = \mathbf{Var}[Z'_{ij}] = \mathbf{Cov}[Z'_{ij} Z'_{ij}] = N'_{i i} S'_{j j}, \;\;\; j = 1,2 \;\;\;\mathtt{ and }\;\;\; i = 1,\ldots,N.
+</div>
+<p>
+The new inverse signal power $\mathbf{S'}$ and residual covariance matrix $\mathbf{N'}$ may thus be computed using the expressions $\mathbf{N'} = \mathbf{V} \mathbf{N} \mathbf{V}^T$ and $\mathbf{S'} = \mathbf{U} \mathbf{S} \mathbf{U}^T$, as in Eisel & Egbert (2001). 
+</p>
+<p>
+    Full error covariances may also be obtained from cross-power spectra (Kelbert, 2019).
+</p>
+<p>
+    See also <a href="inverse_signal_covariance.html">inverse signal covariance</a>, <a href="residual_covariance.html">residual covariance</a> and <a href="variance.html">variance</a>.
+</p>
+<h2>References</h2>
+<p>
+    Eisel, M. and Egbert, G.D., 2001. On the stability of magnetotelluric transfer function estimates and the reliability of their variances. Geophysical Journal International, 144(1), pp.65-82.<br/>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+    Kelbert, A., 2019. EMTF XML: New Data Interchange Format and Conversion Tools for Electromagnetic Transfer Functions. Geophysics, 85(1), pp.1-69.
 </p>
 </body>
 </html>

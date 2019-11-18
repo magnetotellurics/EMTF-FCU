@@ -1,19 +1,62 @@
 <html>
 <head>
 <script type="text/javascript" src="http://latex.codecogs.com/latexit.js"></script>
+<script type="text/javascript">
+    LatexIT.add('p',true);
+</script>
 </head>
 <body>
-<h1>Statistical estimates and definitions for MT Transfer Functions</h1>
+<h1>Statistical estimates for MT Transfer Functions</h1>
 <h2>Variance: VAR</h2>
 <p>&nbsp;</p>
-The variance of a random variable X is defined as the average of the squared differences:
-<p>&nbsp;</p>
-<div lang="latex">
-VAR(X)=E[(X-E[X])^2}
-</div>
 <p>
+The variance of a random variable X is defined as the average of the squared differences:
+<div lang="latex">
+        \sigma^2 = \mathbf{Var}(X) = E[(X-E[X])^2}
+</div>
 <br>
 where E[X] is the expected value of X, also known as the mean of X.
+</p>
+<p>
+In the EDI files, the variance of each impedance component is traditionally specified by, e.g., ZXY.VAR. 
+This is a real positive quantity. Traditionally, EDI files do not support the full error covariance. 
+If only the variance is provided, it gives insufficient information to formally estimate the variance of a rotated impedance.
+Thus, no formal rotation of data in traditional EDI files can be performed.
+XML files and Z-files can also provide the full error covariance in the form of two matrices: 
+the inverse signal power $\mathbf{S}$ and the residual covariance matrix $\mathbf{N}$ (Eisel & Egbert, 2001). 
+The full covariance is the Kronecker delta product of the two,
+</p>
+<div lang="latex">
+    \mathbf{Cov}[\mathbf{Z}] = \mathbf{N} \otimes \mathbf{S},
+</div>
+<p>so that</p>
+<div lang="latex">
+    \mathbf{Cov}[Z_{ij} Z_{i' j'}] = N_{i i'} S_{j j'}, \;\;\; j,j' = 1,2 \;\;\;\mathtt{ and }\;\;\; i,i' = 1,\ldots,N,
+</div>
+<p>
+where $N$ is the number of output channels. The variance is computed using the diagonal elements of $\mathbf{N}$ and $\mathbf{S}$,
+</p>
+<div lang="latex">
+    \sigma^2_{ij} = \mathbf{Var}[Z_{ij}] = \mathbf{Cov}[Z_{ij} Z_{ij}] = N_{i i} S_{j j}, \;\;\; j = 1,2 \;\;\;\mathtt{ and }\;\;\; i = 1,\ldots,N.
+</div>
+<p>
+<p>
+ The variance of the real or imaginary part of an impedance component would be $\sigma^2_{ij}/2$. 
+ However, p 52 of the EDI manual explains that e.g. ZXY.VAR refers to the complex variance 
+ (while ZXYR.VAR would mean the variance of the real part).
+ To be consistent with this definition, we do not divide the variance by two.
+</p>
+<p>
+ Standard error of a real or imaginary part of an impedance component is then obtained as $\sqrt{\sigma^2_{ij}/2}$.
+</p>
+<p>
+    See also <a href="impedance.html">impedance</a>, <a href="covariance.html">covariance</a>, <a href="inverse_signal_covariance.html">inverse signal covariance</a>, and <a href="residual_covariance.html">residual covariance</a>.
+</p>
+<h2>References</h2>
+<p>
+    Chave, A.D. and Jones, A.G. eds., 2012. The magnetotelluric method: Theory and practice. Cambridge University Press.<br/>
+    Wight, D.E., 1988. SEG standard for MT and EMAP data. In SEG Technical Program Expanded Abstracts 1988 (pp. 249-251). Society of Exploration Geophysicists.
+    Kelbert, A., 2019. EMTF XML: New Data Interchange Format and Conversion Tools for Electromagnetic Transfer Functions. Geophysics, 85(1), pp.1-69.
 </p>
 </body>
 </html>
