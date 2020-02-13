@@ -362,7 +362,7 @@ contains
     character(len=2)                      :: elevunits
     logical                               :: readlat,readlon,readelev
     logical                               :: readinfo
-    integer                               :: i1,ii
+    integer                               :: i1,ii,istat
 
     elevunits = 'M'
 
@@ -376,9 +376,9 @@ contains
         read (value,'(i8)',iostat=ios) n
     end if
 
-    if (associated(Notes)) deallocate(Notes)
+    if (associated(Notes)) nullify(Notes)
 
-    allocate(Notes(n))
+    allocate(Notes(n), STAT=istat)
 
     if (.not.silent) then
         write(*,*) 'Before entering the INFO block, latitude  = ',Site%Location%lat
@@ -1544,7 +1544,7 @@ contains
     integer             :: dummy(nch,nch) ! dummy value indicator
     character(4)        :: type ! real/imag
     integer             :: row,col ! row & column in a matrix
-    integer             :: i,j,k,n,ind,istat,imp,tip
+    integer             :: i,j,k,n,ind,istat,imp,tip,nchout
     character(len=80)   :: TFcomp, TFname, info, stat
     ! ... extend the definition of "E" to all output channels, incl. Hz
     ! nch-4 stands for all channels minus 2 input minus 2 remote
@@ -1556,17 +1556,22 @@ contains
     complex(8), allocatable, dimension(:,:)   :: RhH, RhE, HhE, RhR, EhE, HhH
     complex(8)   :: czero
     real(8)      :: delta
-    logical      :: rew,orthogonal
+    logical      :: rew,orthogonal,singlestation
     !character(len=12), dimension(7,2) :: chID
 
     ! try to accommodate a single station SPECTRA although 5 channels could also mean tipper remote reference...
     if ((nch==5) .and. (Ex.ne.0) .and. (Ey.ne.0)) then
-        allocate(TFVar(nch-2,2), Z(nch-2,2), Zh(2,nch-2), ResidCov(nch-2,nch-2), InvSigCov(2,2), stat=istat)
-        allocate(RhH(2,2), RhE(2,nch-2), HhE(2,nch-2), RhR(2,2), EhE(nch-2,nch-2), HhH(2,2), stat=istat)
+        write(*,*) 'Recognized a single station EDI SPECTRA file.'
+        singlestation = .true.
+        nchout = nch-2
     else
-        allocate(TFVar(nch-4,2), Z(nch-4,2), Zh(2,nch-4), ResidCov(nch-4,nch-4), InvSigCov(2,2), stat=istat)
-        allocate(RhH(2,2), RhE(2,nch-4), HhE(2,nch-4), RhR(2,2), EhE(nch-4,nch-4), HhH(2,2), stat=istat)
+        write(*,*) 'Recognized a remote reference EDI SPECTRA file.'
+        singlestation = .false.
+        nchout = nch-4
     end if
+
+    allocate(TFVar(nchout,2), Z(nchout,2), Zh(2,nchout), ResidCov(nchout,nchout), InvSigCov(2,2), stat=istat)
+    allocate(RhH(2,2), RhE(2,nchout), HhE(2,nchout), RhR(2,2), EhE(nchout,nchout), HhH(2,2), stat=istat)
 
     czero = dcmplx(0.0d0,0.0d0)
     delta = 0e0
@@ -1589,6 +1594,7 @@ contains
         write(0,*) 'Warning: not trying to read tipper data in read_spectra, because the electric field channels are missing'
         tip = 0
     end if
+    write(0,*) 'DEBUG entering the loop'
 
     do k=1,nf
         if ((ios /= 0) .or. (trim(this_block) .eq. 'END')) then
@@ -1637,7 +1643,7 @@ contains
         end do
 
         ! a provision for single station analysis
-        if ((nch==5) .and. (Ex.ne.0) .and. (Ey.ne.0)) then
+        if (singlestation) then
             Rx = Hx
             Ry = Hy
         end if
@@ -1718,12 +1724,18 @@ contains
         Zh = matmul(matinv2(RhH), RhE)
         Z = matconjg(Zh)
 
-        ! calculate full covariances for remote reference
-        InvSigCov = matmul(matinv2(RhH), matmul(RhR, matinv2(matconjg(RhH))))
-        ResidCov = (EhE - matmul(matconjg(Zh),HhE) - matmul(matconjg(HhE),Zh) &
-            + matmul(matconjg(Zh), matmul(HhH,Zh))) / avgt
+        if (singlestation) then
+            ! simplify for single station...
+            InvSigCov = matinv2(RhH)
+            ResidCov = (EhE + matmul(matconjg(HhE), matmul(matinv2(HhH),HhE))) / avgt
+        else
+            ! calculate full covariances for remote reference
+            InvSigCov = matmul(matinv2(RhH), matmul(RhR, matinv2(matconjg(RhH))))
+            ResidCov = (EhE - matmul(matconjg(Zh),HhE) - matmul(matconjg(HhE),Zh) &
+                + matmul(matconjg(Zh), matmul(HhH,Zh))) / avgt
+        end if
 
-        do i=1,nch-4
+        do i=1,nchout
             do j=1,2
                 TFVar(i,j) = (ResidCov(i,i)*InvSigCov(j,j))
             end do
@@ -1741,10 +1753,10 @@ contains
             Data(tip)%orthogonal = orthogonal
             Data(tip)%fullcov = .true.
             Data(imp)%Rot(k) = rotspec
-            Data(imp)%Matrix(k,:,:) = Z(2:nch-4,:)
-            Data(imp)%Var(k,:,:) = TFVar(2:nch-4,:)
+            Data(imp)%Matrix(k,:,:) = Z(2:nchout,:)
+            Data(imp)%Var(k,:,:) = TFVar(2:nchout,:)
             Data(imp)%InvSigCov(k,:,:) = InvSigCov
-            Data(imp)%ResidCov(k,:,:) = ResidCov(2:nch-4,2:nch-4)
+            Data(imp)%ResidCov(k,:,:) = ResidCov(2:nchout,2:nchout)
             Data(imp)%orthogonal = orthogonal
             Data(imp)%fullcov = .true.
         else

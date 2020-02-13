@@ -278,7 +278,7 @@ contains
         write (*,*) 'Found ',ntags,' data types.'
     end if
     if (associated(DataType)) then
-       deallocate(DataType, stat=istat)
+       nullify(DataType)
     end if
     allocate(DataType(1:ntags), stat=istat)
     do i = 1,ntags
@@ -303,7 +303,7 @@ contains
 
     ! Read all statistical estimate info from files
     if (associated(Estimate)) then
-       deallocate(Estimate, stat=istat)
+       nullify(Estimate)
     end if
     allocate(Estimate(size(Info%Estimate)), stat=istat)
     do i = 1,size(Info%Estimate)
