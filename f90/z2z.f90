@@ -20,10 +20,10 @@ program z2z
   implicit none
 
   character(len=80) :: input_dir='./'
-  character(len=80) :: z_file=''
-  character(len=80) :: z_file_out=''
+  character(len=200):: z_file=''
+  character(len=200):: z_file_out=''
   character(len=80) :: config_file = 'config.xml'
-  character(len=80) :: zsitename, basename, ext, verbose='',coords=''
+  character(len=200):: zsitename, basename, ext, verbose='',coords=''
   character(len=80) :: header1, header2
   type(UserInfo_t)  :: Info
   type(Site_t)      :: zLocalSite
@@ -40,7 +40,7 @@ program z2z
   real(8),    dimension(:,:), allocatable      :: U,V ! rotation matrices
   logical           :: config_exists, run_list_exists, site_list_exists
   integer           :: i, j, k, l, narg, istat
-  integer           :: nf, nch, nchin, nchout
+  integer           :: nf, nch, nchin, nchout, nchoutH, nchoutE
 
   narg = command_argument_count()
 
@@ -114,10 +114,14 @@ program z2z
 
   call write_z_header(zsitename, zLocalSite, Info, nf, nch, header1, header2)
 
-  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch, zLocalSite%Declination)
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch, nchoutH, nchoutE, zLocalSite%Declination)
 
+  ! Define local dimensions 
+  ! A.K. NOTE AS OF 3/17/2023: we cannot obtain nchout from output channel 
+  ! dimensions; as it turns out they if they are not associated, their sizes
+  ! are not well-defined and that kills the program
   nchin = size(InputMagnetic)
-  nchout = size(OutputMagnetic) + size(OutputElectric)
+  nchout = nchoutH + nchoutE
 
   ! Allocate space for transfer functions and rotation matrices
   allocate(F(nf),TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), stat=istat)
@@ -155,8 +159,10 @@ program z2z
   call end_z_input
 
   ! Exit nicely
-  if (associated(Notes)) deallocate(Notes)
-  deallocate(InputMagnetic, OutputMagnetic, OutputElectric)
+  if (associated(Notes)) nullify(Notes)
+  deallocate(InputMagnetic, stat=istat)
+  if (associated(OutputMagnetic)) nullify(OutputMagnetic)
+  if (associated(OutputElectric)) nullify(OutputElectric)
   deallocate(F, TF, TFVar, InvSigCov, ResidCov, U, V)
 
 

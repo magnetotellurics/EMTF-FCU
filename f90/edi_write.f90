@@ -157,8 +157,9 @@ contains
     character(200), dimension(:), pointer, optional :: Notes
     integer, intent(inout), optional                :: n
     ! local variables
-    character(len=80), dimension(11)               :: info_block
-    character(len=80)                              :: runlist
+    character(len=120), dimension(16)               :: info_block
+    character(len=120)                              :: runlist,doi
+    integer                                         :: i
 
 
     if (len_trim(Site%RunList) > 70) then
@@ -167,18 +168,30 @@ contains
         runlist = Site%RunList
     end if
 
+    i = index(UserInfo%Copyright%SurveyDOI,':')
+    if (i>0) then
+        doi = UserInfo%Copyright%SurveyDOI(i+1:)
+    else
+        doi = UserInfo%Copyright%SurveyDOI
+    end if
+
     ! create a block of additional information
-    write(info_block(1),*) 'PROJECT=',trim(UserInfo%Project)
-    write(info_block(2),*) 'SURVEY=',trim(UserInfo%Survey)
-    write(info_block(3),*) 'YEAR=',trim(UserInfo%YearCollected)
-    write(info_block(4),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
-    write(info_block(5),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
-    write(info_block(6),*) 'PROCESSINGTAG=',trim(UserInfo%ProcessingTag)
-    write(info_block(7),*) 'SITENAME=',trim(Site%Description)
-    write(info_block(8),*) 'RUNLIST=',trim(runlist)
-    write(info_block(9),*) 'REMOTEREF=',trim(UserInfo%RemoteRefType)
-    write(info_block(10),*) 'REMOTESITE=',trim(UserInfo%RemoteSiteID)
-    write(info_block(11),*) 'SIGNCONVENTION=',trim(UserInfo%SignConvention)
+    write(info_block(1),*) 'SURVEYTITLE=',trim(UserInfo%Copyright%Title)
+    write(info_block(2),*) 'SURVEYAUTHORS=',trim(UserInfo%Copyright%Authors)
+    write(info_block(3),*) 'SURVEYYEAR=',trim(UserInfo%Copyright%Year)
+    write(info_block(4),*) 'SURVEYDOI=',trim(doi)
+    write(info_block(5),*) 'CONDITIONSOFUSE=Data Citation Required'
+    write(info_block(6),*) 'PROJECT=',trim(UserInfo%Project)
+    write(info_block(7),*) 'SURVEY=',trim(UserInfo%Survey)
+    write(info_block(8),*) 'YEARCOLLECTED=',trim(UserInfo%YearCollected)
+    write(info_block(9),*) 'PROCESSEDBY=',trim(UserInfo%ProcessedBy)
+    write(info_block(10),*) 'PROCESSINGSOFTWARE=',trim(UserInfo%ProcessingSoftware)
+    write(info_block(11),*) 'PROCESSINGTAG=',trim(UserInfo%ProcessingTag)
+    write(info_block(12),*) 'SITENAME=',trim(Site%Description)
+    write(info_block(13),*) 'RUNLIST=',trim(runlist)
+    write(info_block(14),*) 'REMOTEREF=',trim(UserInfo%RemoteRefType)
+    write(info_block(15),*) 'REMOTESITE=',trim(UserInfo%RemoteSiteID)
+    write(info_block(16),*) 'SIGNCONVENTION=',trim(UserInfo%SignConvention)
 
 !-----------------------------------------------------------------------
 !     INFO block
@@ -188,7 +201,7 @@ contains
       write(edifile,*) 'MAXINFO=999'
 
       do j=1,size(info_block)
-        write(edifile,*) trim(info_block(j))
+        write(edifile,'(a120)') info_block(j)
       end do
 
     if (present(Notes)) then

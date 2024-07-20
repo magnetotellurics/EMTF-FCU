@@ -161,7 +161,7 @@ program xml2edi
   call write_edi_header(edi_date, xmlsitename, xmlLocalSite, UserInfo)
   call write_edi_info(xmlLocalSite,UserInfo)
   call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, xmlLocalSite)
-  call write_edi_data(xmlsitename, F, Data)
+  call write_edi_data(xmlLocalSite%ID, F, Data)
   call end_edi_output()
 
   ! Exit nicely

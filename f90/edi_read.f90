@@ -13,7 +13,7 @@ module edi_read
   character(len=16)              :: dummy_data_value
   integer                        :: missing_value_count=0
   integer                        :: missing_freq_count=0
-  integer                        :: ios,i,j,k,maxblks=0
+  integer                        :: ios,i,j,j1,j2,k,maxblks=0
   integer                        :: Ex=0,Ey=0,Hx=0,Hy=0,Hz=0,Rx=0,Ry=0
 
   save   :: edifile
@@ -65,7 +65,9 @@ contains
      if (i<=0) then
         i = 0
      end if
-     j = index(trim(fname),'.edi')
+     j1 = index(trim(fname),'.edi')
+     j2 = index(trim(fname),'.EDI')
+     j = max(j1,j2)
      if (j > 0) then
         sitename = trim(fname(i+1:j-1))
         k=index( trim(sitename),'_imp')
@@ -248,7 +250,7 @@ contains
                     write(*,*) 'Decimal latitude value of ',trim(value),' found in EDI header'
                 end if
             end if
-        case ('LONG')
+        case ('LONG','LON')
             if (index(value,':')>0) then
                 Site%Location%lon=dms2deg(value)
                 if (.not. silent) then
@@ -264,7 +266,7 @@ contains
             read(value,*) Site%Location%elev
         case ('UNITS') ! units for elevation
             elevunits = value
-        case ('DECL')
+        case ('DECL','DECLINATION')
             read(value,*) Site%Declination
         case ('STDVERS,MAXSECT')
             ! EDI file information; ignore - needed only for reading
@@ -550,9 +552,9 @@ contains
         call init_channel_units(Channel)
         ! define the default azimuths, to be overwritten if present in file
         select case (edichar2)
-        case ('X')
+        case ('X','x')
             Channel%Orientation = 0.0
-        case ('Y')
+        case ('Y','y')
             Channel%Orientation = 90.0
         end select
         ! read in the numeric ID
@@ -1727,7 +1729,7 @@ contains
         if (singlestation) then
             ! simplify for single station...
             InvSigCov = matinv2(RhH)
-            ResidCov = (EhE + matmul(matconjg(HhE), matmul(matinv2(HhH),HhE))) / avgt
+            ResidCov = (EhE - matmul(matconjg(HhE), matmul(matinv2(HhH),HhE))) / avgt
         else
             ! calculate full covariances for remote reference
             InvSigCov = matmul(matinv2(RhH), matmul(RhR, matinv2(matconjg(RhH))))

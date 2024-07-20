@@ -39,11 +39,11 @@ program z2xml
   use xml_write
   implicit none
 
-  character(len=80) :: input_dir='./'
-  character(len=80) :: z_file=''
-  character(len=80) :: xml_file=''
+  character(len=200):: input_dir='./'
+  character(len=200):: z_file=''
+  character(len=200):: xml_file=''
   character(len=80) :: config_file = 'config.xml'
-  character(len=80) :: zsitename, basename, verbose='',rotinfo=''
+  character(len=200):: zsitename, basename, verbose='',rotinfo=''
   type(UserInfo_t)  :: UserInfo
   type(Site_t)      :: zLocalSite, xmlLocalSite, xmlRemoteSite
   type(Channel_t), dimension(:), pointer      :: InputMagnetic
@@ -81,6 +81,12 @@ program z2xml
      call get_command_argument(2,xml_file)
   else
      xml_file = trim(basename)//'.xml'
+  end if
+
+  if (index(z_file(l-2:l),'zmm')>0) then ! different logic for multistation metadata
+    multistation = .true.
+  else
+    multistation = .false.
   end if
 
   silent = .false.
@@ -167,10 +173,12 @@ program z2xml
   	write(0,*) '		<LastMod>1987-10-12</LastMod>'
   	write(0,*) '		<Author>Gary Egbert</Author>'
   	write(0,*) '	</ProcessingSoftware>'
+ 	  write(0,*) '	<ParseProcessingTag>1</ParseProcessingTag>'
+ 	  write(0,*) '	<FileNameAsSiteID>0</FileNameAsSiteID>'
   	write(0,*) '	<RunList>Runs.xml</RunList>'
   	write(0,*) '	<SiteList>Sites.xml</SiteList>'
   	write(0,*) '	<ChannelList>Channels.xml</ChannelList>'
-  	write(0,*) '<Configuration>'
+  	write(0,*) '</Configuration>'
   	write(0,*)
   	write(0,*) 'Project and YearCollected (if present) help identify'
     write(0,*) 'a product in SPUD. They should not contain spaces.'
@@ -193,14 +201,18 @@ program z2xml
   call initialize_z_input(z_file, UserInfo)
 
   call read_z_header(zsitename, zLocalSite, UserInfo, nf, nch)
+  if (UserInfo%FileNameAsSiteID) then
+    zLocalSite%ID = basename
+  end if
 
 
-  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch, zLocalSite%Declination)
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch, nchoutH, nchoutE, zLocalSite%Declination)
 
-  ! Define local dimensions
+  ! Define local dimensions 
+  ! A.K. NOTE AS OF 3/17/2023: we cannot obtain nchout from output channel 
+  ! dimensions; as it turns out they if they are not associated, their sizes
+  ! are not well-defined and that kills the program
   nchin = size(InputMagnetic)
-  nchoutH = size(OutputMagnetic)
-  nchoutE = size(OutputElectric)
   nchout = nchoutH + nchoutE
 
   ! Allocate space for transfer functions and rotation matrices
@@ -288,7 +300,13 @@ program z2xml
 
   ! Read runs (e.g. start and end times) information for each of the runs
   ! which were used in processing the data found in the Z-file
-  call read_run_list(UserInfo%RunList, zLocalSite%RunList, Run, run_list_exists)
+  ! If multistation, don't try to parse the name in Z-file, use site list
+  run_list_exists = .false.
+  if (.not. multistation .and. UserInfo%ParseProcessingTag) then
+    call read_run_list(UserInfo%RunList, zLocalSite%RunList, Run, run_list_exists)
+  else if (len_trim(xmlLocalSite%RunList)>0) then
+    call read_run_list(UserInfo%RunList, xmlLocalSite%RunList, Run, run_list_exists)
+  end if
 
   ! Field notes go first
   if (run_list_exists) then
@@ -305,10 +323,10 @@ program z2xml
   end if
   
   ! Processing notes follow
-  if (UserInfo%RemoteRef) then
+  if (UserInfo%RemoteRef .and. UserInfo%ParseProcessingTag) then
   	call read_site_list(UserInfo%SiteList, UserInfo%RemoteSiteID, xmlRemoteSite, site_list_exists)
 	call read_run_list (UserInfo%RunList, xmlRemoteSite%RunList, RemoteRun, run_list_exists)
-  	if (run_list_exists) then
+  	if (run_list_exists .and. .not. multistation) then
 		call add_ProcessingInfo(UserInfo, xmlRemoteSite, RemoteRun)
 	else
 		call add_ProcessingInfo(UserInfo, xmlRemoteSite)
@@ -339,12 +357,16 @@ program z2xml
   call end_block('InputChannels')
 
   call new_channel_block('OutputChannels')
-  do i=1,size(OutputMagnetic)
-     call add_Channel(OutputMagnetic(i), location=.false.)
-  end do
-  do i=1,size(OutputElectric)
-     call add_Channel(OutputElectric(i), location=.false.)
-  end do
+  if (associated(OutputMagnetic)) then
+    do i=1,nchoutH
+        call add_Channel(OutputMagnetic(i), location=.false.)
+    end do
+  end if
+  if (associated(OutputElectric)) then
+    do i=1,nchoutE
+        call add_Channel(OutputElectric(i), location=.false.)
+    end do
+  end if
   call end_block('OutputChannels')
   call end_element('SiteLayout')
 
@@ -383,10 +405,12 @@ program z2xml
   call add_PeriodRange(F)
 
   ! Exit nicely
-  deallocate(Run)
-  if (associated(RemoteRun)) deallocate(RemoteRun)
-  if (associated(Notes)) deallocate(Notes)
-  deallocate(InputMagnetic, OutputMagnetic, OutputElectric, stat=istat)
+  if (associated(Run)) nullify(Run)
+  if (associated(RemoteRun)) nullify(RemoteRun)
+  if (associated(Notes)) nullify(Notes)
+  deallocate(InputMagnetic, stat=istat)
+  if (associated(OutputMagnetic)) nullify(OutputMagnetic)
+  if (associated(OutputElectric)) nullify(OutputElectric)
   deallocate(F, TF, TFVar, InvSigCov, ResidCov, stat=istat)
   do i = 1,size(DataType)
     call deall_data(Data(i))

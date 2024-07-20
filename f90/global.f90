@@ -6,6 +6,7 @@ module global
   !integer, save         :: nf, ndt
   logical, save         :: dry=.false.
   logical, save         :: silent=.true.
+  logical, save         :: multistation=.false.
   character(len=10)     :: date, time, zone
   !*********************************************************
   ! Rotation options: if .not. rotate, leave the TFs alone.
@@ -21,8 +22,7 @@ module global
   ! this folder can be hardcoded here. If the code is run
   ! from a directory that contains DATATYPES and COPYRIGHT
   ! folders, homedir is overwritten with the current directory
-  !character(len=80)     :: homedir='/home/mho/lana/EMTF-XML/f90/'
-  character(len=200)    :: homedir='/Users/akelbert/Developer/EMTF-FCU/f90/'
+  character(len=200)    :: homedir='/home/akelbert/Developer/EMTF-FCU/f90/'
   !*********************************************************
   ! IRIS requires site ID to have no more than 5 chars
   ! respectively, run ID has no more than 6 chars
@@ -57,6 +57,8 @@ module global
   character(len=12)     :: magnetic_field_units='[nT]'
   character(len=12)     :: electric_field_units='[mV/km]'
   !*********************************************************
+  ! Adding a missing data value to ensure consistent XMLs
+  real(8)               :: large_errorbar = 1.0e+32
 
 
   !************************************************************************
@@ -64,7 +66,10 @@ module global
   ! In general, site names are unique within the 2-char Network.
   ! However, all MT stuff has been given a single network name ('EM').
   ! Recently, that has been changed, and new MT surveys will have unique
-  ! networks. Still, most of the historic MT is in 'EM'.
+  ! networks. Still, most of the historical MT is in 'EM'.
+  ! Update on March 16, 2021: IRIS archive will be re-organized to include
+  ! unique networks for each MT survey, including historical. This will
+  ! now need to be part of the config.xml file. Already coded up.
   character(len=2)      :: network='EM'
   character(len=20)     :: subType='MT_TF'
   character(len=200)    :: subTypeInfo='Magnetotelluric Transfer Functions'
@@ -133,7 +138,9 @@ module global
     character(len=80) :: ProcessingSoftware
     character(len=80) :: ProcessingSoftwareLastMod
     character(len=80) :: ProcessingSoftwareAuthor
-    character(len=80) :: ProcessingTag ! for Z-file input/output
+    character(len=120):: ProcessingTag ! for Z-file input/output
+    logical           :: ParseProcessingTag ! for Z-file input/output
+    logical           :: FileNameAsSiteID ! for Z-file input/output
     character(len=80) :: Estimate(8) ! statistical estimate types
     character(len=80) :: DateFormat ! for EDI input/output
     character(len=80) :: DummyDataValue ! for EDI input/output
@@ -150,7 +157,7 @@ module global
     logical           :: AddDeclToSiteLayout ! channel azimuths should be relative to geographic North
     logical           :: UseImpedanceRotationForAll ! set to true to default to ZROT for tipper
     logical           :: ChannelsOnTwoLines ! set to false to default
-    character(len=80) :: Basename ! base name of the original file to be submitted
+    character(len=200):: Basename ! base name of the original file to be submitted
     character(len=10) :: Image ! extension of the image file, if present
     character(len=10) :: Original ! extension of the original file to be submitted
     character(len=80) :: Attachment ! full name for optional survey attachment file
@@ -192,6 +199,7 @@ module global
 	type(XYZ_t)        :: Coords
   	type(Location_t)   :: Location
 	real(8)            :: Declination
+	character(80)      :: DeclinationModel ! e.g., IGRF-13
 	character(10)      :: Orientation ! TFs as in file either 'orthogonal' or 'sitelayout'
 	real(8)            :: AngleToGeogrNorth ! if 'orthogonal' this is the azimuth
 	integer			   :: QualityRating ! 1-5
@@ -418,6 +426,8 @@ contains
         Info%ProcessingSoftwareLastMod = ' '
         Info%ProcessingSoftwareAuthor = ' '
         Info%ProcessingTag = ' '
+        Info%ParseProcessingTag = .FALSE.
+        Info%FileNameAsSiteID = .FALSE.
         Info%DateFormat = 'MM/DD/YY'
         Info%DummyDataValue = ''
         Info%DefaultSiteName = 'UNKNOWN SITE NAME'
@@ -490,6 +500,7 @@ contains
         call init_location(Site%Coords%Origin)
 		call init_location(Site%Location)
 		Site%Declination = 0.0d0
+		Site%DeclinationModel = ' '
 		Site%Orientation = 'sitelayout'
 		Site%AngleToGeogrNorth = 0.0d0
 		Site%QualityRating = 0
@@ -639,10 +650,10 @@ contains
         Data%Rot = 0.0d0
         Data%Empty = 0
         Data%Matrix = dcmplx(0.0d0,0.0d0)
-        Data%Var = 0.0d0
-        Data%Cov = dcmplx(0.0d0,0.0d0)
+        Data%Var = large_errorbar
+        Data%Cov = dcmplx(large_errorbar,large_errorbar)
         Data%InvSigCov = dcmplx(0.0d0,0.0d0)
-        Data%ResidCov = dcmplx(0.0d0,0.0d0)
+        Data%ResidCov = dcmplx(large_errorbar,large_errorbar)
         Data%Coh = dcmplx(0.0d0,0.0d0)
         Data%MultCoh = dcmplx(0.0d0,0.0d0)
         Data%SigAmp = dcmplx(0.0d0,0.0d0)

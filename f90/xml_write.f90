@@ -174,6 +174,17 @@ contains
         call xml_EndElement(xmlfile, 'Attachment')
     end if
 
+    if (trim(UserInfo%Original) .eq. 'j') then ! exception to include Alan Chave's j-file covariances
+        call xml_NewElement(xmlfile, 'Attachment')
+        call xml_NewElement(xmlfile, 'Filename')
+        call xml_AddCharacters(xmlfile, trim(UserInfo%Basename)//'_cov.'//trim(UserInfo%Original))
+        call xml_EndElement(xmlfile, 'Filename')
+        call xml_NewElement(xmlfile, 'Description')
+        call xml_AddCharacters(xmlfile, 'Alan Chave BIRRP Covariance file')
+        call xml_EndElement(xmlfile, 'Description')
+        call xml_EndElement(xmlfile, 'Attachment')
+    end if
+
     if (.not. isempty(UserInfo%Attachment)) then ! submit the survey attachment to SPUD
         call xml_NewElement(xmlfile, 'Attachment')
         call xml_NewElement(xmlfile, 'Filename')
@@ -338,7 +349,7 @@ contains
 
 	call add_Site_header(UserInfo, Site)
  
-	call add_Location(Site%Location,Site%Declination)
+	call add_Location(Site%Location,Site%Declination,Site%DeclinationModel)
 
 	call xml_NewElement(xmlfile, 'Orientation')
     if (Site%Orientation .eq. 'orthogonal') then
@@ -489,6 +500,8 @@ contains
 		type(UserInfo_t), intent(in)                    :: UserInfo
     	type(Site_t), optional, intent(in)              :: RemoteSite
     	type(Run_t), optional, dimension(:), intent(in) :: RemoteRun 
+        ! local
+        integer irun
 
 		call xml_NewElement(xmlfile, 'ProcessingInfo')
 		call xml_NewElement(xmlfile, 'SignConvention')
@@ -509,8 +522,8 @@ contains
 				call xml_EndElement(xmlfile, 'Site')
 								
 				if (present(RemoteRun)) then
-  					do i=1,size(RemoteRun)
-						call add_FieldNotes(RemoteRun(i))
+  					do irun=1,size(RemoteRun)
+						call add_FieldNotes(RemoteRun(irun))
   					end do
    				end if	
 			
@@ -690,9 +703,12 @@ contains
     	
 	end subroutine add_FieldNotes
 
-  subroutine add_Location(L,decl)
+  subroutine add_Location(L,decl,model)
     type(Location_t), intent(in)    :: L
 	real(8), optional, intent(in)   :: decl
+	character(*), optional, intent(in) :: model
+	! local
+	character(6) epoch
 
     call xml_NewElement(xmlfile, 'Location')
     call xml_AddAttribute(xmlfile, 'datum', trim(L%datum))
@@ -712,7 +728,29 @@ contains
     
     if (present(decl)) then
     	call xml_NewElement(xmlfile, 'Declination')
-    	call xml_AddAttribute(xmlfile, 'epoch', '1995.0')
+    	! parse IGRF model, if present
+    	if (present(model)) then
+    	    if (index(model,'15')>0) then
+    	        epoch = '2030.0'
+    	    elseif (index(model,'14')>0) then
+                epoch = '2025.0'
+            elseif (index(model,'13')>0) then
+                epoch = '2020.0'
+            elseif (index(model,'12')>0) then
+                epoch = '2015.0'
+            elseif (index(model,'11')>0) then
+                epoch = '2010.0'
+            elseif (index(model,'10')>0) then
+                epoch = '2005.0'
+            elseif (index(model,'09')>0) then
+                epoch = '2000.0'
+            else
+                epoch = '1995.0'
+            end if
+            call xml_AddAttribute(xmlfile, 'epoch', epoch)
+    	else
+    	    call xml_AddAttribute(xmlfile, 'epoch', '1995.0')
+    	end if
     	call xml_AddCharacters(xmlfile, decl,  fmt="r3")
     	call xml_EndElement(xmlfile, 'Declination')
     end if
@@ -1029,11 +1067,12 @@ contains
        do j=1,Data%nchin
           if (isnan(Data%Var(iPer,i,j))) then
             if (Data%Type%isScalar) then
-                write(0,*) 'Warning: skipping NaN output for ',trim(Data%Type%Name),' VAR period ',iPer
+                write(0,*) 'Warning: writing NaN output for ',trim(Data%Type%Name),' VAR period ',iPer,' as ',large_errorbar
             else
-                write(0,*) 'Warning: skipping NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' VAR period ',iPer
+                write(0,*) 'Warning: writing NaN output for ',trim(TF_name(Data%Type,Input(j),Output(i))),' VAR period ',iPer, &
+                            ' as ',large_errorbar
             end if
-            cycle
+            !cycle
           end if
           call xml_NewElement(xmlfile, 'value')
           if (Data%Type%isScalar) then
@@ -1043,7 +1082,11 @@ contains
               call xml_AddAttribute(xmlfile, 'output', trim(Output(i)%ID))
               call xml_AddAttribute(xmlfile, 'input', trim(Input(j)%ID))
           end if
-          call xml_AddCharacters(xmlfile, Data%Var(iPer,i,j), fmt="s7")
+          if (isnan(Data%Var(iPer,i,j))) then
+            call xml_AddCharacters(xmlfile, large_errorbar, fmt="s7")
+          else
+            call xml_AddCharacters(xmlfile, Data%Var(iPer,i,j), fmt="s7")
+          end if
           call xml_EndElement(xmlfile, 'value')
        end do
     end do

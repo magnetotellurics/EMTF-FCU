@@ -21,7 +21,7 @@
 !               104 CEOAS Administration Building                                 !
 !               Corvallis, OR 97331-5503                                          !
 !                                                                                 !
-! Copyright (C) Anna Kelbert, 2015-2018                                           !
+! Copyright (C) Anna Kelbert, 2015-2024                                           !
 !               Geomagnetism Program                                              !
 !               U.S. Geological Survey                                            !
 !               1711 Illinois St                                                  !
@@ -41,10 +41,11 @@
 ! Subroutines in module utils.f90 are (C) 2007 Anna Kelbert (LGPL),               !
 ! (C) 2002-2005 J. K. Dewhurst, S. Sharma and C. Ambrosch-Draxl (LGPL),           !
 ! (C) 2003 Purple Sage Computing Solutions, Inc. (GPLv2 or above).                !
-! Module write_edi.f90 is an adaptation of a modified version of wrt_edi.f,       !
-! originally written by Randie Mackie. In the latest version, EDI write           !
-! routines have been generalized and rewritten from scratch. The author           !
-! would like to thank Xavier Garcia for kindly sharing his EDI SPECTRA            !
+! The author would like to thank Randie Mackie for sharing his wrt_edi.f code     !
+! which served as a useful point of reference for output EDI files formatting.    !
+! In the latest version, generalized EDI write routines have been written         !
+! from scratch and do not use any external code.                                  !
+! The author would like to thank Xavier Garcia for kindly sharing his EDI SPECTRA !
 ! reading and rotation code with the author. This code has not been incorporated  !
 ! in EMTF XML code base, but has served as an invaluable point of reference.      !
-!---------------------------------------------------------------------------------! 
+!---------------------------------------------------------------------------------!

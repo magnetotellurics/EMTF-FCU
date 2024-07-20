@@ -41,7 +41,7 @@ contains
      end if
 
      if(ios/=0) then
-        write(0,*) 'Error opening file:', fname
+        write(0,*) 'Error opening file:', trim(fname)
      endif
 
      if (present(Info)) then
@@ -72,7 +72,7 @@ contains
   ! Please manually correct the station name in your Z-file to satisfy
   ! these criteria before attempting to run this program.
   subroutine parse_z_site_name(sitename, SiteID, RemoteSiteID, RunList)
-  	character(len=80), intent(in)    :: sitename
+  	character(len=200), intent(in)   :: sitename
   	character(len=5), intent(out)    :: SiteID
   	character(len=5), intent(out)    :: RemoteSiteID
   	character(len=80), intent(out)   :: RunList
@@ -80,8 +80,9 @@ contains
 	character(len=20)                :: list, abbrev
   	integer                          :: l, k, i, ir
 
-  	SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//toupper(sitename(3:3))//sitename(4:5)
-        !SiteID = sitename(1:3)//sitename(4:6)  ! this is for CAFE_MT/CFNM_ZRR only!!! 
+  	SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//sitename(3:5)
+    !SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))//toupper(sitename(3:3))//sitename(5:6) ! USGS style
+        !SiteID = sitename(1:3)//sitename(4:6)  ! this is for CAFE_MT/CFNM_ZRR only!!!
         if(sitename(1:3).eq.'CAF')then
           SiteID = toupper(sitename(1:1))//toupper(sitename(2:2))// &
                    toupper(sitename(3:3))//sitename(5:6)! this is for CAFE_MT/CFNM_ZRR only!!!
@@ -100,28 +101,37 @@ contains
   	    l = len_trim(sitename)
   	end if
 
+    abbrev = ' '
+
   	if (l>5) then
   		i = index(sitename,'_')
                 ir = index(sitename,'r')
                 list=' '
-		if (i==0) then ! Single Station - create the run list and exit
-			list = sitename(6:l)
-			abbrev = ' '
+		if (i==0) then
+		    if (l>6) then
+		        ! Do not attempt to parse the name
+		        list = ' '
+		        abbrev = ' '
+		    else
+		        ! Single Station - create the run list and exit
+			    list = sitename(6:l)
+			    abbrev = ' '
+			endif
 		else ! Remote Reference - parse the name of the remote site
 			list = sitename(6:i-1)
 			abbrev = sitename(i+1:l)
 		end if
-                if(sitename(1:3).eq.'pam')then ! remote referencing for Argentina
-                       list = sitename(6:ir-1)
-		       abbrev = sitename(ir+1:i-1)
-                endif
+		if(sitename(1:3).eq.'pam')then ! remote referencing for Argentina
+		    list = sitename(6:ir-1)
+		    abbrev = sitename(ir+1:i-1)
+		endif
 		! In either case, make a list of run names, store them in a string
 		do k=1,len_trim(list)
-                     if(sitename(1:3).ne.'CAF'.and.sitename(1:3).ne.'pam')then
-			RunList = trim(RunList)//' '//trim(SiteID)//list(k:k)                     
-                     else
-                        RunList = trim(RunList)//' '//trim(sitename)//' '
-                     endif
+		    !if(sitename(1:3).ne.'CAF'.and.sitename(1:3).ne.'pam')then
+		    !    RunList = trim(RunList)//' '//trim(SiteID)//list(k:k)
+		    !else
+		        RunList = trim(RunList)//' '//trim(sitename)//' '
+		    !endif
 		end do
 	end if
   	if (len_trim(abbrev)==0) then
@@ -176,7 +186,7 @@ contains
 
 
   subroutine read_z_header(sitename, Site, Info, nf, nch, header1, header2)
-    character(len=80), intent(out)   :: sitename
+    character(len=200), intent(out)  :: sitename
     type(Site_t),  intent(out)       :: Site
 	type(UserInfo_t), intent(inout)  :: Info
 	integer, intent(out)             :: nf
@@ -249,18 +259,18 @@ contains
   end subroutine read_z_header
 
 
-  subroutine read_z_channels(Input, OutputH, OutputE, nch, decl)
+  subroutine read_z_channels(Input, OutputH, OutputE, nch, nchoutH, nchoutE, decl)
     type(Channel_t), pointer, intent(inout) :: Input(:)
     type(Channel_t), pointer, intent(inout) :: OutputH(:)
     type(Channel_t), pointer, intent(inout) :: OutputE(:)
     integer, intent(in)                     :: nch
+    integer, intent(out)                    :: nchoutH, nchoutE
     real(8), intent(inout), optional        :: decl
     ! local
     type(Channel_t), pointer         :: Output(:)
     real(8)                          :: declination
     character(len=3)                 :: temp
     integer                          :: num, istat
-    integer                          :: nchoutH, nchoutE
     character(len=80)                :: chname
     real                             :: orientation
     real                             :: tilt
@@ -347,7 +357,7 @@ contains
     read (zfile,'(a100)',iostat=ios) temp
     i = index(temp,'period')
     !j = index(temp,'decimation level')
-
+ 
 	call init_freq_info(F)
 
     read (temp(i+8:i+24),*) period
@@ -393,7 +403,7 @@ contains
           end if
        end do
     end do
-
+ 
     ResidCov=0.0d0
     read (zfile,*) temp !Residual Covariance
     do i=1,nchout
@@ -538,11 +548,11 @@ contains
 
 	read (zfile,'(i8)',iostat=ios) nline
 	if (ios/=0 .or. nline==0) then
-		if (associated(Notes)) deallocate(Notes)
+		if (associated(Notes)) nullify(Notes)
 		return
 	end if
 
-	if (associated(Notes)) deallocate(Notes)
+	if (associated(Notes)) nullify(Notes)
 
 	write(0,*) 'Reading ',nline,' lines of notes at the end of Z-file...'
 

@@ -27,7 +27,7 @@ my $input_fname;
 opendir(LS, "$input_dir/") || die "Unable to open the requested directory";
 print "Reading directory $input_dir/\n";
 while($input_fname = readdir(LS)){
-	if($input_fname =~ /^(\w+)\.(xml)$/){
+	if($input_fname =~ /^(\S+)\.(xml)$/){
 		push @take_files, $input_fname;
 	}
 }
@@ -41,7 +41,7 @@ if (@take_files==0) {
 my $output_fname;
 foreach $input_fname(@take_files){
 	$_ = $input_fname;
-	s/^(\w+)\.(\w+)$/$1\.edi/;
+	s/^(\S+)\.(\w+)$/$1\.edi/;
 	$output_fname = $_;
 	print "xml2edi $input_dir/$input_fname $output_dir/$output_fname\n";
 	system("xml2edi $input_dir/$input_fname $output_dir/$output_fname silent\n");

@@ -23,7 +23,7 @@ my $input_fname;
 opendir(LS, "$input_dir/") || die "Unable to open the requested directory";
 print "Reading directory $input_dir/\n";
 while($input_fname = readdir(LS)){
-	if($input_fname =~ /^(\w+)\.(zss|zrr|zmm)$/){
+	if($input_fname =~ /^([^.]+)\.(zss|zrr|zmm)$/){
 		push @take_files, $input_fname;
 	}
 }
@@ -37,7 +37,7 @@ if (@take_files==0) {
 my $output_fname;
 foreach $input_fname(@take_files){
 	$_ = $input_fname;
-	s/^(\w+)\.(\w+)$/$1\.xml/;
+	s/^([^.]+)\.(\w+)$/$1\.xml/;
 	$output_fname = $_;
 	print "z2xml $input_dir/$input_fname $output_dir/$output_fname silent 0.0\n";
 	system("z2xml $input_dir/$input_fname $output_dir/$output_fname silent 0.0\n");

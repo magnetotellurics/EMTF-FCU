@@ -182,7 +182,7 @@ program edi2xml
     write(0,*) '    <WriteEDIInfo>0</WriteEDIInfo>'
     write(0,*) '    <MetadataOnly>0</MetadataOnly>'
     write(0,*) '    <DateFormat>MM/DD/YY</DateFormat>'
-  	write(0,*) '<Configuration>'
+  	write(0,*) '</Configuration>'
   	write(0,*)
   	write(0,*) 'Project and YearCollected (if present) help identify'
     write(0,*) 'a product in SPADE. They should not contain spaces.'
@@ -315,7 +315,7 @@ program edi2xml
 
   ! Read information for this site from a list. If successfully read,
   ! trust this information rather than that from the edi-file
-  call read_site_list(UserInfo%SiteList, ediLocalSite%IRIS_ID, xmlLocalSite, site_list_exists)
+  call read_site_list(UserInfo%SiteList, ediLocalSite%ID, xmlLocalSite, site_list_exists)
 
   ! Initialize output
   call initialize_xml_output(xml_file,'EM_TF')
@@ -326,6 +326,14 @@ program edi2xml
     xmlLocalSite%ID = ediLocalSite%ID
     xmlLocalSite%Orientation = ediLocalSite%Orientation
     xmlLocalSite%AngleToGeogrNorth = ediLocalSite%AngleToGeogrNorth
+    ! Allow for incomplete site lists...
+    if (len_trim(xmlLocalSite%Start)==0) then
+        xmlLocalSite%Start = ediLocalSite%Start
+    end if
+    if (len_trim(xmlLocalSite%End)==0) then
+        xmlLocalSite%End = ediLocalSite%End
+    end if
+    ! Save EDI info if requested
     if (UserInfo%WriteEDIInfo) then
         call add_xml_header(xmlLocalSite, UserInfo, Notes, NotesLength)
     else
@@ -361,7 +369,7 @@ program edi2xml
   call end_element('DataTypes')
   end if
 
-  call add_GridOrigin(ediLocalSite)
+  !call add_GridOrigin(ediLocalSite)
 
   call new_element('SiteLayout')
   call new_channel_block('InputChannels')

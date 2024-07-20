@@ -6,12 +6,12 @@ program z2edi
   use edi_write
   implicit none
 
-  character(len=80) :: z_file=''
-  character(len=80) :: edi_file=''
+  character(len=200):: z_file=''
+  character(len=200):: edi_file=''
   character(len=80) :: site_info_list='Sites.xml'
   character(len=80) :: run_info_list='Runs.xml'
   character(len=80) :: description='My favourite station'
-  character(len=80) :: zsitename, basename, verbose='',coords=''
+  character(len=200):: zsitename, basename, verbose='',coords=''
   type(UserInfo_t)  :: Info
   type(Site_t)                                 :: zLocalSite
   type(Run_t), dimension(:), allocatable       :: Run
@@ -85,11 +85,13 @@ program z2edi
   call read_z_header(zsitename, zLocalSite, Info, nf, nch)
 
   ! Read and write channels
-  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch)
+  call read_z_channels(InputMagnetic, OutputMagnetic, OutputElectric, nch, nchoutH, nchoutE)
 
+  ! Define local dimensions 
+  ! A.K. NOTE AS OF 3/17/2023: we cannot obtain nchout from output channel 
+  ! dimensions; as it turns out they if they are not associated, their sizes
+  ! are not well-defined and that kills the program
   nchin = size(InputMagnetic)
-  nchoutH = size(OutputMagnetic)
-  nchoutE = size(OutputElectric)
   nchout = nchoutH + nchoutE
 
   allocate(F(nf),TF(nf,nchout,nchin), TFVar(nf,nchout,nchin), stat=istat)
@@ -126,6 +128,7 @@ program z2edi
         Data(i)%ResidCov = ResidCov(:,1:nchoutH,1:nchoutH)
         Data(i)%fullcov = .true.
         Data(i)%orthogonal = .false.
+        if (nchoutH == 0) Data(i)%allocated = .false.
     case ('E')
         call init_data(Data(i),DataType(i),nf,nchin,nchoutE)
         Data(i)%Matrix = TF(:,nchoutH+1:nchout,:)
@@ -134,6 +137,7 @@ program z2edi
         Data(i)%ResidCov = ResidCov(:,nchoutH+1:nchout,nchoutH+1:nchout)
         Data(i)%fullcov = .true.
         Data(i)%orthogonal = .false.
+        if (nchoutE == 0) Data(i)%allocated = .false.
     case default
         write(0,*) 'Error: unable to initialize the data variable #',i
     end select
@@ -154,6 +158,9 @@ program z2edi
             write(*,*) 'Rotation of derived types is presently not supported. ', &
                 'Data type ',trim(DataType(i)%Tag),' will NOT be rotated and may need to be recomputed.'
             cycle
+        else if (.not. Data(i)%allocated) then
+            write(*,*) 'Data type ',trim(DataType(i)%Tag),' is not allocated and will not be rotated.'
+            cycle
         end if
         write(*,'(a10,a20,a4,a10,a14,f9.6)') &
             'Rotating ',trim(DataType(i)%Tag),' to ',trim(orthogonalORsitelayout),' with azimuth ',azimuth
@@ -167,7 +174,6 @@ program z2edi
         end select
       end do
   end if
-
 
   call date_and_time(date)
 

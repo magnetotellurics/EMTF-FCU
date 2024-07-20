@@ -56,6 +56,8 @@ contains
 	if (.not.(exists)) then
 		write(0,*) 'Unable to read data from XML file ',trim(xmlFile),': File does not exist'
 		return
+    else
+        write(0,*) 'Reading from file ',trim(xmlFile)
     end if
     
     if (len_trim(xmlFile)==0) then
@@ -88,6 +90,10 @@ contains
     		Site%Location%lon = getReal(thisSite,"Longitude")
     		Site%Location%elev = getReal(thisSite,"Elevation")
     		Site%Declination = getReal(thisSite,"Declination")
+    		str = getString(thisSite,"DeclinationModel")
+    		if (len_trim(str)>0) then
+    		    Site%DeclinationModel = trim(str)
+    		end if
     		Site%QualityRating = getInteger(thisSite,"QualityRating")
     		Site%GoodFromPeriod = getReal(thisSite,"GoodFromPeriod")
     		Site%GoodToPeriod = getReal(thisSite,"GoodToPeriod")
@@ -112,7 +118,11 @@ contains
     	write(*,*) 'Site quality is ',Site%QualityRating,' out of 5'
     	write(*,*) 'Location is ', &
     		Site%Location%lon, Site%Location%lat, Site%Location%elev, Site%Declination
-		write(*,*) 'Run list is ', Site%RunList		
+		if (len_trim(Site%RunList)>0) then
+			write(*,*) 'Run list is ', Site%RunList
+		else
+			write(*,*) 'Run list is empty in the Site description'
+		end if
     end if
     
   end subroutine read_site_list
@@ -154,6 +164,12 @@ contains
 	integer                                :: k, n
 	logical, intent(out)                   :: exists
 
+    if (len_trim(xmlFile)==0) then
+		write(0,*) 'Unable to read data from the Run list: File is not provided'
+    	exists = .false.
+    	return
+	end if
+
 	! this interesting formula for the number of runs stems from the fact
 	! that there are 6 letters in a run ID, and n-1 blanks in between,
 	! and possibly a leading blank by construction (6n+n-1 or 6n+n letters)
@@ -168,12 +184,9 @@ contains
 	if (.not.(exists)) then
 		write(0,*) 'Unable to read data from XML file ',trim(xmlFile),': File does not exist'
 		return
+    else
+        write(0,*) 'Reading runs ',trim(runlist),' from file ',trim(xmlFile)
     end if
-
-    if (len_trim(xmlFile)==0) then
-    	exists = .false.
-    	return
-	end if
 	
  	! Load in the document
   	doc => parseFile(xmlFile)
@@ -284,6 +297,8 @@ contains
 	if (.not.(exists)) then
 		write(0,*) 'Unable to read data from XML file ',trim(xmlFile),': File does not exist'
 		return
+    else
+        write(0,*) 'Reading channels for ',trim(myRun),' from file ',trim(xmlFile)
     end if
 
     if (len_trim(xmlFile)==0) then
