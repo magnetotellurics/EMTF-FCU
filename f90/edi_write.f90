@@ -157,7 +157,7 @@ contains
     character(200), dimension(:), pointer, optional :: Notes
     integer, intent(inout), optional                :: n
     ! local variables
-    character(len=120), dimension(16)               :: info_block
+    character(len=400), dimension(16)               :: info_block
     character(len=120)                              :: runlist,doi
     integer                                         :: i
 
@@ -201,7 +201,7 @@ contains
       write(edifile,*) 'MAXINFO=999'
 
       do j=1,size(info_block)
-        write(edifile,'(a120)') info_block(j)
+          write(edifile,'(a)') trim(info_block(j))
       end do
 
     if (present(Notes)) then

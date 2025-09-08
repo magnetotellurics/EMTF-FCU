@@ -94,7 +94,7 @@ program edi2edi
 
   ! Update output file name
   if (index(edi_file_out,'.')==0) then
- 	edi_file_out = trim(edi_file_out)//'.edi'
+ 	  edi_file_out = trim(edi_file_out)//'.edi'
   end if
 
   ! Initialize user info - no requirement for XML file here
@@ -111,7 +111,8 @@ program edi2edi
   ! On input, UserInfo comes from the XML configuration; fill it in from the EDI
   call read_edi_header(edisitename, ediLocalSite, UserInfo)
 
-  ! Read EDI info always, but do not necessarily parse
+  ! Read and try to parse EDI info
+  UserInfo%ParseEDIinfo = .true.
   call read_edi_info(ediLocalSite, UserInfo, Notes, NotesLength)
 
   ! This allocates and fills in the channels and updates the local site coords
@@ -182,7 +183,7 @@ program edi2edi
   ! currently writing out impedances and tippers, if present
   call initialize_edi_output(edi_file_out)
   call write_edi_header(edi_date, edisitename, ediLocalSite, UserInfo)
-  call write_edi_info(ediLocalSite,UserInfo,Notes,NotesLength)
+  call write_edi_info(ediLocalSite, UserInfo)
   call write_edi_channels(InputMagnetic, OutputMagnetic, OutputElectric, ediLocalSite)
   call write_edi_data(edisitename, F, Data)
   call end_edi_output()

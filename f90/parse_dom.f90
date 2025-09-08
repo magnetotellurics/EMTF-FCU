@@ -127,7 +127,7 @@ contains
 
 	if (len_trim(str)>0) then
 		if ((index(str,'e')>0).or.(index(str,'E')>0)) then
-			read(str, '(e16.5)') value
+			read(str, '(e24.6)') value
 		else
 			if (index(str,'.')==0) then
 				str = trim(str)//'.'

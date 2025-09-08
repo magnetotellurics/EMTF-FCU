@@ -84,7 +84,7 @@ contains
 
 
   subroutine parse_edi_line(line, var, value)
-    character(len=200), intent(in)   :: line
+    character(len=*),   intent(in)   :: line
     character(len=200), intent(out)  :: var, value
     ! local
     character(len=1)                 :: edichar1, edichar2
@@ -127,7 +127,7 @@ contains
         var = trim(temp(1:i-1))
         value = trim(adjustl(temp(i+1:N)))
         edichar1 = value(1:1)
-        if (isdigit(edichar1)) then
+        if ((isdigit(edichar1)) .or. (trim(this_block) == 'INFO')) then
             ! just save the full line; could be date or anything
         elseif (len_trim(value) == 0) then
             ! this is an empty string; meaningless, do nothing
@@ -442,13 +442,59 @@ contains
 
             else
 
+                    ! parse standard INFO block as written by edi_write
+                    if (len_trim(value) > 0) then ! deal with the empty string problem
+                    select case (trim(var))
+                        case('SURVEYTITLE') 
+                            Info%Copyright%Title = trim(value)
+                        case('SURVEYAUTHORS')
+                            Info%Copyright%Authors = trim(value)
+                        case('SURVEYYEAR')
+                            Info%Copyright%Year = trim(value)
+                        case('SURVEYDOI')
+                            Info%Copyright%SurveyDOI = trim(value)
+                        case('CONDITIONSOFUSE')
+                            Info%Copyright%ConditionsOfUse = trim(value)
+                        case('PROJECT')
+                            Info%Project = trim(value)
+                        case('SURVEY')
+                            if (isempty(Info%Survey)) then ! prefer the XML config info
+                                Info%Survey = trim(value)
+                            end if
+                        case('YEARCOLLECTED')
+                            Info%YearCollected = trim(value)
+                        case('PROCESSEDBY')
+                            Info%ProcessedBy = trim(value)
+                        case('PROCESSINGSOFTWARE')
+                            Info%ProcessingSoftware = trim(value)
+                        case('PROCESSINGTAG')
+                            Info%ProcessingTag = trim(value)
+                        case('SITENAME')
+                            if(Info%IgnoreSiteNameInFile) then
+                                ! do nothing
+                            else if (.not. (trim(adjustl(value)) .eq. 'UNKNOWN SITE NAME')) then
+                                Site%Description = trim(value)
+                            end if
+                        case('RUNLIST')
+                            Site%RunList = trim(value)
+                        case('REMOTEREF')
+                            Info%RemoteRefType = trim(value)
+                        case('REMOTESITE')
+                            Info%RemoteSiteID = trim(value)
+                        case('SIGNCONVENTION')
+                            Info%SignConvention = trim(value)
+                        case ('INFO','DUMMY','COMMENT')
+                            ! these are already saved in the Notes if needed
+                    end select
+                end if
+
                 ! In the special case of "EDI file changed by program edi_dec",
                 ! whatever that program is... read the declination
                 if (trim(var) .eq. 'Declination for this location') then
                     read(value,*) Site%Declination
                 end if
 
-                ! to parse the INFO block, first find an occurence of the site ID
+                ! to parse the location INFO, first find an occurence of the site ID
                 ! then allow parsing of only one value of each type after site ID
                 if (trim(var) .eq. 'INFO') then
                     if (index(to_upper(value),trim(to_upper(Site%ID)))>0) then
