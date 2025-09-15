@@ -1,6 +1,10 @@
-+--------------------+
-|    Compilation     |
-+--------------------+
+# EMTF-File Conversion Utility (EMTF-FCU)
+
+Electromagnetic Transfer Functions File Conversion Utilities (EMTF FCU), (C)
+2007-2018 Anna Kelbert, is a set of Fortran 90 routines for electromagnetic
+transfer function file conversion and rotation.
+
+## Compilation
 
 EMTF FCU is written in Fortran 90 and may be compiled with any
 command-line or visual modern Fortran compiler. However, this
@@ -8,61 +12,60 @@ EMTF FCU compilation guide assumes a command-line environment.
 This is straightforward under Linux or on a Mac: just open any
 shell terminal. On Windows, command-line environment is most
 easily achieved by installing the Cygwin package from
-Https://www.cygwin.com. Windows 10 and later versions have an
+<https://www.cygwin.com>. Windows 10 and later versions have an
 inbuilt Linux shell option:
-https://docs.microsoft.com/en-us/windows/wsl/install-win10
+<https://docs.microsoft.com/en-us/windows/wsl/install-win10>
 
 1. Install gfortran or similar Fortran 95 compiler.
 
-2. Download the newest version of FoX library,
-   https://github.com/andreww/fox
-   and unpack it to a directory (call it $FOX_LIB).
+2. Download the newest version of FoX library, https://github.com/andreww/fox
+and unpack it to a directory (call it `$FOX_LIB`).
 
 3. Compile FoX package
 
-   cd $FOX_LIB
-   ./configure
-   make
+```bash
+cd $FOX_LIB
+./configure
+make
+```
 
 NB: if you move FoX in the file system, reconfigure
 
 4. Go back to the EMTF FCU directory. Change the
-   $FOX_LIB variable in the Makefile to your FoX path.
-   Change $BIN_DIR variable in the Makefile to an existing
+   `$FOX_LIB` variable in the Makefile to your FoX path.
+   Change `$BIN_DIR` variable in the Makefile to an existing
    directory where you wish your executables to reside.
 
-5. Optional: to create XML files, set "homedir" variable
-   in the header of global.f90 to the directory where
-   DATATYPES and COPYRIGHT folder reside (usually, same as code).
+5. Optional: to create XML files, set `homedir` variable
+   in the header of `global.f90` to the directory where
+   `DATATYPES` and `COPYRIGHT` folder reside (usually, same as code).
 
    If you intend to only run the codes from the file directory
-   Where source codes reside, "homedir" is not needed.
+   Where source codes reside, `homedir` is not needed.
 
-NB: if you set "homedir" to a directory name that is longer than
+NB: if you set `homedir` to a directory name that is longer than
     80 chars, can encounter compile problems with fortran. In that
-    case, add the -ffree-line-length-none option to the compile flags.
+    case, add the `-ffree-line-length-none` option to the compile flags.
     Other compilers such as Intel should not encounter this problem.
 
-6. Compile EMTF FCU by typing 'make'.
+6. Compile EMTF FCU by typing `make`.
 
-+--------------------+
-|  Program usage     |
-+--------------------+
+## Program usage
 
 The following standalone programs are available:
 
-   edi2xml
-   z2xml
-   xml2z
-   xml2edi
-   z2edi
+   edi2xml  
+   z2xml  
+   xml2z 
+   xml2edi  
+   z2edi  
 
 Additionally, these standalone codes may be used for quick
 coordinate rotation:
 
-   xml2xml
-   edi2edi
-   z2z
+   xml2xml  
+   edi2edi  
+   z2z  
 
 Note that, other than for the XML files, there is no guarantee
 that the metadata will be preserved in the same exact format
@@ -71,23 +74,23 @@ upon a coordinate rotation, or that no information will be lost.
 For the above conversion codes, Perl script counterparts
 are available to perform batch processing.
 
-   edi2xml & z2xml:
+**edi2xml & z2xml:**
 
-	depend on the FoX library and require additional
-        metadata files for full functionality (see below)
+depend on the FoX library and require additional
+      metadata files for full functionality (see below)
 
-   xml2z & xml2edi:
+**xml2z & xml2edi:**
 
-	depend on the FoX library but do not require any
-        additional files; have limited functionality in
-        the sense that they will only work correctly
-        with those XML files that contain the right data
-        types and statistical estimates for this type
-        of storage
+depend on the FoX library but do not require any
+      additional files; have limited functionality in
+      the sense that they will only work correctly
+      with those XML files that contain the right data
+      types and statistical estimates for this type
+      of storage
 
-    z2edi:
+**z2edi:**
 
-        standalone code that requires no additional inputs
+  standalone code that requires no additional inputs
 
 All conversion codes have an additional capability to rotate the
 transfer functions to an arbitrary coordinate system. This
@@ -97,43 +100,40 @@ covariance matrices. Rotation, therefore, invalidates the error
 bars in the files. While we try to do something reasonable in this
 case, rotation without a covariance matrix is mathematically invalid.
 
-+-----------------------+
-|  Creating XML files   |
-+-----------------------+
 
-   This comment only applies if you would like to
-   use the software to create XML files for archiving
-   or self-describing data storage, using z2xml or edi2xml.
+## Creating XML files
 
-   In this case, you need to create an XML configuration
-   file called config.xml and place it in the same
-   directory as your input data. Example file pasted below.
+This comment only applies if you would like to
+use the software to create XML files for archiving
+or self-describing data storage, using z2xml or edi2xml.
 
-   This is where any user-defined information about
-   the experiment is stored. You could also use the
-   configuration file to specify one or all XML lists
-   with additional metadata: Sites.xml, Runs.xml, Channels.xml.
-   The lists, if specified, should contain experiment metadata
-   information about runs and the sites, as described in
-   module read_lists.f90. Examples below.
+In this case, you need to create an XML configuration
+file called config.xml and place it in the same
+directory as your input data. Example file pasted below.
+
+This is where any user-defined information about
+the experiment is stored. You could also use the
+configuration file to specify one or all XML lists
+with additional metadata: Sites.xml, Runs.xml, Channels.xml.
+The lists, if specified, should contain experiment metadata
+information about runs and the sites, as described in
+module read_lists.f90. Examples below.
 
 NB: For the XML lists, the attributes are optional;
-    they are automatically inserted for easier reading
-    with Matlab. All elements are also optional.
+they are automatically inserted for easier reading
+with Matlab. All elements are also optional.
 
-   The program looks for the configuration file and the
-   optional XML lists in the same directory where the
-   input file is located. If the lists are not found,
-   the programs run without the additional information.
+The program looks for the configuration file and the
+optional XML lists in the same directory where the
+input file is located. If the lists are not found,
+the programs run without the additional information.
 
 NB: If you have the lists, use them by first running
-    z2xml, then xml2edi. Note that the program z2edi
-    does not require FoX library to be installed, and
-    it does not use the additional XML information.
+z2xml, then xml2edi. Note that the program z2edi
+does not require FoX library to be installed, and
+it does not use the additional XML information.
 
-+--------------------------+
-|  Example program calls   |
-+--------------------------+
+## Example program calls
 
 Use Case A: Convert EDI to XML, while rotating to geographic coordinates.
 
@@ -146,7 +146,7 @@ Use Case A: Convert EDI to XML, while rotating to geographic coordinates.
 
 3. Run
 
-./edi2xml filename.edi filename.xml [verbose|silent] 0.0
+`./edi2xml filename.edi filename.xml [verbose|silent] 0.0`
 
 Setting the third input variable to "silent" will suppress most output.
 
@@ -164,18 +164,24 @@ Use Case B: Rotate EMTF XML to original site orientation.
 Since the complete original site layout is now stored in the XML channels
 details, rotations of XML files are fully reversible.
 
-./xml2xml geographic.xml original.xml [verbose|silent] sitelayout
+`./xml2xml geographic.xml original.xml [verbose|silent] sitelayout`
 
 
 Use Case C: Convert XML to Z-file without additional rotation.
 
-./xml2z filename.xml filename.zrr
+`./xml2z filename.xml filename.zrr`
 
-+----------------------------+
-|  Code update 18 Sep 2018   |
-+----------------------------+
+## Previous Releases and Updates
 
-Bug fixes:
+### Code Release 20 Dec 2019
+
+This code as previous released publicly and can be found here:
+
+https://www.usgs.gov/software/electromagnetic-transfer-function-file-conversion-utilities-emtf-fcu
+
+### Code update 18 Sep 2018
+
+**Bug fixes:**
 
 This release includes two major bug fixes.
 
@@ -219,14 +225,14 @@ same way as the impedance. So we have now changed the code's behavior to default
 information for the tippers, if TROT or any other indication of tipper rotations is missing.
 
 
-Conceptual and schema changes:
+**Conceptual and schema changes:**
 
 We have updated the XML schema to include unambiguous rotation information.
 TF orientation is now stored in <Orientation> tag. Original site layout is
 always preserved in the <Channels> block.
 
 
-Code improvements:
+**Code improvements:**
 
 The updated EMTF FCU v4.0 code includes numerous improvements to correctly
 parse and rotate many variants of EDI files. Among the major improvements
@@ -254,9 +260,11 @@ of historic MT TFs that were previously unaccessible for archiving.
   Last Update: 18 Sep 2018
 
 
--------------------------------------------------------------------
+## Examples 
+
 Example config.xml as of 18 Sep 2018:
 
+```XML
 <Configuration>
   <!-- set this to zero or omit if the time series are not archived at IRIS DMC -->
   <TimeSeriesArchived>0</TimeSeriesArchived>
@@ -331,10 +339,11 @@ Example config.xml as of 18 Sep 2018:
   <Attachment></Attachment>
   <AttachmentInfo></AttachmentInfo>
 </Configuration>
+```
 
--------------------------------------------------------------------
 Example site list element as of 9 Sep 2013:
 
+```xml
   <Site idx="1" type="struct" size="1 1">
     <ID idx="1" type="char" size="1 5">CAM01</ID>
     <Description idx="1" type="char" size="1 18">Earl Lake, CA, USA</Description>
@@ -357,10 +366,12 @@ Example site list element as of 9 Sep 2013:
     <NoGPS idx="1" type="logical" size="1 1">0</NoGPS>
     <Comments idx="1" type="char" size="1 65">Data Problem Report available at http://www.iris.edu/data/dpr.htm</Comments>
   </Site>
+```
 
 -------------------------------------------------------------------
 Example run list element as of 9 Sep 2013:
 
+```xml
   <Run idx="1" type="struct" size="1 1">
     <ID idx="1" type="char" size="1 6">CAM01a</ID>
     <siteID idx="1" type="char" size="1 5">CAM01</siteID>
@@ -389,10 +400,12 @@ Example run list element as of 9 Sep 2013:
     <Comments idx="1" type="char" size="0 0"/>
     <Errors idx="1" type="char" size="0 0"/>
   </Run>
+```
 
 -------------------------------------------------------------------
 Example channel list element as of 9 Sep 2013:
 
+```xml
   <Channel idx="1" type="struct" size="1 1">
     <ID idx="1" type="char" size="1 3">LFN</ID>
     <Name idx="1" type="char" size="1 2">Hx</Name>
@@ -424,10 +437,12 @@ Example channel list element as of 9 Sep 2013:
     <Conversion idx="1" type="double" size="1 1">0.01</Conversion>
     <Comments idx="1" type="char" size="1 36">x 0.01 to get nT, Hx base shift 0 nT</Comments>
   </Channel>
+```xml
 
 -------------------------------------------------------------------
 FoX usage example:
 
+``` Fortran
 doc => parseFile("input.xml")
 
 nlist => getElementsByTagname(doc, "interestingElement")
@@ -443,3 +458,4 @@ do i = 0, getLength(nlist)-1
 enddo
 
 call destroy(doc)
+```
