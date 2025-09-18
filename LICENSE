@@ -21,15 +21,20 @@
 !               104 CEOAS Administration Building                                 !
 !               Corvallis, OR 97331-5503                                          !
 !                                                                                 !
-! Copyright (C) Anna Kelbert, 2015-2025                                           !
+! Copyright (C) Anna Kelbert, 2015-2024                                           !
 !               Geomagnetism Program                                              !
 !               U.S. Geological Survey                                            !
 !               1711 Illinois St                                                  !
 !               Golden, CO 80401                                                  !
 !                                                                                 !
-! Please contact the author with questions, comments or corrections               !
-!                              at the e-mail address:  akelbert@usgs.gov          !
-!                                        or by phone: +1-303-273-8448             !
+! Copyright (C) Anna Kelbert, 2024-2025                                           !
+!               Science Explorer (SciX)                                           !
+!               Center for Astrophysics | Harvard & Smithsonian                   !
+!               60 Garden St                                                      !
+!               Cambridge, MA 02138                                               ! 
+!                                                                                 !
+! Please contact the author with questions, comments or corrections:              !
+!                                   Anna Kelbert <anna.kelbert@cfa.harvard.edu>   !
 !                                                                                 !
 ! EMTF FCU uses Fortran XML library (FoX),(C) 2005-2018 Toby White, Andrew Walker !
 ! This library is freely available under a 3-clause BSD license; which is         !
